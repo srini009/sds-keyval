@@ -1,0 +1,48 @@
+#                                               -*- Autoconf -*-
+# Process this file with autoconf to produce a configure script.
+
+AC_PREREQ([2.69])
+AC_INIT([sds-keyval], [0.1], [robl@mcs.anl.gov])
+AM_INIT_AUTOMAKE([-Wall -Werror foreign subdir-objects silent-rules])
+AM_SILENT_RULES([yes])
+AC_CONFIG_MACRO_DIR([m4])
+AC_CONFIG_SRCDIR([src/sds-keyval.h])
+LT_PREREQ([2.2])
+# LT_INIT needs to know about AR
+AM_PROG_AR
+LT_INIT([dlopen])
+
+# Checks for programs.
+AC_PROG_CC
+AC_PROG_CXX
+AC_PROG_INSTALL
+
+# Checks for libraries.
+# Checks for header files.
+
+#pkg-config and libraries supporting that
+PKG_PROG_PKG_CONFIG
+if test "x$PKG_CONFIG" == "x"; then
+   AC_MSG_ERROR([Could not find pkg-config utility!])
+fi
+
+PKG_CHECK_MODULES([MARGO],[margo],[],
+      [AC_MSG_ERROR([Could not find working margo installation!])])
+LIBS="$MARGO_LIBS $LIBS"
+CPPFLAGS="$MARGO_CFLAGS $CPPFLAGS"
+CFLAGS="$MARGO_CFLAGS $CFLAGS"
+
+
+# Checks for typedefs, structures, and compiler characteristics.
+AC_C_INLINE
+AC_TYPE_INT64_T
+AC_TYPE_SIZE_T
+AC_TYPE_SSIZE_T
+
+# Checks for library functions.
+AC_FUNC_MALLOC
+AC_FUNC_REALLOC
+
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT
+
