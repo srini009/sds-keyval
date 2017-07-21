@@ -6,28 +6,88 @@
 #include <margo.h>
 #include <abt-snoozer.h>
 #include <abt.h>
+#include <assert.h>
 
 static hg_return_t open_handler(hg_handle_t h)
 {
+	hg_return_t ret;
+	open_in_t in;
+	open_out_t out;
+	const struct hg_info* info = HG_Get_info(h);
+	margo_instance_id mid;
+
+
 	printf("SERVER: OPEN\n");
+	ret = HG_Get_input(h, &in);
+	// this works
+	ret = HG_Respond(h, NULL, NULL, &out);
+	// but this did not?
+	//mid = margo_hg_class_to_instance(info->hg_class);
+	//ret = margo_respond(mid, h, &out);
+	assert(ret == HG_SUCCESS);
+
+	HG_Free_input(h, &in);
+	HG_Destroy(h);
+
 	return HG_SUCCESS;
 }
+DEFINE_MARGO_RPC_HANDLER(open_handler);
 
 static hg_return_t close_handler(hg_handle_t h)
 {
+	hg_return_t ret;
+	close_in_t in;
+	close_out_t out;
+
 	printf("SERVER: CLOSE\n");
+
+	ret = HG_Get_input(h, &in);
+	assert(ret == HG_SUCCESS);
+	ret = HG_Respond(h, NULL, NULL, &out);
+	assert(ret == HG_SUCCESS);
+
+	HG_Free_input(h, &in);
+	HG_Destroy(h);
+
 	return HG_SUCCESS;
 }
 
 static hg_return_t  put_handler(hg_handle_t h)
 {
+	hg_return_t ret;
+	put_in_t in;
+	put_out_t out;
+
 	printf("SERVER: PUT\n");
+
+	ret = HG_Get_input(h, &in);
+	assert(ret == HG_SUCCESS);
+
+	ret = HG_Respond(h, NULL, NULL, &out);
+	assert(ret == HG_SUCCESS);
+
+	HG_Free_input(h, &in);
+	HG_Destroy(h);
 	return HG_SUCCESS;
 }
 
 static hg_return_t  get_handler(hg_handle_t h)
 {
+	hg_return_t ret;
+	get_in_t in;
+	get_out_t out;
+
 	printf("SERVER: GET\n");
+
+	ret = HG_Get_input(h, &in);
+	assert(ret == HG_SUCCESS);
+
+	ret = HG_Respond(h, NULL, NULL, &out);
+	assert(ret == HG_SUCCESS);
+
+	HG_Free_input(h, &in);
+	HG_Destroy(h);
+
 	return HG_SUCCESS;
 }
 
@@ -42,9 +102,14 @@ kv_context * kv_server_register(int argc, char **argv)
 	/* sds keyval server init */
 	context->hg_class = HG_Init("cci+tcp://localhost:52345", HG_TRUE);
 	context->hg_context = HG_Context_create(context->hg_class);
-	ABT_init(argc, argv);
-	ABT_snoozer_xstream_self_set();
+	ret = ABT_init(argc, argv);
+	assert (ret == 0);
+
+	ret = ABT_snoozer_xstream_self_set();
+	assert(ret == 0);
+
 	context->mid = margo_init(0, 0, context->hg_context);
+	assert(context->mid);
 
 	/* figure out what address this server is listening on */
 	ret = HG_Addr_self(context->hg_class, &addr_self);

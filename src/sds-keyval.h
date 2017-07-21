@@ -24,6 +24,7 @@ typedef struct kv_context_s {
 	hg_id_t get_id;
 	hg_id_t open_id;
 	hg_id_t close_id;
+	/* some keyval dodad goes here for the server I guess? */
 
 } kv_context;
 

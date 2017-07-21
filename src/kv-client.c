@@ -36,6 +36,7 @@ kv_context *kv_client_register(int argc, char **argv) {
 
 
 int kv_client_deregister(kv_context *context) {
+	HG_Addr_free(context->hg_class, context->svr_addr);
 	margo_finalize(context->mid);
 	ABT_finalize();
 	HG_Context_destroy(context->hg_context);

@@ -17,6 +17,7 @@ int main(int argc, char **argv) {
 	ret = margo_addr_lookup(context->mid, argv[1], &(context->svr_addr));
 	assert(ret == HG_SUCCESS);
 
+	/* open */
 	ret = HG_Create(context->hg_context, context->svr_addr,
 			context->open_id, &handle);
 	assert(ret == HG_SUCCESS);
@@ -25,22 +26,40 @@ int main(int argc, char **argv) {
 	assert(ret == HG_SUCCESS);
 	ret = HG_Get_output(handle, &open_out);
 	assert(ret == HG_SUCCESS);
+	HG_Free_output(handle, &open_out);
+	HG_Destroy(handle);
 
+	/* put */
+	ret = HG_Create(context->hg_context, context->svr_addr,
+			context->put_id, &handle);
+	assert(ret == HG_SUCCESS);
 	ret = margo_forward(context->mid, handle, &put_in);
 	assert(ret == HG_SUCCESS);
 	ret = HG_Get_output(handle, &put_out);
 	assert(ret == HG_SUCCESS);
+	HG_Free_output(handle, &put_out);
+	HG_Destroy(handle);
 
+	/* get */
+	ret = HG_Create(context->hg_context, context->svr_addr,
+			context->get_id, &handle);
 	ret = margo_forward(context->mid, handle, &get_in);
 	assert(ret == HG_SUCCESS);
 	ret = HG_Get_output(handle, &get_out);
 	assert(ret == HG_SUCCESS);
+	HG_Free_output(handle, &get_out);
+	HG_Destroy(handle);
 
+	/* close */
+	ret = HG_Create(context->hg_context, context->svr_addr,
+			context->close_id, &handle);
+	assert(ret == HG_SUCCESS);
 	ret = margo_forward(context->mid, handle, &close_in);
 	assert(ret == HG_SUCCESS);
 	ret = HG_Get_output(handle, &close_out);
 	assert(ret == HG_SUCCESS);
-
+	HG_Free_output(handle, &close_out);
+	HG_Destroy(handle);
 
 
 	kv_client_deregister(context);
