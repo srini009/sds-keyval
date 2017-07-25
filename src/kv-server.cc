@@ -8,6 +8,15 @@
 #include <abt.h>
 #include <assert.h>
 
+/* keyval-specific stuff can go here */
+#include <bwtree.h>
+#include <vector>
+
+wangziqi2013::bwtree::BwTree<int, int> TREE;
+
+static hg_return_t open_handler(hg_handle_t);
+DECLARE_MARGO_RPC_HANDLER(open_handler);
+
 static hg_return_t open_handler(hg_handle_t h)
 {
 	hg_return_t ret;
@@ -16,9 +25,20 @@ static hg_return_t open_handler(hg_handle_t h)
 	const struct hg_info* info = HG_Get_info(h);
 	margo_instance_id mid;
 
-
-	printf("SERVER: OPEN\n");
 	ret = HG_Get_input(h, &in);
+	printf("SERVER: OPEN %s\n", in.name);
+
+	TREE.SetDebugLogging(0);
+	TREE.UpdateThreadLocal(1);
+	TREE.AssignGCID(0);
+
+	/* TODO: something with in.keytype and in.valtype.  In C I would get
+	 * away with sloppy casting.  Not sure how to do the same with a C++
+	 * template.  */
+
+	/* I don't know how to check for error */
+	out.ret = HG_SUCCESS;
+
 	// this works
 	ret = HG_Respond(h, NULL, NULL, &out);
 	// but this did not?
@@ -31,7 +51,7 @@ static hg_return_t open_handler(hg_handle_t h)
 
 	return HG_SUCCESS;
 }
-DEFINE_MARGO_RPC_HANDLER(open_handler);
+DEFINE_MARGO_RPC_HANDLER(open_handler)
 
 static hg_return_t close_handler(hg_handle_t h)
 {
@@ -58,9 +78,10 @@ static hg_return_t  put_handler(hg_handle_t h)
 	put_in_t in;
 	put_out_t out;
 
-	printf("SERVER: PUT\n");
 
 	ret = HG_Get_input(h, &in);
+	printf("SERVER: PUT key = %d val = %d\n", in.key, in.value);
+	TREE.Insert(in.key, in.value);
 	assert(ret == HG_SUCCESS);
 
 	ret = HG_Respond(h, NULL, NULL, &out);
@@ -77,10 +98,19 @@ static hg_return_t  get_handler(hg_handle_t h)
 	get_in_t in;
 	get_out_t out;
 
-	printf("SERVER: GET\n");
 
 	ret = HG_Get_input(h, &in);
 	assert(ret == HG_SUCCESS);
+
+	/*void 	GetValue (const KeyType &search_key, std::vector< ValueType > &value_list) */
+	std::vector<int> value;
+	TREE.GetValue(in.key, value);
+
+	if (value.size() >= 1) {
+		printf("SERVER: GET: key=%d, value=%d\n",
+				in.key, value.front());
+	}
+	out.value = value.front();
 
 	ret = HG_Respond(h, NULL, NULL, &out);
 	assert(ret == HG_SUCCESS);
