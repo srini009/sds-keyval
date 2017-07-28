@@ -15,9 +15,11 @@ kv_context *kv_client_register(int argc, char **argv) {
 
 	context->hg_class = HG_Init("cci+tcp://localhost:1234", HG_FALSE);
 	context->hg_context = HG_Context_create(context->hg_class);
+
 	ABT_init(argc, argv);
 	ABT_snoozer_xstream_self_set();
 	ret  = ABT_xstream_self(&(context->xstream));
+
 	context->mid = margo_init(0, 0, context->hg_context);
 
 	context->put_id = MERCURY_REGISTER(context->hg_class, "put",
@@ -34,12 +36,15 @@ kv_context *kv_client_register(int argc, char **argv) {
 	return context;
 }
 
-int kv_open(kv_context *context, char *name,
+int kv_open(kv_context *context, char * server, char *name,
 		kv_type keytype, kv_type valtype) {
 	int ret = HG_SUCCESS;
 	hg_handle_t handle;
 	open_in_t open_in;
 	open_out_t open_out;
+
+	ret = margo_addr_lookup(context->mid, server, &(context->svr_addr));
+	assert(ret == HG_SUCCESS);
 
 	ret = HG_Create(context->hg_context, context->svr_addr,
 			context->open_id, &handle);
@@ -52,6 +57,16 @@ int kv_open(kv_context *context, char *name,
 	ret = HG_Get_output(handle, &open_out);
 	assert(ret == HG_SUCCESS);
 	ret = open_out.ret;
+
+	/* set up the other calls here: idea is we'll pay the registration cost
+	 * once here but can reuse the handles and identifiers multiple times*/
+	ret = HG_Create(context->hg_context, context->svr_addr,
+			context->put_id, &(context->put_handle) );
+	assert(ret == HG_SUCCESS);
+	ret = HG_Create(context->hg_context, context->svr_addr,
+			context->get_id, &(context->get_handle) );
+	assert(ret == HG_SUCCESS);
+
 	HG_Free_output(handle, &open_out);
 	HG_Destroy(handle);
 	return ret;
@@ -61,41 +76,31 @@ int kv_open(kv_context *context, char *name,
  * size. */
 int kv_put(kv_context *context, void *key, void *value) {
 	int ret;
-	hg_handle_t handle;
 	put_in_t put_in;
 	put_out_t put_out;
-	ret = HG_Create(context->hg_context, context->svr_addr,
-			context->put_id, &handle);
-	assert(ret == HG_SUCCESS);
 
 	put_in.key = *(int*)key;
 	put_in.value = *(int*)value;
-	ret = margo_forward(context->mid, handle, &put_in);
+	ret = margo_forward(context->mid, context->put_handle, &put_in);
 	assert(ret == HG_SUCCESS);
-	ret = HG_Get_output(handle, &put_out);
+	ret = HG_Get_output(context->put_handle, &put_out);
 	assert(ret == HG_SUCCESS);
-	HG_Free_output(handle, &put_out);
-	HG_Destroy(handle);
+	HG_Free_output(context->put_handle, &put_out);
 }
 
 int kv_get(kv_context *context, void *key, void *value)
 {
 	int ret;
-	hg_handle_t handle;
 	get_in_t get_in;
 	get_out_t get_out;
 
-	ret = HG_Create(context->hg_context, context->svr_addr,
-			context->get_id, &handle);
-
 	get_in.key = *(int*)key;
-	ret = margo_forward(context->mid, handle, &get_in);
+	ret = margo_forward(context->mid, context->get_handle, &get_in);
 	assert(ret == HG_SUCCESS);
-	ret = HG_Get_output(handle, &get_out);
+	ret = HG_Get_output(context->get_handle, &get_out);
 	*(int*) value  = get_out.value;
 	assert(ret == HG_SUCCESS);
-	HG_Free_output(handle, &get_out);
-	HG_Destroy(handle);
+	HG_Free_output(context->get_handle, &get_out);
 }
 int kv_close(kv_context *context)
 {
@@ -112,6 +117,9 @@ int kv_close(kv_context *context)
 	ret = HG_Get_output(handle, &close_out);
 	assert(ret == HG_SUCCESS);
 	HG_Free_output(handle, &close_out);
+
+	HG_Destroy(context->put_handle);
+	HG_Destroy(context->get_handle);
 	HG_Destroy(handle);
 }
 

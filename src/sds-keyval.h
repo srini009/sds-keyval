@@ -36,6 +36,8 @@ typedef struct kv_context_s {
 	hg_id_t get_id;
 	hg_id_t open_id;
 	hg_id_t close_id;
+	hg_handle_t put_handle;
+	hg_handle_t get_handle;
 	/* some keyval dodad goes here so the server can discriminate.  Seems
 	 * like it should be some universal identifier we can share with other
 	 * clients */
@@ -81,7 +83,7 @@ int kv_client_deregister(kv_context *context);
 int kv_server_deregister(kv_context *context);
 
 /* client-side routines wrapping up all the RPC stuff  */
-int kv_open(kv_context *context, char *name,
+int kv_open(kv_context *context, char *server, char *name,
 		kv_type keytype, kv_type valtype);
 int kv_put(kv_context *context, void *key, void *value);
 int kv_get(kv_context *context, void *key, void *value);
