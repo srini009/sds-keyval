@@ -18,6 +18,7 @@ kv_context *kv_client_register(int argc, char **argv) {
 
 	ABT_init(argc, argv);
 	ABT_snoozer_xstream_self_set();
+	/* client side: no custom xstreams */
 	ret  = ABT_xstream_self(&(context->xstream));
 
 	context->mid = margo_init(0, 0, context->hg_context);
@@ -60,6 +61,9 @@ int kv_open(kv_context *context, char * server, char *name,
 
 	/* set up the other calls here: idea is we'll pay the registration cost
 	 * once here but can reuse the handles and identifiers multiple times*/
+	/* put/get handles: can have as many in flight as we have registered.
+	 * BAKE has a handle-caching mechanism we should consult.
+	 * should margo be caching handles? */
 	ret = HG_Create(context->hg_context, context->svr_addr,
 			context->put_id, &(context->put_handle) );
 	assert(ret == HG_SUCCESS);

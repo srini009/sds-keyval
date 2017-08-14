@@ -135,6 +135,7 @@ kv_context * kv_server_register(int argc, char **argv)
 	ret = ABT_init(argc, argv);
 	assert (ret == 0);
 
+	/* server probably needs to create a new execution stream */
 	ret = ABT_snoozer_xstream_self_set();
 	assert(ret == 0);
 
