@@ -6,13 +6,14 @@
 
 ## Cloning
 
-We picked up Zi Qi Wang's BwTree implementation.  Be sure to clone with the ``--recursive`` option:
-
-    git clone --recursive
+Until RobL figures out git submodules and branch tracking, we just copied Zi Qi Wang's BwTree implementation into our tree.
 
 ## Build requirements
 - the ''mercury suite'': `mercury`, `margo`, `argobots`, `abt-snoozer`, and friends. 
 - autotools
-- the [https://github.com/wangziqi2013/BwTree BwTree] implementation.  Should come along with everything else if you cloned with ``--recursive``
 
 ## Issues
+
+## Notes
+The [https://github.com/wangziqi2013/BwTree](BwTree) implementation in here
+came from Zi Qi Wang's git repository.
