@@ -1,0 +1,3 @@
+[submodule "src/BwTree"]
+	path = src/BwTree
+	url = git@github.com:roblatham00/BwTree.git
