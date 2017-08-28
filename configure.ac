@@ -11,6 +11,8 @@ LT_PREREQ([2.2])
 # LT_INIT needs to know about AR
 AM_PROG_AR
 LT_INIT([dlopen])
+# subdir objects needs a bit of help
+AM_PROG_CC_C_O
 
 # Checks for programs.
 AC_PROG_CC
