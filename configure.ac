@@ -3,7 +3,7 @@
 
 AC_PREREQ([2.69])
 AC_INIT([sds-keyval], [0.1], [robl@mcs.anl.gov])
-AM_INIT_AUTOMAKE([-Wall -Werror foreign subdir-objects silent-rules])
+AM_INIT_AUTOMAKE([1.15 -Wall -Werror foreign subdir-objects silent-rules])
 AM_SILENT_RULES([yes])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([src/sds-keyval.h])
@@ -11,11 +11,11 @@ LT_PREREQ([2.2])
 # LT_INIT needs to know about AR
 AM_PROG_AR
 LT_INIT([dlopen])
-# subdir objects needs a bit of help
-AM_PROG_CC_C_O
 
 # Checks for programs.
 AC_PROG_CC
+# subdir objects needs a bit of help
+AM_PROG_CC_C_O
 AC_PROG_CXX
 AC_PROG_INSTALL
 
