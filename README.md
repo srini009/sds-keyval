@@ -17,7 +17,7 @@ Until RobL figures out git submodules and branch tracking, we just copied Zi Qi 
 The server is pretty simple: all the RPC registration happens in `kv_server_register`, so we merely need to hang around and listen for client requests:
 
 ```C
-#include "sds-keyval.h"
+#include <sds-keyval.h>
 
 int main(int argc, char **argv) {
 	kv_context * context = kv_server_register(argc, argv);
@@ -28,11 +28,13 @@ int main(int argc, char **argv) {
 }
 ```
 
+Both server and client include `<sds-keyval.h>`.  The server code needs to
+link against `libkvserver` and all the other "mercury suite" dependencies.
+
 Client side, all of the remote functionality is abstracted under the client API, aside from a server string passed to `kv_open`.
 
 ```C
-#include "sds-keyval.h"
-#include <assert.h>
+#include <sds-keyval.h>
 
 int main(int argc, char **argv) {
 	int ret;
@@ -57,6 +59,8 @@ int main(int argc, char **argv) {
 	kv_client_deregister(context);
 }
 ```
+
+To compile this code, you'll need to link against `libkvclient` in addition to the "mercury suite" dependencies.
 
 The key and value type information passed to `kv_open` might not end up being
 so useful in the end.  We're still working on that one.
