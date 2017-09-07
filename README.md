@@ -68,6 +68,13 @@ so useful in the end.  We're still working on that one.
 
 ## Issues
 
+If you get 
+```undefined reference to `__atomic_compare_exchange_16'
+```
+
+That suggests gcc needs a bit of help pulling in the 'libatomic' library
+.  The server uses CMU's BwTree implementaiton, which in turn relies on atomic operations.  Link server-side code with `libatomic` to address this issue.
+
 ## Notes
 The [https://github.com/wangziqi2013/BwTree](BwTree) implementation in here
 came from Zi Qi Wang's git repository.
