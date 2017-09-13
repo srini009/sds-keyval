@@ -34,7 +34,11 @@ kv_context *kv_client_register(int argc, char **argv) {
 
 	context->close_id = MERCURY_REGISTER(context->hg_class, "close",
 			close_in_t, close_out_t, NULL);
+
+	context->bench_id= MERCURY_REGISTER(context->hg_class, "bench",
+			bench_in_t, bench_out_t, NULL);
 	return context;
+
 }
 
 int kv_open(kv_context *context, char * server, char *name,
@@ -70,6 +74,8 @@ int kv_open(kv_context *context, char * server, char *name,
 	ret = HG_Create(context->hg_context, context->svr_addr,
 			context->get_id, &(context->get_handle) );
 	assert(ret == HG_SUCCESS);
+	ret = HG_Create(context->hg_context, context->svr_addr,
+		context->bench_id, &(context->bench_handle) );
 
 	HG_Free_output(handle, &open_out);
 	HG_Destroy(handle);
@@ -125,6 +131,25 @@ int kv_close(kv_context *context)
 	HG_Destroy(context->put_handle);
 	HG_Destroy(context->get_handle);
 	HG_Destroy(handle);
+}
+
+char *kv_benchmark(kv_context *context, int count) {
+    int ret;
+    hg_handle_t handle;
+    bench_in_t bench_in;
+    bench_out_t bench_out;
+    char *output = NULL;
+
+    bench_in.count = count;
+    ret = HG_Create(context->hg_context, context->svr_addr,
+	    context->bench_id, &handle);
+    assert(ret == HG_SUCCESS);
+    ret = margo_forward(context->mid, context->bench_handle, &bench_in);
+    assert(ret == HG_SUCCESS);
+    ret = HG_Get_output(context->bench_handle, &bench_out);
+    HG_Free_output(handle, &bench_out);
+
+    return output;
 }
 
 int kv_client_deregister(kv_context *context) {

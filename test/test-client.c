@@ -21,5 +21,11 @@ int main(int argc, char **argv) {
 	/* close */
 	ret = kv_close(context);
 
+	/* benchmark doesn't require an open keyval */
+	char *output;
+	output = kv_benchmark(context, 1000);
+	printf("%s\n", output);
+	free(output);
+
 	kv_client_deregister(context);
 }

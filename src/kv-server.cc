@@ -121,6 +121,102 @@ static hg_return_t  get_handler(hg_handle_t h)
 	return HG_SUCCESS;
 }
 
+
+/*
+ * from BwTree tests:
+ * RandomInsertSpeedTest() - Tests how fast it is to insert keys randomly
+ */
+#include <random>
+#include <iostream>
+static void RandomInsertSpeedTest(size_t key_num)
+{
+  std::random_device r{};
+  std::default_random_engine e1(r());
+  std::uniform_int_distribution<int> uniform_dist(0, key_num - 1);
+
+  auto *t = new wangziqi2013::bwtree::BwTree<int, int>;
+  t->SetDebugLogging(0);
+  t->UpdateThreadLocal(1);
+  t->AssignGCID(0);
+
+  std::chrono::time_point<std::chrono::system_clock> start, end;
+
+  start = std::chrono::system_clock::now();
+
+  // We loop for keynum * 2 because in average half of the insertion
+  // will hit an empty slot
+  for(size_t i = 0;i < key_num * 2;i++) {
+    int key = uniform_dist(e1);
+
+    t->Insert(key, key);
+  }
+
+  end = std::chrono::system_clock::now();
+
+  std::chrono::duration<double> elapsed_seconds = end - start;
+
+  std::cout << "BwTree: at least " << (key_num * 2.0 / (1024 * 1024)) / elapsed_seconds.count()
+            << " million random insertion/sec" << "\n";
+
+  // Then test random read after random insert
+  std::vector<int> v{};
+  v.reserve(100);
+
+  start = std::chrono::system_clock::now();
+
+  for(size_t i = 0;i < key_num * 2;i++) {
+    int key = uniform_dist(e1);
+
+    t->GetValue(key, v);
+
+    v.clear();
+  }
+
+  end = std::chrono::system_clock::now();
+
+  elapsed_seconds = end - start;
+  std::cout << "BwTree: at least " << (key_num * 2.0 / (1024 * 1024)) / elapsed_seconds.count()
+            << " million random read after random insert/sec" << "\n";
+
+  // Measure the overhead
+
+  start = std::chrono::system_clock::now();
+
+  for(size_t i = 0;i < key_num * 2;i++) {
+    int key = uniform_dist(e1);
+
+    v.push_back(key);
+
+    v.clear();
+  }
+
+  end = std::chrono::system_clock::now();
+
+  std::chrono::duration<double> overhead = end - start;
+
+  std::cout << "    Overhead = " << overhead.count() << " seconds" << std::endl;
+
+  return;
+}
+
+
+static hg_return_t  bench_handler(hg_handle_t h)
+{
+    int ret;
+    bench_in_t bench_in;
+    bench_out_t bench_out;
+
+    ret = HG_Get_input(h, &bench_in);
+    printf("benchmarking %d keys\n", bench_in.count);
+    RandomInsertSpeedTest(bench_in.count);
+    ret = HG_Respond(h, NULL, NULL, NULL);
+
+    HG_Free_input(h, &bench_in);
+    HG_Destroy(h);
+    return HG_SUCCESS;
+}
+DEFINE_MARGO_RPC_HANDLER(bench_handler)
+
 kv_context * kv_server_register(int argc, char **argv)
 {
 	int ret;
@@ -175,6 +271,9 @@ kv_context * kv_server_register(int argc, char **argv)
 
 	context->get_id = MERCURY_REGISTER(context->hg_class, "get",
 			get_in_t, get_out_t, get_handler);
+
+	context->bench_id = MERCURY_REGISTER(context->hg_class, "bench",
+		bench_in_t, bench_out_t, bench_handler);
 
 	return context;
 }
