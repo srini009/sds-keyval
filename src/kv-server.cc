@@ -14,18 +14,13 @@
 
 wangziqi2013::bwtree::BwTree<int, int> TREE;
 
-static hg_return_t open_handler(hg_handle_t);
-DECLARE_MARGO_RPC_HANDLER(open_handler);
-
 static hg_return_t open_handler(hg_handle_t h)
 {
 	hg_return_t ret;
 	open_in_t in;
 	open_out_t out;
-	const struct hg_info* info = HG_Get_info(h);
-	margo_instance_id mid;
 
-	ret = HG_Get_input(h, &in);
+	ret = margo_get_input(h, &in);
 	printf("SERVER: OPEN %s\n", in.name);
 
 	TREE.SetDebugLogging(0);
@@ -71,6 +66,7 @@ static hg_return_t close_handler(hg_handle_t h)
 
 	return HG_SUCCESS;
 }
+DEFINE_MARGO_RPC_HANDLER(close_handler)
 
 static hg_return_t  put_handler(hg_handle_t h)
 {
@@ -91,6 +87,7 @@ static hg_return_t  put_handler(hg_handle_t h)
 	HG_Destroy(h);
 	return HG_SUCCESS;
 }
+DEFINE_MARGO_RPC_HANDLER(put_handler)
 
 static hg_return_t  get_handler(hg_handle_t h)
 {
@@ -120,6 +117,8 @@ static hg_return_t  get_handler(hg_handle_t h)
 
 	return HG_SUCCESS;
 }
+DEFINE_MARGO_RPC_HANDLER(get_handler)
+
 
 
 /*
@@ -226,53 +225,43 @@ kv_context * kv_server_register(int argc, char **argv)
 	kv_context *context;
 	context = (kv_context *)malloc(sizeof(*context));
 	/* sds keyval server init */
-	context->hg_class = HG_Init("cci+tcp://localhost:52345", HG_TRUE);
-	context->hg_context = HG_Context_create(context->hg_class);
-	ret = ABT_init(argc, argv);
-	assert (ret == 0);
 
-	/* server probably needs to create a new execution stream */
-	ret = ABT_snoozer_xstream_self_set();
-	assert(ret == 0);
-
-	context->mid = margo_init(0, 0, context->hg_context);
+	context->mid = margo_init("cci+tcp://localhost:52345",
+		MARGO_SERVER_MODE, 0, -1);
 	assert(context->mid);
 
 	/* figure out what address this server is listening on */
-	ret = HG_Addr_self(context->hg_class, &addr_self);
+	ret = margo_addr_self(context->mid, &addr_self);
 	if(ret != HG_SUCCESS)
 	{
-		fprintf(stderr, "Error: HG_Addr_self()\n");
-		HG_Context_destroy(context->hg_context);
-		HG_Finalize(context->hg_class);
+		fprintf(stderr, "Error: mago_addr_selff()\n");
+		margo_finalize(context->mid);
 		return(NULL);
 	}
-	ret = HG_Addr_to_string(context->hg_class, addr_self_string,
+	ret = margo_addr_to_string(context->mid, addr_self_string,
 			&addr_self_string_sz, addr_self);
 	if(ret != HG_SUCCESS)
 	{
 		fprintf(stderr, "Error: HG_Addr_self()\n");
-		HG_Context_destroy(context->hg_context);
-		HG_Finalize(context->hg_class);
-		HG_Addr_free(context->hg_class, addr_self);
+		margo_finalize(context->mid);
 		return(NULL);
 	}
-	HG_Addr_free(context->hg_class, addr_self);
+	margo_addr_free(context->mid, addr_self);
 	printf("# accepting RPCs on address \"%s\"\n", addr_self_string);
 
-	context->open_id = MERCURY_REGISTER(context->hg_class, "open",
+	context->open_id = MARGO_REGISTER(context->mid, "open",
 			open_in_t, open_out_t, open_handler);
 
-	context->close_id = MERCURY_REGISTER(context->hg_class, "close",
+	context->close_id = MARGO_REGISTER(context->mid, "close",
 			close_in_t, close_out_t, close_handler);
 
-	context->put_id = MERCURY_REGISTER(context->hg_class, "put",
+	context->put_id = MARGO_REGISTER(context->mid, "put",
 			put_in_t, put_out_t, put_handler);
 
-	context->get_id = MERCURY_REGISTER(context->hg_class, "get",
+	context->get_id = MARGO_REGISTER(context->mid, "get",
 			get_in_t, get_out_t, get_handler);
 
-	context->bench_id = MERCURY_REGISTER(context->hg_class, "bench",
+	context->bench_id = MARGO_REGISTER(context->mid, "bench",
 		bench_in_t, bench_out_t, bench_handler);
 
 	return context;
@@ -282,9 +271,6 @@ kv_context * kv_server_register(int argc, char **argv)
 int kv_server_deregister(kv_context *context) {
 	margo_wait_for_finalize(context->mid);
 	margo_finalize(context->mid);
-	ABT_finalize();
-	HG_Context_destroy(context->hg_context);
-	HG_Finalize(context->hg_class);
 	free(context);
 	return 0;
 }
