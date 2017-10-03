@@ -35,7 +35,9 @@ typedef struct kv_context_s {
 	hg_id_t close_id;
 	hg_id_t bench_id;
 	hg_handle_t put_handle;
+	hg_handle_t bulk_put_handle;
 	hg_handle_t get_handle;
+	hg_handle_t bulk_get_handle;
 	hg_handle_t bench_handle;
 	/* some keyval dodad goes here so the server can discriminate.  Seems
 	 * like it should be some universal identifier we can share with other
@@ -95,10 +97,25 @@ static inline hg_return_t hg_proc_bench_result( hg_proc_t proc, bench_result *re
 }
 
 DECLARE_MARGO_RPC_HANDLER(bench_handler)
-
 MERCURY_GEN_PROC(bench_out_t, ((bench_result)(result)) )
 
-kv_context *kv_client_register(int argc, char **argv);
+// for handling bulk puts/gets (e.g. for ParSplice use case)
+MERCURY_GEN_PROC(bulk_put_in_t,
+		 ((uint64_t)(key))		\
+		 ((uint64_t)(size))		\
+		 ((hg_bulk_t)(bulk_handle)) )
+MERCURY_GEN_PROC(bulk_put_out_t, ((int32_t)(ret)))
+DECLARE_MARGO_RPC_HANDLER(bulk_put_handler)
+
+MERCURY_GEN_PROC(bulk_get_in_t,
+		 ((uint64_t)(key))		\
+		 ((uint64_t)(size))		\
+		 ((hg_bulk_t)(bulk_handle)) )
+MERCURY_GEN_PROC(bulk_get_out_t, ((int32_t)(ret)))
+DECLARE_MARGO_RPC_HANDLER(bulk_get_handler)
+
+  
+kv_context *kv_client_register(char *addr_str=0);
 kv_context * kv_server_register(margo_instance_id mid);
 
 /* both the same: should probably move to common */
