@@ -9,7 +9,6 @@
 
 
 kv_context *kv_client_register(int argc, char **argv) {
-	int ret;
 	kv_context * context;
 	context = malloc(sizeof(kv_context));
 
@@ -33,7 +32,6 @@ kv_context *kv_client_register(int argc, char **argv) {
 	context->bench_id= MARGO_REGISTER(context->mid, "bench",
 			bench_in_t, bench_out_t, NULL);
 	return context;
-
 }
 
 int kv_open(kv_context *context, char * server, char *name,
@@ -80,7 +78,7 @@ int kv_open(kv_context *context, char * server, char *name,
 /* we gave types in the open call.  Will need to maintain in 'context' the
  * size. */
 int kv_put(kv_context *context, void *key, void *value) {
-	int ret;
+	int ret=0;
 	put_in_t put_in;
 	put_out_t put_out;
 
@@ -91,11 +89,12 @@ int kv_put(kv_context *context, void *key, void *value) {
 	ret = HG_Get_output(context->put_handle, &put_out);
 	assert(ret == HG_SUCCESS);
 	HG_Free_output(context->put_handle, &put_out);
+	return ret;
 }
 
 int kv_get(kv_context *context, void *key, void *value)
 {
-	int ret;
+	int ret=0;
 	get_in_t get_in;
 	get_out_t get_out;
 
@@ -106,10 +105,11 @@ int kv_get(kv_context *context, void *key, void *value)
 	*(int*) value  = get_out.value;
 	assert(ret == HG_SUCCESS);
 	HG_Free_output(context->get_handle, &get_out);
+	return ret;
 }
 int kv_close(kv_context *context)
 {
-	int ret;
+	int ret=0;
 	hg_handle_t handle;
 	put_in_t close_in;
 	put_out_t close_out;
@@ -126,6 +126,7 @@ int kv_close(kv_context *context)
 	HG_Destroy(context->put_handle);
 	HG_Destroy(context->get_handle);
 	HG_Destroy(handle);
+	return ret;
 }
 
 char *kv_benchmark(kv_context *context, int count) {
