@@ -29,8 +29,6 @@ kv_context *kv_client_register(int argc, char **argv) {
 	context->close_id = MARGO_REGISTER(context->mid, "close",
 			close_in_t, close_out_t, NULL);
 
-	context->bench_id= MARGO_REGISTER(context->mid, "bench",
-			bench_in_t, bench_out_t, NULL);
 	return context;
 }
 
@@ -67,8 +65,6 @@ int kv_open(kv_context *context, char * server, char *name,
 	ret = margo_create(context->mid, context->svr_addr,
 			context->get_id, &(context->get_handle) );
 	assert(ret == HG_SUCCESS);
-	ret = margo_create(context->mid, context->svr_addr,
-		context->bench_id, &(context->bench_handle) );
 
 	margo_free_output(handle, &open_out);
 	margo_destroy(handle);
@@ -129,12 +125,17 @@ int kv_close(kv_context *context)
 	return ret;
 }
 
-char *kv_benchmark(kv_context *context, int count) {
+bench_result *kv_benchmark(kv_context *context, int count) {
     int ret;
     hg_handle_t handle;
     bench_in_t bench_in;
     bench_out_t bench_out;
-    char *output = NULL;
+    bench_result *result=NULL;
+
+    context->bench_id= MARGO_REGISTER(context->mid, "bench",
+			bench_in_t, bench_out_t, NULL);
+    ret = margo_create(context->mid, context->svr_addr,
+		context->bench_id, &(context->bench_handle) );
 
     bench_in.count = count;
     ret = margo_create(context->mid, context->svr_addr,
@@ -143,9 +144,18 @@ char *kv_benchmark(kv_context *context, int count) {
     ret = margo_forward(context->bench_handle, &bench_in);
     assert(ret == HG_SUCCESS);
     ret = HG_Get_output(context->bench_handle, &bench_out);
-    HG_Free_output(handle, &bench_out);
 
-    return output;
+    result = malloc(sizeof(bench_result));
+    result->nkeys = bench_out.result.nkeys;
+    result->insert_time = bench_out.result.insert_time;
+    result->read_time = bench_out.result.read_time;
+
+    margo_free_output(handle, &bench_out);
+    //margo_destroy(handle);
+
+    HG_Destroy(context->bench_handle);
+
+    return result;
 }
 
 int kv_client_deregister(kv_context *context) {

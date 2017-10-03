@@ -80,10 +80,23 @@ MERCURY_GEN_PROC(close_out_t, ((int32_t)(ret)) )
 DECLARE_MARGO_RPC_HANDLER(close_handler)
 
 MERCURY_GEN_PROC(bench_in_t, ((int32_t)(count)) )
-MERCURY_GEN_PROC(bench_out_t, ((int32_t)(out)) )
+
+typedef struct {
+    size_t nkeys;
+    double insert_time;
+    double read_time;
+    double overhead;
+} bench_result;
+
+static inline hg_return_t hg_proc_bench_result( hg_proc_t proc, bench_result *result)
+{
+    /* TODO: needs a portable encoding */
+    return(hg_proc_memcpy(proc, result, sizeof(*result))) ;
+}
 
 DECLARE_MARGO_RPC_HANDLER(bench_handler)
 
+MERCURY_GEN_PROC(bench_out_t, ((bench_result)(result)) )
 
 kv_context *kv_client_register(int argc, char **argv);
 kv_context * kv_server_register(int argc, char **argv);
@@ -97,7 +110,7 @@ int kv_open(kv_context *context, char *server, char *name,
 		kv_type keytype, kv_type valtype);
 int kv_put(kv_context *context, void *key, void *value);
 int kv_get(kv_context *context, void *key, void *value);
-char *kv_benchmark(kv_context *context, int count);
+bench_result *kv_benchmark(kv_context *context, int count);
 int kv_close(kv_context *context);
 
 

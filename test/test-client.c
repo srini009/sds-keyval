@@ -22,10 +22,12 @@ int main(int argc, char **argv) {
 	ret = kv_close(context);
 
 	/* benchmark doesn't require an open keyval */
-	char *output;
+	bench_result *output;
 	output = kv_benchmark(context, 1000);
-	printf("%s\n", output);
+	printf("insert: %zd keys in %f seconds: %f Million-insert per sec\n",
+		output->nkeys, output->insert_time,
+		output->nkeys/(output->insert_time*1024*1024) );
 	free(output);
 
-	kv_client_deregister(context);
+//	kv_client_deregister(context);
 }

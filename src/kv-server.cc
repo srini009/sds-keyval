@@ -127,7 +127,8 @@ DEFINE_MARGO_RPC_HANDLER(get_handler)
  */
 #include <random>
 #include <iostream>
-static void RandomInsertSpeedTest(size_t key_num)
+
+static void RandomInsertSpeedTest(size_t key_num, bench_result *results)
 {
   std::random_device r{};
   std::default_random_engine e1(r());
@@ -154,8 +155,11 @@ static void RandomInsertSpeedTest(size_t key_num)
 
   std::chrono::duration<double> elapsed_seconds = end - start;
 
+  results->nkeys = key_num;
+  results->insert_time = elapsed_seconds.count();
+
   std::cout << "BwTree: at least " << (key_num * 2.0 / (1024 * 1024)) / elapsed_seconds.count()
-            << " million random insertion/sec" << "\n";
+           << " million random insertion/sec" << "\n";
 
   // Then test random read after random insert
   std::vector<int> v{};
@@ -176,6 +180,7 @@ static void RandomInsertSpeedTest(size_t key_num)
   elapsed_seconds = end - start;
   std::cout << "BwTree: at least " << (key_num * 2.0 / (1024 * 1024)) / elapsed_seconds.count()
             << " million random read after random insert/sec" << "\n";
+  results->read_time = elapsed_seconds.count();
 
   // Measure the overhead
 
@@ -194,6 +199,7 @@ static void RandomInsertSpeedTest(size_t key_num)
   std::chrono::duration<double> overhead = end - start;
 
   std::cout << "    Overhead = " << overhead.count() << " seconds" << std::endl;
+  results->overhead = overhead.count();
 
   return;
 }
@@ -201,18 +207,24 @@ static void RandomInsertSpeedTest(size_t key_num)
 
 static hg_return_t  bench_handler(hg_handle_t h)
 {
-    int ret;
+    hg_return_t ret = HG_SUCCESS;
     bench_in_t bench_in;
     bench_out_t bench_out;
+    bench_result random_insert;
 
     ret = HG_Get_input(h, &bench_in);
     printf("benchmarking %d keys\n", bench_in.count);
-    RandomInsertSpeedTest(bench_in.count);
-    ret = HG_Respond(h, NULL, NULL, NULL);
+    RandomInsertSpeedTest(bench_in.count, &random_insert);
+    bench_out.result.nkeys = random_insert.nkeys*2;
+    bench_out.result.insert_time = random_insert.insert_time;
+    bench_out.result.read_time = random_insert.read_time;
+    bench_out.result.overhead = random_insert.overhead;
+
+    ret = HG_Respond(h, NULL, NULL, &bench_out);
 
     HG_Free_input(h, &bench_in);
     HG_Destroy(h);
-    return HG_SUCCESS;
+    return ret;
 }
 DEFINE_MARGO_RPC_HANDLER(bench_handler)
 
