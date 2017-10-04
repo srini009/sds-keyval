@@ -132,7 +132,11 @@ DECLARE_MARGO_RPC_HANDLER(shutdown_handler)
 int kv_client_deregister(kv_context *context);
 int kv_server_deregister(kv_context *context);
 
+/* server-side routine */
+int kv_server_wait_for_shutdown(kv_context *context);
+
 /* client-side routines wrapping up all the RPC stuff  */
+int kv_client_shutdown_server(kv_context *context);
 int kv_open(kv_context *context, char *server, char *name,
 		kv_type keytype, kv_type valtype);
 int kv_put(kv_context *context, void *key, void *value);

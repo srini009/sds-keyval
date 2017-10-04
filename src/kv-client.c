@@ -26,26 +26,31 @@ kv_context *kv_client_register(char *addr_str) {
 	}
 
 	context->put_id = MARGO_REGISTER(context->mid, "put",
-			put_in_t, put_out_t, NULL);
+					 put_in_t, put_out_t, NULL);
 
 	context->put_id = MARGO_REGISTER(context->mid, "put",
-			put_in_t, put_out_t, NULL);
+					 put_in_t, put_out_t, NULL);
 
 	context->bulk_put_id = MARGO_REGISTER(context->mid, "bulk_put",
 					      bulk_put_in_t, bulk_put_out_t, NULL);
 
 	context->get_id = MARGO_REGISTER(context->mid, "get",
-			get_in_t, get_out_t, NULL);
+					 get_in_t, get_out_t, NULL);
 
 	context->bulk_get_id = MARGO_REGISTER(context->mid, "bulk_get",
 					      bulk_get_in_t, bulk_get_out_t, NULL);
 
 	context->open_id = MARGO_REGISTER(context->mid, "open",
-			open_in_t, open_out_t, NULL);
+					  open_in_t, open_out_t, NULL);
 
 	context->close_id = MARGO_REGISTER(context->mid, "close",
-			close_in_t, close_out_t, NULL);
+					   close_in_t, close_out_t, NULL);
 
+	context->bench_id= MARGO_REGISTER(context->mid, "bench",
+					  bench_in_t, bench_out_t, NULL);
+
+	context->shutdown_id= MARGO_REGISTER(context->mid, "shutdown",
+					     void, void, NULL);
 	return context;
 }
 
@@ -188,12 +193,6 @@ int kv_close(kv_context *context)
 	ret = HG_Get_output(handle, &close_out);
 	assert(ret == HG_SUCCESS);
 	HG_Free_output(handle, &close_out);
-
-	HG_Destroy(context->put_handle);
-	HG_Destroy(context->get_handle);
-	HG_Destroy(context->bulk_put_handle);
-	HG_Destroy(context->bulk_get_handle);
-	HG_Destroy(context->bench_handle);
 	HG_Destroy(handle);
 	return HG_SUCCESS;
 }
@@ -234,17 +233,25 @@ bench_result *kv_benchmark(kv_context *context, int count) {
 int kv_client_deregister(kv_context *context) {
   int ret;
 
-  ret = kv_close(context);
+  HG_Destroy(context->put_handle);
+  HG_Destroy(context->get_handle);
+  HG_Destroy(context->bulk_put_handle);
+  HG_Destroy(context->bulk_get_handle);
+  HG_Destroy(context->bench_handle);
+  HG_Destroy(context->shutdown_handle);
+
   assert(ret == HG_SUCCESS);
   ret = margo_addr_free(context->mid, context->svr_addr);
+
   assert(ret == HG_SUCCESS);
   margo_finalize(context->mid);
+
   free(context);
 
   return HG_SUCCESS;
 }
 
-int kv_shutdown_server(kv_context *context) {
+int kv_client_shutdown_server(kv_context *context) {
   int ret;
 
   ret = margo_forward(context->shutdown_handle, NULL);

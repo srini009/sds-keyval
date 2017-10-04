@@ -117,9 +117,10 @@ int main(int argc, char *argv[])
       MPI_Barrier(clientComm);
       if (rank==1) {
 	printf("rank %d: sending server a shutdown request\n", rank);
-	kv_shutdown_server(context);
+	kv_client_shutdown_server(context);
       }
 
+      // now finish cleaning up
       kv_client_deregister(context);
       printf("rank %d: client deregistered\n", rank);
     }
