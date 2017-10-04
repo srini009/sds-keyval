@@ -242,11 +242,10 @@ static hg_return_t bulk_put_handler(hg_handle_t h)
 	hg_return_t ret;
 	bulk_put_in_t bpin;
 	bulk_put_out_t bpret;
-	vblob_t *vblob;
+	void *buffer;
 	hg_bulk_t bulk_handle;
 	const struct hg_info *hgi;
 	margo_instance_id mid;
-
 
 	ret = HG_Get_input(h, &bpin);
 	printf("SERVER: BULK PUT key = %d size = %d\n", bpin.key, bpin.size);
@@ -256,14 +255,14 @@ static hg_return_t bulk_put_handler(hg_handle_t h)
 	assert(hgi);
 	mid = margo_hg_info_get_instance(hgi);
 	assert(mid != MARGO_INSTANCE_NULL);
-	
-	vblob = new vblob_t[bpin.size];
-	ret = margo_bulk_create(mid, 1, &((void*)vblob), &bpin.size, HG_BULK_WRITE_ONLY, &bulk_handle);
+
+	buffer = calloc(1, bpin.size);
+	ret = margo_bulk_create(mid, 1, &buffer, &bpin.size, HG_BULK_WRITE_ONLY, &bulk_handle);
 	assert(ret == HG_SUCCESS);
 	ret = margo_bulk_transfer(mid, HG_BULK_PULL, hgi->addr, bpin.bulk_handle, 0, bulk_handle, 0, bpin.size);
 	assert(ret == HG_SUCCESS);
 	
-	TREE->Insert(bpin.key, &(*vblob)); // handling vblob correctly?
+	TREE->Insert(bpin.key, &((vblob_t*)buffer); // handling vblob correctly?
 	assert(ret == HG_SUCCESS);
 
 	bpret = ret;
@@ -273,7 +272,7 @@ static hg_return_t bulk_put_handler(hg_handle_t h)
 	HG_Free_input(h, &bpin);
 	margo_bulk_free(bulk_handle);
 	HG_Destroy(h);
-	delete(vblob);
+	free(vblob);
 	
 	return HG_SUCCESS;
 }
@@ -312,28 +311,66 @@ DEFINE_MARGO_RPC_HANDLER(get_handler)
 static hg_return_t bulk_get_handler(hg_handle_t h)
 {
 	hg_return_t ret;
-	get_in_t in;
-	get_out_t out;
+	bulk_get_in_t bgin;
+	bulk_get_out_t bgout;
+	hg_bulk_t bulk_handle;
+	const struct hg_info *hgi;
+	margo_instance_id mid;
 
-	ret = HG_Get_input(h, &in);
+	ret = HG_Get_input(h, &bgin);
 	assert(ret == HG_SUCCESS);
 
-	/*void 	GetValue (const KeyType &search_key, std::vector< ValueType > &value_list) */
-	std::vector<int> value;
-	TREE->GetValue(in.key, value);
+	/* void GetValue (const KeyType &search_key, std::vector< ValueType > &value_list) */
+	std::vector<vblob_t> *values;
+	values = new(std::vector<vblob_t>); // get heap memory rather than on the stack
+	TREE->GetValue(bgin.key, &(*values)); // is this right for values?
 
-	if (value.size() >= 1) {
-		printf("SERVER: GET: key=%d, value=%d\n",
-				in.key, value.front());
+	// what do we do if we get more than 1 value?
+	// perhaps > 1 or 0 results in an error return value?
+	if (values->size() == 1) {
+	  printf("SERVER: GET: found 1 value for key=%d\n", bgin.key);
+	  vblob_t *buffer = &(values->front());
+	  // will the transfer fit on the client side?
+	  bgout.size = buffer->size();
+	  if (bgout.size <= bgin.size) {
+	    /* get handle info and margo instance */
+	    hgi = margo_get_info(h);
+	    assert(hgi);
+	    mid = margo_hg_info_get_instance(hgi);
+	    assert(mid != MARGO_INSTANCE_NULL);
+
+	    ret = margo_bulk_create(mid, 1, &((void*)buffer), &bgout.size, HG_BULK_READ_ONLY, &bulk_handle);
+	    assert(ret == HG_SUCCESS);
+	    ret = margo_bulk_transfer(mid, HG_PUSH_PULL, hgi->addr, bgin.bulk_handle, 0, bulk_handle, 0, bgout.size);
+	    assert(ret == HG_SUCCESS);
+
+	    bgout.ret = HG_SUCCESS;
+	  }
+	  else {
+	    bgout.ret = HG_SIZE_ERROR;
+	  }
 	}
-	out.value = value.front();
-
-	ret = HG_Respond(h, NULL, NULL, &out);
+	else if (values->size() > 1) {
+	  // get on key returned more than 1 value (return number found)
+	  printf("SERVER: GET: found %d values for key=%d\n", values->size(), bgin.key);
+	  bgout.size = values->size();
+	  bgout.ret = HG_OTHER_ERROR;
+	}
+	else {
+	  // get on key did not find a value (return 0 for number found)
+	  printf("SERVER: GET: found 0 values for key=%d\n", bgin.key);
+	  bgout.size = 0;
+	  bgout.ret = HG_OTHER_ERROR;
+	}
+	
+	ret = HG_Respond(h, NULL, NULL, &bgout);
 	assert(ret == HG_SUCCESS);
 
-	HG_Free_input(h, &in);
+	HG_Free_input(h, &bgin);
+	margo_bulk_free(bulk_handle);
 	HG_Destroy(h);
-
+	delete(values);
+	
 	return HG_SUCCESS;
 }
 DEFINE_MARGO_RPC_HANDLER(bulk_get_handler)

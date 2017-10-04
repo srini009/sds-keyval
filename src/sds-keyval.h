@@ -111,7 +111,9 @@ MERCURY_GEN_PROC(bulk_get_in_t,
 		 ((uint64_t)(key))		\
 		 ((uint64_t)(size))		\
 		 ((hg_bulk_t)(bulk_handle)) )
-MERCURY_GEN_PROC(bulk_get_out_t, ((int32_t)(ret)))
+MERCURY_GEN_PROC(bulk_get_out_t,
+		 ((uint64_t)(size))		\
+		 ((int32_t)(ret)))
 DECLARE_MARGO_RPC_HANDLER(bulk_get_handler)
 
   
