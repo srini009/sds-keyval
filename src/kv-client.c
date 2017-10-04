@@ -8,7 +8,8 @@
 
 
 
-kv_context *kv_client_register(char *addr_str=0) {
+// pass in NULL pointer to get default behavior
+kv_context *kv_client_register(char *addr_str) {
 	int ret;
 	kv_context * context;
 	context = malloc(sizeof(kv_context));
