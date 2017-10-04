@@ -117,7 +117,6 @@ MERCURY_GEN_PROC(bulk_get_out_t,
 		 ((int32_t)(ret)))
 DECLARE_MARGO_RPC_HANDLER(bulk_get_handler)
 
-
 kv_context *kv_client_register(char *addr_str=0);
 kv_context * kv_server_register(margo_instance_id mid);
 

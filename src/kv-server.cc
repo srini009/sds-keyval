@@ -235,7 +235,7 @@ static hg_return_t bulk_put_handler(hg_handle_t h)
 {
 	hg_return_t ret;
 	bulk_put_in_t bpin;
-	bulk_put_out_t bpret;
+	bulk_put_out_t bpout;
 	void *buffer;
 	hg_bulk_t bulk_handle;
 	const struct hg_info *hgi;
@@ -260,8 +260,8 @@ static hg_return_t bulk_put_handler(hg_handle_t h)
 	TREE->Insert(bpin.key, data);
 	assert(ret == HG_SUCCESS);
 
-	bpret = ret;
-	ret = HG_Respond(h, NULL, NULL, &bpret);
+	bpout.ret = ret;
+	ret = HG_Respond(h, NULL, NULL, &bpout);
 	assert(ret == HG_SUCCESS);
 
 	HG_Free_input(h, &bpin);

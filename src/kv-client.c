@@ -8,7 +8,7 @@
 
 
 
-kv_context *kv_client_register(char *addr_str) {
+kv_context *kv_client_register(char *addr_str=0) {
 	int ret;
 	kv_context * context;
 	context = malloc(sizeof(kv_context));
@@ -103,24 +103,24 @@ int kv_put(kv_context *context, void *key, void *value) {
 	return ret;
 }
 
-int kv_bulk_put(kv_context *context, void *key, void *data, uint64_t data_size) {
+int kv_bulk_put(kv_context *context, void *key, void *data, hg_size_t data_size) {
 	int ret;
 	bulk_put_in_t bpin;
-	bulk_put_out_t bpret;
+	bulk_put_out_t bpout;
 
 	bpin.key = *(uint64_t*)key;
 	bpin.size = data_size;
-	ret = margo_bulk_create(context->mid, 1, &data, data_size,
+	ret = margo_bulk_create(context->mid, 1, &data, &data_size,
 				HG_BULK_READ_ONLY, &bpin.bulk_handle);
 	assert(ret == HG_SUCCESS);
 	ret = margo_forward(context->bulk_put_handle, &bpin);
 	assert(ret == HG_SUCCESS);
-	ret = HG_Get_output(context->bulk_put_handle, &bpret);
+	ret = HG_Get_output(context->bulk_put_handle, &bpout);
 	assert(ret == HG_SUCCESS);
-	assert(bpret == HG_SUCCESS); // make sure the server side says all is OK
-	HG_Free_output(context->bulk_put_handle, &bpret);
+	assert(bpout.ret == HG_SUCCESS); // make sure the server side says all is OK
+	HG_Free_output(context->bulk_put_handle, &bpout);
 
-	return ret;
+	return HG_SUCCESS;
 }
 
 int kv_get(kv_context *context, void *key, void *value)
@@ -139,25 +139,25 @@ int kv_get(kv_context *context, void *key, void *value)
 	return ret;
 }
 
-int kv_bulk_get(kv_context *context, void *key, void *data, uint64_t data_size)
+int kv_bulk_get(kv_context *context, void *key, void *data, hg_size_t data_size)
 {
 	int ret;
 	bulk_get_in_t bgin;
-	bulk_get_out_t bgret;
+	bulk_get_out_t bgout;
 
 	bgin.key = *(uint64_t*)key;
 	bgin.size = data_size;
-	ret = margo_bulk_create(context->mid, 1, &data, data_size,
+	ret = margo_bulk_create(context->mid, 1, &data, &data_size,
 				HG_BULK_WRITE_ONLY, &bgin.bulk_handle);
 	assert(ret == HG_SUCCESS);
 	ret = margo_forward(context->bulk_get_handle, &bgin);
 	assert(ret == HG_SUCCESS);
-	ret = HG_Get_output(context->bulk_get_handle, &bgret);
+	ret = HG_Get_output(context->bulk_get_handle, &bgout);
 	assert(ret == HG_SUCCESS);
-	assert(bgret == HG_SUCCESS); // make sure the server side says all is OK
-	HG_Free_output(context->get_handle, &bgret);
+	assert(bgout.ret == HG_SUCCESS); // make sure the server side says all is OK
+	HG_Free_output(context->get_handle, &bgout);
 
-	return ret;
+	return HG_SUCCESS;
 }
 
 int kv_close(kv_context *context)
