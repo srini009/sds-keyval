@@ -338,7 +338,7 @@ static hg_return_t bulk_get_handler(hg_handle_t h)
 	// what do we do if we get more than 1 value?
 	// perhaps > 1 or 0 results in an error return value?
 	if (values.size() == 1) {
-	  printf("SERVER: GET: found 1 value for key=%lu\n", bgin.key);
+	  printf("SERVER: BULK GET: found 1 value for key=%lu\n", bgin.key);
 	  std::vector<char> data = values.front();
 	  // will the transfer fit on the client side?
 	  bgout.size = data.size();
@@ -363,13 +363,13 @@ static hg_return_t bulk_get_handler(hg_handle_t h)
 	}
 	else if (values.size() > 1) {
 	  // get on key returned more than 1 value (return number found)
-	  printf("SERVER: GET: found %lu values for key=%lu\n", values.size(), bgin.key);
+	  printf("SERVER: BULK GET: found %lu values for key=%lu\n", values.size(), bgin.key);
 	  bgout.size = values.size();
 	  bgout.ret = HG_OTHER_ERROR;
 	}
 	else {
 	  // get on key did not find a value (return 0 for number found)
-	  printf("SERVER: GET: found 0 values for key=%lu\n", bgin.key);
+	  printf("SERVER: BULK GET: found 0 values for key=%lu\n", bgin.key);
 	  bgout.size = 0;
 	  bgout.ret = HG_OTHER_ERROR;
 	}

@@ -88,8 +88,8 @@ int main(int argc, char *argv[])
       sleep(2*rank);
 
       // open specified "DB" (pass in the server's address)
-      char *db = "kv-test-db";
-      ret = kv_open(context, server_addr_str, db, KV_UINT, KV_BULK);
+      const char *db = "kv-test-db";
+      ret = kv_open(context, server_addr_str, (char*)db, KV_UINT, KV_BULK);
       
       // put
       uint64_t key = rank;
