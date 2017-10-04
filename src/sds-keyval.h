@@ -38,11 +38,13 @@ typedef struct kv_context_s {
 	hg_id_t open_id;
 	hg_id_t close_id;
 	hg_id_t bench_id;
+	hg_id_t shutdown_id;
 	hg_handle_t put_handle;
         hg_handle_t bulk_put_handle; // necessary?
 	hg_handle_t get_handle;
 	hg_handle_t bulk_get_handle; // necessary?
 	hg_handle_t bench_handle;
+	hg_handle_t shutdown_handle;
 	/* some keyval dodad goes here so the server can discriminate.  Seems
 	 * like it should be some universal identifier we can share with other
 	 * clients */
@@ -122,6 +124,9 @@ DECLARE_MARGO_RPC_HANDLER(bulk_get_handler)
 
 kv_context *kv_client_register(char *addr_str=0);
 kv_context * kv_server_register(margo_instance_id mid);
+
+DECLARE_MARGO_RPC_HANDLER(shutdown_handler)
+
 
 /* both the same: should probably move to common */
 int kv_client_deregister(kv_context *context);

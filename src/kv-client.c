@@ -90,7 +90,10 @@ int kv_open(kv_context *context, char * server, char *name,
 	assert(ret == HG_SUCCESS);
 	ret = margo_create(context->mid, context->svr_addr,
 			   context->bench_id, &(context->bench_handle) );
-
+	assert(ret == HG_SUCCESS);
+	ret = margo_create(context->mid, context->svr_addr,
+			   context->shutdown_id, &(context->shutdown_handle) );
+	assert(ret == HG_SUCCESS);
 	margo_free_output(handle, &open_out);
 	margo_destroy(handle);
 	return ret;
@@ -237,6 +240,15 @@ int kv_client_deregister(kv_context *context) {
   assert(ret == HG_SUCCESS);
   margo_finalize(context->mid);
   free(context);
+
+  return HG_SUCCESS;
+}
+
+int kv_shutdown_server(kv_context *context) {
+  int ret;
+
+  ret = margo_forward(context->shutdown_handle, NULL);
+  assert(ret == HG_SUCCESS);
 
   return HG_SUCCESS;
 }

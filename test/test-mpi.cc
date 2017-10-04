@@ -50,7 +50,10 @@ int main(int argc, char *argv[])
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
+    MPI_Comm clientComm;
+
     if (rank == 0) {
+      MPI_Comm_split(MPI_COMM_WORLD, MPI_UNDEFINED, rank, &clientComm);
       // kv-server
       kv_context *context = kv_server_register(argv[1]);
       hgctx = margo_get_context(context->mid);
@@ -68,14 +71,14 @@ int main(int argc, char *argv[])
       MPI_Bcast(server_addr_str, 128, MPI_BYTE, 0, MPI_COMM_WORLD);
 
       // process requests until finalized
-      margo_wait_for_finalize(context->mid);
+      kv_server_wait_for_shutdown(context);
 
-      // now shutdown
-      printf("rank %d: server deregistering\n", rank);
+      // now finish cleaning up
       kv_server_deregister(context);
       printf("rank %d: server deregistered\n", rank);
     }
     else {
+      MPI_Comm_split(MPI_COMM_WORLD, 1, rank, &clientComm);
       // broadcast (recv) server address
       MPI_Bcast(server_addr_str, 128, MPI_BYTE, 0, MPI_COMM_WORLD);
       printf("client (rank %d): server add_str: %s\n", rank, server_addr_str);
@@ -110,7 +113,13 @@ int main(int argc, char *argv[])
       // close
       ret = kv_close(context);
 
-      printf("rank %d: client deregistering\n", rank);
+      // once all clients are done, one client can signal server
+      MPI_Barrier(clientComm);
+      if (rank==1) {
+	printf("rank %d: sending server a shutdown request\n", rank);
+	kv_shutdown_server(context);
+      }
+
       kv_client_deregister(context);
       printf("rank %d: client deregistered\n", rank);
     }

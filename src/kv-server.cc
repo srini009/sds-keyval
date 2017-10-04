@@ -222,7 +222,7 @@ static hg_return_t close_handler(hg_handle_t h)
 }
 DEFINE_MARGO_RPC_HANDLER(close_handler)
 
-static hg_return_t  put_handler(hg_handle_t h)
+static hg_return_t put_handler(hg_handle_t h)
 {
 	hg_return_t ret;
 	put_in_t in;
@@ -286,7 +286,7 @@ static hg_return_t bulk_put_handler(hg_handle_t h)
 }
 DEFINE_MARGO_RPC_HANDLER(bulk_put_handler)
 
-static hg_return_t  get_handler(hg_handle_t h)
+static hg_return_t get_handler(hg_handle_t h)
 {
 	hg_return_t ret;
 	get_in_t in;
@@ -385,6 +385,32 @@ static hg_return_t bulk_get_handler(hg_handle_t h)
 }
 DEFINE_MARGO_RPC_HANDLER(bulk_get_handler)
 
+static void shutdown_handler(hg_handle_t handle)
+{
+    hg_return_t ret;
+    margo_instance_id mid;
+
+    printf("Got RPC request to shutdown!\n");
+
+    /* get handle info and margo instance */
+    mid = margo_hg_handle_get_instance(handle);
+    assert(mid != MARGO_INSTANCE_NULL);
+
+    ret = margo_respond(handle, NULL);
+    assert(ret == HG_SUCCESS);
+
+    margo_destroy(handle);
+
+    /* NOTE: we assume that the server daemon is using
+     * margo_wait_for_finalize() to suspend until this RPC executes, so there
+     * is no need to send any extra signal to notify it.
+     */
+    margo_finalize(mid);
+
+    return;
+}
+DEFINE_MARGO_RPC_HANDLER(shutdown_handler)
+
 /*
  * from BwTree tests:
  * RandomInsertSpeedTest() - Tests how fast it is to insert keys randomly
@@ -469,7 +495,7 @@ static void RandomInsertSpeedTest(size_t key_num, bench_result *results)
 }
 
 
-static hg_return_t  bench_handler(hg_handle_t h)
+static hg_return_t bench_handler(hg_handle_t h)
 {
     hg_return_t ret = HG_SUCCESS;
     bench_in_t bench_in;
@@ -516,7 +542,7 @@ kv_context *kv_server_register(margo_instance_id mid);
 		return(NULL);
 	}
 	ret = margo_addr_to_string(context->mid, addr_self_string,
-			&addr_self_string_sz, addr_self);
+				   &addr_self_string_sz, addr_self);
 	if(ret != HG_SUCCESS)
 	{
 		fprintf(stderr, "Error: HG_Addr_self()\n");
@@ -527,34 +553,41 @@ kv_context *kv_server_register(margo_instance_id mid);
 	printf("# accepting RPCs on address \"%s\"\n", addr_self_string);
 
 	context->open_id = MARGO_REGISTER(context->mid, "open",
-			open_in_t, open_out_t, open_handler);
+					  open_in_t, open_out_t, open_handler);
 
 	context->close_id = MARGO_REGISTER(context->mid, "close",
-			close_in_t, close_out_t, close_handler);
+					   close_in_t, close_out_t, close_handler);
 
 	context->put_id = MARGO_REGISTER(context->mid, "put",
-			put_in_t, put_out_t, put_handler);
+					 put_in_t, put_out_t, put_handler);
 
 	context->put_id = MARGO_REGISTER(context->mid, "bulk_put",
-			bulk_put_in_t, bulk_put_out_t, bulk_put_handler);
+					 bulk_put_in_t, bulk_put_out_t, bulk_put_handler);
 
 	context->get_id = MARGO_REGISTER(context->mid, "get",
-			get_in_t, get_out_t, get_handler);
+					 get_in_t, get_out_t, get_handler);
 
 	context->get_id = MARGO_REGISTER(context->mid, "bulk_get",
-			bulk_get_in_t, bulk_get_out_t, bulk_get_handler);
+					 bulk_get_in_t, bulk_get_out_t, bulk_get_handler);
 
 	context->bench_id = MARGO_REGISTER(context->mid, "bench",
-		bench_in_t, bench_out_t, bench_handler);
+					   bench_in_t, bench_out_t, bench_handler);
+
+	context->shutdown_id = MARGO_REGISTER(context->mid, "shutdown",
+					      void, void, shutdown_handler);
 
 	return context;
 }
 
+int kv_server_wait_for_shutdown(kv_context *context) {
+  margo_wait_for_finalize(context->mid);
+  return HG_SUCCESS;
+}
+
 /* this is the same as client. should be moved to common utility library */
 int kv_server_deregister(kv_context *context) {
-	margo_wait_for_finalize(context->mid);
-	margo_finalize(context->mid);
-	free(context);
-	delete(TREE);
-	return 0;
+  free(context);
+  delete(TREE);
+  return HG_SUCCESS;
 }
+
