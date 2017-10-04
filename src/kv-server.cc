@@ -133,24 +133,34 @@ DEFINE_MARGO_RPC_HANDLER(bench_handler)
 /* keyval-specific stuff can go here */
 #include <bwtree.h>
 #include <vector>
+#include <boost/functional/hash.hpp>
 
-size_t my_hash(const std::vector<char> &v) {
-  size_t hash = 0;
-  boost::hash_range(hash, v.begin(), v.end());
-  return hash;
-}
+struct my_hash {
+  size_t operator()(const std::vector<char> &v) const {
+    size_t hash = 0;
+    boost::hash_range(hash, v.begin(), v.end());
+    return hash;
+  }
+};
 
-bool my_equal_to(const std::vector<char> &v1, const std::vector<char> &v2) {
-  return my_hash(v1) == my_hash(v2);
-}
+struct my_equal_to {
+  bool operator()(const std::vector<char> &v1, const std::vector<char> &v2) const {
+    size_t h1 = 0;
+    size_t h2 = 0;
+    boost::hash_range(h1, v1.begin(), v1.end());
+    boost::hash_range(h2, v2.begin(), v2.end());
+    return (h1 == h2);
+  }
+};
 
-wangziqi2013::bwtree::BwTree<uint64_t, std::vector<char>,
-			     std::less<uint64_t>,
-			     std::equal_to<uint64_t>,
-			     std::hash<uint64_t>,
-			     my_equal_to,
-			     my_hash> *TREE;
+using namespace wangziqi2013::bwtree;
 
+BwTree<uint64_t, std::vector<char>,
+       std::less<uint64_t>,
+       std::equal_to<uint64_t>,
+       std::hash<uint64_t>,
+       my_equal_to,
+       my_hash> *TREE;
 
 static hg_return_t open_handler(hg_handle_t h)
 {
@@ -160,12 +170,13 @@ static hg_return_t open_handler(hg_handle_t h)
 
 	ret = margo_get_input(h, &in);
 
-	TREE = new(wangziqi2013::bwtree::BwTree<uint64_t, std::vector<char>,
-		                                std::less<uint64_t>,
-		                                std::equal_to<uint64_t>,
-                                		std::hash<uint64_t>,
-		                                my_equal_to,
-                                 		my_hash>);
+	TREE = new BwTree<uint64_t, std::vector<char>,
+			  std::less<uint64_t>,
+			  std::equal_to<uint64_t>,
+			  std::hash<uint64_t>,
+			  my_equal_to,
+			  my_hash>();
+
 	TREE->SetDebugLogging(0);
 	TREE->UpdateThreadLocal(1);
 	TREE->AssignGCID(0);
@@ -219,7 +230,10 @@ static hg_return_t  put_handler(hg_handle_t h)
 
 
 	ret = HG_Get_input(h, &in);
-	TREE->Insert(in.key, in.value);
+	std::vector<char> data;
+	data.resize(sizeof(in.value));
+	memcpy(data.data(), &in.value, sizeof(in.value));
+	TREE->Insert(in.key, data);
 	assert(ret == HG_SUCCESS);
 
 	ret = HG_Respond(h, NULL, NULL, &out);
@@ -236,13 +250,12 @@ static hg_return_t bulk_put_handler(hg_handle_t h)
 	hg_return_t ret;
 	bulk_put_in_t bpin;
 	bulk_put_out_t bpout;
-	void *buffer;
 	hg_bulk_t bulk_handle;
 	const struct hg_info *hgi;
 	margo_instance_id mid;
 
 	ret = HG_Get_input(h, &bpin);
-	printf("SERVER: BULK PUT key = %d size = %d\n", bpin.key, bpin.size);
+	printf("SERVER: BULK PUT key = %lu size = %lu\n", bpin.key, bpin.size);
 
 	/* get handle info and margo instance */
 	hgi = margo_get_info(h);
@@ -252,7 +265,8 @@ static hg_return_t bulk_put_handler(hg_handle_t h)
 
 	std::vector<char> data;
 	data.resize(bpin.size);
-	ret = margo_bulk_create(mid, 1, &((void*)data.data()), &bpin.size, HG_BULK_WRITE_ONLY, &bulk_handle);
+	void *buffer = (void*)data.data();
+	ret = margo_bulk_create(mid, 1, (void**)&buffer, &bpin.size, HG_BULK_WRITE_ONLY, &bulk_handle);
 	assert(ret == HG_SUCCESS);
 	ret = margo_bulk_transfer(mid, HG_BULK_PULL, hgi->addr, bpin.bulk_handle, 0, bulk_handle, 0, bpin.size);
 	assert(ret == HG_SUCCESS);
@@ -283,14 +297,17 @@ static hg_return_t  get_handler(hg_handle_t h)
 	assert(ret == HG_SUCCESS);
 
 	/*void 	GetValue (const KeyType &search_key, std::vector< ValueType > &value_list) */
-	std::vector<int> value;
-	TREE->GetValue(in.key, value);
+	std::vector<std::vector<char>> values;
+	TREE->GetValue(in.key, values);
 
-	if (value.size() >= 1) {
-		out.value = value.front();
+	// this needs to deal with cases where values.size() > 1 or == 0
+	int value = 0;
+	if (values.size() >= 1) {
+	  std::vector<char> data = values.front();
+	  memcpy(&value, data.data(), sizeof(value));
 	} else {
 	    out.ret = -1;
-	}
+	out.value = value;
 
 	ret = HG_Respond(h, NULL, NULL, &out);
 	assert(ret == HG_SUCCESS);
@@ -321,7 +338,7 @@ static hg_return_t bulk_get_handler(hg_handle_t h)
 	// what do we do if we get more than 1 value?
 	// perhaps > 1 or 0 results in an error return value?
 	if (values.size() == 1) {
-	  printf("SERVER: GET: found 1 value for key=%d\n", bgin.key);
+	  printf("SERVER: GET: found 1 value for key=%lu\n", bgin.key);
 	  std::vector<char> data = values.front();
 	  // will the transfer fit on the client side?
 	  bgout.size = data.size();
@@ -332,7 +349,8 @@ static hg_return_t bulk_get_handler(hg_handle_t h)
 	    mid = margo_hg_info_get_instance(hgi);
 	    assert(mid != MARGO_INSTANCE_NULL);
 
-	    ret = margo_bulk_create(mid, 1, &((void*)data.data()), &bgout.size, HG_BULK_READ_ONLY, &bulk_handle);
+	    void *buffer = (void*)data.data();
+	    ret = margo_bulk_create(mid, 1, (void**)&buffer, &bgout.size, HG_BULK_READ_ONLY, &bulk_handle);
 	    assert(ret == HG_SUCCESS);
 	    ret = margo_bulk_transfer(mid, HG_BULK_PUSH, hgi->addr, bgin.bulk_handle, 0, bulk_handle, 0, bgout.size);
 	    assert(ret == HG_SUCCESS);
@@ -345,13 +363,13 @@ static hg_return_t bulk_get_handler(hg_handle_t h)
 	}
 	else if (values.size() > 1) {
 	  // get on key returned more than 1 value (return number found)
-	  printf("SERVER: GET: found %d values for key=%d\n", values.size(), bgin.key);
+	  printf("SERVER: GET: found %lu values for key=%lu\n", values.size(), bgin.key);
 	  bgout.size = values.size();
 	  bgout.ret = HG_OTHER_ERROR;
 	}
 	else {
 	  // get on key did not find a value (return 0 for number found)
-	  printf("SERVER: GET: found 0 values for key=%d\n", bgin.key);
+	  printf("SERVER: GET: found 0 values for key=%lu\n", bgin.key);
 	  bgout.size = 0;
 	  bgout.ret = HG_OTHER_ERROR;
 	}
@@ -459,6 +477,7 @@ static hg_return_t  bench_handler(hg_handle_t h)
     bench_result random_insert;
 
     ret = HG_Get_input(h, &bench_in);
+    assert(ret == HG_SUCCESS);
     printf("benchmarking %d keys\n", bench_in.count);
     RandomInsertSpeedTest(bench_in.count, &random_insert);
     bench_out.result.nkeys = random_insert.nkeys*2;
