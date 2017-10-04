@@ -22,7 +22,8 @@ typedef enum {
 	KV_INT,
 	KV_FLOAT,
 	KV_DOUBLE,
-	KV_STRING
+	KV_STRING,
+	KV_BULK
 } kv_type;
 
 /* do we need one for server, one for client? */
@@ -35,9 +36,9 @@ typedef struct kv_context_s {
 	hg_id_t close_id;
 	hg_id_t bench_id;
 	hg_handle_t put_handle;
-	hg_handle_t bulk_put_handle;
+        hg_handle_t bulk_put_handle; // necessary?
 	hg_handle_t get_handle;
-	hg_handle_t bulk_get_handle;
+	hg_handle_t bulk_get_handle; // necessary?
 	hg_handle_t bench_handle;
 	/* some keyval dodad goes here so the server can discriminate.  Seems
 	 * like it should be some universal identifier we can share with other
@@ -116,7 +117,7 @@ MERCURY_GEN_PROC(bulk_get_out_t,
 		 ((int32_t)(ret)))
 DECLARE_MARGO_RPC_HANDLER(bulk_get_handler)
 
-  
+
 kv_context *kv_client_register(char *addr_str=0);
 kv_context * kv_server_register(margo_instance_id mid);
 

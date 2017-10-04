@@ -134,28 +134,22 @@ DEFINE_MARGO_RPC_HANDLER(bench_handler)
 #include <bwtree.h>
 #include <vector>
 
-typedef std::vector<char> vblob_t; // how ParSplice manages its "blobs" (i.e. the Rd type)
-
-struct vblob_hash {
-  size_t operator()(const vblob_t& vblob) {
-    size_t hash = 0;
-    boost::hash_range(hash, vblob_t.begin(), vblob_t.end());
-    return hash;
-  }
-};
-
-struct vblob_equal_to {
-  bool operator()(const vblob_t& vb1, const vblob_t& vb2) {
-    return vblob_hash(vb1) == vblob_hash(vb2);
-  }
+size_t my_hash(const std::vector<char> &v) {
+  size_t hash = 0;
+  boost::hash_range(hash, v.begin(), v.end());
+  return hash;
 }
 
-wangziqi2013::bwtree::BwTree<uint64_t, vblob_t,
+bool my_equal_to(const std::vector<char> &v1, const std::vector<char> &v2) {
+  return my_hash(v1) == my_hash(v2);
+}
+
+wangziqi2013::bwtree::BwTree<uint64_t, std::vector<char>,
 			     std::less<uint64_t>,
 			     std::equal_to<uint64_t>,
 			     std::hash<uint64_t>,
-			     vblob_equal_to,
-			     vblob_hash> *TREE;
+			     my_equal_to,
+			     my_hash> *TREE;
 
 
 static hg_return_t open_handler(hg_handle_t h)
@@ -166,12 +160,12 @@ static hg_return_t open_handler(hg_handle_t h)
 
 	ret = margo_get_input(h, &in);
 
-	TREE = new(wangziqi2013::bwtree::BwTree<uint64_t, vblob_t,
+	TREE = new(wangziqi2013::bwtree::BwTree<uint64_t, std::vector<char>,
 		                                std::less<uint64_t>,
 		                                std::equal_to<uint64_t>,
                                 		std::hash<uint64_t>,
-		                                vblob_equal_to,
-                                 		vblob_hash>);
+		                                my_equal_to,
+                                 		my_hash>);
 	TREE->SetDebugLogging(0);
 	TREE->UpdateThreadLocal(1);
 	TREE->AssignGCID(0);
@@ -256,13 +250,14 @@ static hg_return_t bulk_put_handler(hg_handle_t h)
 	mid = margo_hg_info_get_instance(hgi);
 	assert(mid != MARGO_INSTANCE_NULL);
 
-	buffer = calloc(1, bpin.size);
-	ret = margo_bulk_create(mid, 1, &buffer, &bpin.size, HG_BULK_WRITE_ONLY, &bulk_handle);
+	std::vector<char> data;
+	data.resize(bpin.size);
+	ret = margo_bulk_create(mid, 1, &((void*)data.data()), &bpin.size, HG_BULK_WRITE_ONLY, &bulk_handle);
 	assert(ret == HG_SUCCESS);
 	ret = margo_bulk_transfer(mid, HG_BULK_PULL, hgi->addr, bpin.bulk_handle, 0, bulk_handle, 0, bpin.size);
 	assert(ret == HG_SUCCESS);
 	
-	TREE->Insert(bpin.key, &((vblob_t*)buffer); // handling vblob correctly?
+	TREE->Insert(bpin.key, data);
 	assert(ret == HG_SUCCESS);
 
 	bpret = ret;
@@ -272,7 +267,6 @@ static hg_return_t bulk_put_handler(hg_handle_t h)
 	HG_Free_input(h, &bpin);
 	margo_bulk_free(bulk_handle);
 	HG_Destroy(h);
-	free(vblob);
 	
 	return HG_SUCCESS;
 }
@@ -321,17 +315,16 @@ static hg_return_t bulk_get_handler(hg_handle_t h)
 	assert(ret == HG_SUCCESS);
 
 	/* void GetValue (const KeyType &search_key, std::vector< ValueType > &value_list) */
-	std::vector<vblob_t> *values;
-	values = new(std::vector<vblob_t>); // get heap memory rather than on the stack
-	TREE->GetValue(bgin.key, &(*values)); // is this right for values?
+	std::vector<std::vector<char>> values;
+	TREE->GetValue(bgin.key, values); // is this right for values?
 
 	// what do we do if we get more than 1 value?
 	// perhaps > 1 or 0 results in an error return value?
-	if (values->size() == 1) {
+	if (values.size() == 1) {
 	  printf("SERVER: GET: found 1 value for key=%d\n", bgin.key);
-	  vblob_t *buffer = &(values->front());
+	  std::vector<char> data = values.front();
 	  // will the transfer fit on the client side?
-	  bgout.size = buffer->size();
+	  bgout.size = data.size();
 	  if (bgout.size <= bgin.size) {
 	    /* get handle info and margo instance */
 	    hgi = margo_get_info(h);
@@ -339,9 +332,9 @@ static hg_return_t bulk_get_handler(hg_handle_t h)
 	    mid = margo_hg_info_get_instance(hgi);
 	    assert(mid != MARGO_INSTANCE_NULL);
 
-	    ret = margo_bulk_create(mid, 1, &((void*)buffer), &bgout.size, HG_BULK_READ_ONLY, &bulk_handle);
+	    ret = margo_bulk_create(mid, 1, &((void*)data.data()), &bgout.size, HG_BULK_READ_ONLY, &bulk_handle);
 	    assert(ret == HG_SUCCESS);
-	    ret = margo_bulk_transfer(mid, HG_PUSH_PULL, hgi->addr, bgin.bulk_handle, 0, bulk_handle, 0, bgout.size);
+	    ret = margo_bulk_transfer(mid, HG_BULK_PUSH, hgi->addr, bgin.bulk_handle, 0, bulk_handle, 0, bgout.size);
 	    assert(ret == HG_SUCCESS);
 
 	    bgout.ret = HG_SUCCESS;
@@ -350,10 +343,10 @@ static hg_return_t bulk_get_handler(hg_handle_t h)
 	    bgout.ret = HG_SIZE_ERROR;
 	  }
 	}
-	else if (values->size() > 1) {
+	else if (values.size() > 1) {
 	  // get on key returned more than 1 value (return number found)
-	  printf("SERVER: GET: found %d values for key=%d\n", values->size(), bgin.key);
-	  bgout.size = values->size();
+	  printf("SERVER: GET: found %d values for key=%d\n", values.size(), bgin.key);
+	  bgout.size = values.size();
 	  bgout.ret = HG_OTHER_ERROR;
 	}
 	else {
@@ -369,7 +362,6 @@ static hg_return_t bulk_get_handler(hg_handle_t h)
 	HG_Free_input(h, &bgin);
 	margo_bulk_free(bulk_handle);
 	HG_Destroy(h);
-	delete(values);
 	
 	return HG_SUCCESS;
 }
@@ -483,7 +475,7 @@ static hg_return_t  bench_handler(hg_handle_t h)
 DEFINE_MARGO_RPC_HANDLER(bench_handler)
 #endif
 
-kv_context * kv_server_register(margo_instance_id mid)
+kv_context *kv_server_register(margo_instance_id mid);
 {
 	int ret;
 	hg_addr_t addr_self;
@@ -524,8 +516,14 @@ kv_context * kv_server_register(margo_instance_id mid)
 	context->put_id = MARGO_REGISTER(context->mid, "put",
 			put_in_t, put_out_t, put_handler);
 
+	context->put_id = MARGO_REGISTER(context->mid, "bulk_put",
+			bulk_put_in_t, bulk_put_out_t, bulk_put_handler);
+
 	context->get_id = MARGO_REGISTER(context->mid, "get",
 			get_in_t, get_out_t, get_handler);
+
+	context->get_id = MARGO_REGISTER(context->mid, "bulk_get",
+			bulk_get_in_t, bulk_get_out_t, bulk_get_handler);
 
 	context->bench_id = MARGO_REGISTER(context->mid, "bench",
 		bench_in_t, bench_out_t, bench_handler);

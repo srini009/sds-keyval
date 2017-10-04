@@ -70,8 +70,16 @@ int kv_open(kv_context *context, char * server, char *name,
 			context->put_id, &(context->put_handle) );
 	assert(ret == HG_SUCCESS);
 	ret = margo_create(context->mid, context->svr_addr,
+			context->put_id, &(context->bulk_put_handle) );
+	assert(ret == HG_SUCCESS);
+	ret = margo_create(context->mid, context->svr_addr,
 			context->get_id, &(context->get_handle) );
 	assert(ret == HG_SUCCESS);
+	ret = margo_create(context->mid, context->svr_addr,
+			context->get_id, &(context->bulk_get_handle) );
+	assert(ret == HG_SUCCESS);
+	ret = margo_create(context->mid, context->svr_addr,
+		context->bench_id, &(context->bench_handle) );
 
 	margo_free_output(handle, &open_out);
 	margo_destroy(handle);
@@ -95,14 +103,14 @@ int kv_put(kv_context *context, void *key, void *value) {
 	return ret;
 }
 
-int kv_bulk_put(kv_context *context, void *key, void *value, uint64_t value_size) {
+int kv_bulk_put(kv_context *context, void *key, void *data, uint64_t data_size) {
 	int ret;
 	bulk_put_in_t bpin;
 	bulk_put_out_t bpret;
 
 	bpin.key = *(uint64_t*)key;
-	bpin.size = value_size;
-	ret = margo_bulk_create(context->mid, 1, value, value_size,
+	bpin.size = data_size;
+	ret = margo_bulk_create(context->mid, 1, &data, data_size,
 				HG_BULK_READ_ONLY, &bpin.bulk_handle);
 	assert(ret == HG_SUCCESS);
 	ret = margo_forward(context->bulk_put_handle, &bpin);
@@ -131,15 +139,15 @@ int kv_get(kv_context *context, void *key, void *value)
 	return ret;
 }
 
-int kv_bulk_get(kv_context *context, void *key, void *value, uint64_t value_size)
+int kv_bulk_get(kv_context *context, void *key, void *data, uint64_t data_size)
 {
 	int ret;
 	bulk_get_in_t bgin;
 	bulk_get_out_t bgret;
 
 	bgin.key = *(uint64_t*)key;
-	bgin.size = value_size;
-	ret = margo_bulk_create(context->mid, 1, value, value_size,
+	bgin.size = data_size;
+	ret = margo_bulk_create(context->mid, 1, &data, data_size,
 				HG_BULK_WRITE_ONLY, &bgin.bulk_handle);
 	assert(ret == HG_SUCCESS);
 	ret = margo_forward(context->bulk_get_handle, &bgin);
