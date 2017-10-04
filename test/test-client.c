@@ -3,7 +3,7 @@
 
 int main(int argc, char **argv) {
 	int ret;
-	kv_context * context = kv_client_register(argc, argv);
+	kv_context * context = kv_client_register(NULL);
 
 	/* open */
 	ret = kv_open(context, argv[1], "booger", KV_INT, KV_INT);

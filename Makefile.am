@@ -19,21 +19,29 @@ noinst_HEADERS = src/BwTree/src/bwtree.h \
 
 check_PROGRAMS = test/test-client \
 		test/test-server \
-		test/bench-client
+		test/bench-client \
+		test/test-mpi
 
 test_bench_client_SOURCES = test/bench-client.cc
 test_bench_client_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src
 test_bench_client_LDADD = ${LIBS} -lkvclient
 
 TESTS = test/test-client \
-        test/test-server
+        test/test-server \
+	test/bench-client \
+	test/test-mpi
 
 test_test_client_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src
 test_test_client_LDADD =  ${LIBS} -lkvclient
 
 test_test_server_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src
-test_test_server_LDADD =  ${LIBS} -lkvserver
+test_test_server_LDADD =  ${LIBS} -lkvserver -lstdc++
+
+test_test_mpi_SOURCES = test/test-mpi.cc
+test_test_mpi_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src
+test_test_mpi_LDADD =  ${LIBS} -lkvclient -lkvserver
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = maint/kv-server.pc \
 		 maint/kv-client.pc
+

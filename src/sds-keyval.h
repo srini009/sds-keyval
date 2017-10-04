@@ -20,6 +20,7 @@ typedef int kv_id;
 
 typedef enum {
 	KV_INT,
+	KV_UINT,
 	KV_FLOAT,
 	KV_DOUBLE,
 	KV_STRING,
@@ -31,7 +32,9 @@ typedef struct kv_context_s {
 	margo_instance_id mid;
 	hg_addr_t svr_addr;
 	hg_id_t put_id;
+	hg_id_t bulk_put_id;
 	hg_id_t get_id;
+	hg_id_t bulk_get_id;
 	hg_id_t open_id;
 	hg_id_t close_id;
 	hg_id_t bench_id;
@@ -128,8 +131,10 @@ int kv_server_deregister(kv_context *context);
 int kv_open(kv_context *context, char *server, char *name,
 		kv_type keytype, kv_type valtype);
 int kv_put(kv_context *context, void *key, void *value);
+int kv_bulk_put(kv_context *context, void *key, void *data, hg_size_t data_size);
 int kv_get(kv_context *context, void *key, void *value);
 bench_result *kv_benchmark(kv_context *context, int count);
+int kv_bulk_get(kv_context *context, void *key, void *data, hg_size_t data_size);
 int kv_close(kv_context *context);
 
 

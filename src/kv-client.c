@@ -28,8 +28,17 @@ kv_context *kv_client_register(char *addr_str) {
 	context->put_id = MARGO_REGISTER(context->mid, "put",
 			put_in_t, put_out_t, NULL);
 
+	context->put_id = MARGO_REGISTER(context->mid, "put",
+			put_in_t, put_out_t, NULL);
+
+	context->bulk_put_id = MARGO_REGISTER(context->mid, "bulk_put",
+					      bulk_put_in_t, bulk_put_out_t, NULL);
+
 	context->get_id = MARGO_REGISTER(context->mid, "get",
 			get_in_t, get_out_t, NULL);
+
+	context->bulk_get_id = MARGO_REGISTER(context->mid, "bulk_get",
+					      bulk_get_in_t, bulk_get_out_t, NULL);
 
 	context->open_id = MARGO_REGISTER(context->mid, "open",
 			open_in_t, open_out_t, NULL);
@@ -68,19 +77,19 @@ int kv_open(kv_context *context, char * server, char *name,
 	 * BAKE has a handle-caching mechanism we should consult.
 	 * should margo be caching handles? */
 	ret = margo_create(context->mid, context->svr_addr,
-			context->put_id, &(context->put_handle) );
+			   context->put_id, &(context->put_handle) );
 	assert(ret == HG_SUCCESS);
 	ret = margo_create(context->mid, context->svr_addr,
-			context->put_id, &(context->bulk_put_handle) );
+			   context->bulk_put_id, &(context->bulk_put_handle) );
 	assert(ret == HG_SUCCESS);
 	ret = margo_create(context->mid, context->svr_addr,
-			context->get_id, &(context->get_handle) );
+			   context->get_id, &(context->get_handle) );
 	assert(ret == HG_SUCCESS);
 	ret = margo_create(context->mid, context->svr_addr,
-			context->get_id, &(context->bulk_get_handle) );
+			   context->bulk_get_id, &(context->bulk_get_handle) );
 	assert(ret == HG_SUCCESS);
 	ret = margo_create(context->mid, context->svr_addr,
-		context->bench_id, &(context->bench_handle) );
+			   context->bench_id, &(context->bench_handle) );
 
 	margo_free_output(handle, &open_out);
 	margo_destroy(handle);
@@ -156,7 +165,7 @@ int kv_bulk_get(kv_context *context, void *key, void *data, hg_size_t data_size)
 	ret = HG_Get_output(context->bulk_get_handle, &bgout);
 	assert(ret == HG_SUCCESS);
 	assert(bgout.ret == HG_SUCCESS); // make sure the server side says all is OK
-	HG_Free_output(context->get_handle, &bgout);
+	HG_Free_output(context->bulk_get_handle, &bgout);
 
 	return HG_SUCCESS;
 }
@@ -169,7 +178,7 @@ int kv_close(kv_context *context)
 	put_out_t close_out;
 
 	ret = margo_create(context->mid, context->svr_addr,
-			context->close_id, &handle);
+			   context->close_id, &handle);
 	assert(ret == HG_SUCCESS);
 	ret = margo_forward(handle, &close_in);
 	assert(ret == HG_SUCCESS);
@@ -179,8 +188,11 @@ int kv_close(kv_context *context)
 
 	HG_Destroy(context->put_handle);
 	HG_Destroy(context->get_handle);
+	HG_Destroy(context->bulk_put_handle);
+	HG_Destroy(context->bulk_get_handle);
+	HG_Destroy(context->bench_handle);
 	HG_Destroy(handle);
-	return ret;
+	return HG_SUCCESS;
 }
 
 bench_result *kv_benchmark(kv_context *context, int count) {
@@ -217,8 +229,14 @@ bench_result *kv_benchmark(kv_context *context, int count) {
 }
 
 int kv_client_deregister(kv_context *context) {
-	margo_addr_free(context->mid, context->svr_addr);
-	margo_finalize(context->mid);
-	free(context);
-	return 0;
+  int ret;
+
+  ret = kv_close(context);
+  assert(ret == HG_SUCCESS);
+  ret = margo_addr_free(context->mid, context->svr_addr);
+  assert(ret == HG_SUCCESS);
+  margo_finalize(context->mid);
+  free(context);
+
+  return HG_SUCCESS;
 }
