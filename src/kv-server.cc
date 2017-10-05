@@ -21,7 +21,6 @@ static hg_return_t open_handler(hg_handle_t h)
 	open_out_t out;
 
 	ret = margo_get_input(h, &in);
-	printf("SERVER: OPEN %s\n", in.name);
 
 	TREE.SetDebugLogging(0);
 	TREE.UpdateThreadLocal(1);
@@ -54,7 +53,6 @@ static hg_return_t close_handler(hg_handle_t h)
 	close_in_t in;
 	close_out_t out;
 
-	printf("SERVER: CLOSE\n");
 
 	ret = HG_Get_input(h, &in);
 	assert(ret == HG_SUCCESS);
@@ -76,7 +74,6 @@ static hg_return_t  put_handler(hg_handle_t h)
 
 
 	ret = HG_Get_input(h, &in);
-	printf("SERVER: PUT key = %d val = %d\n", in.key, in.value);
 	TREE.Insert(in.key, in.value);
 	assert(ret == HG_SUCCESS);
 
@@ -104,8 +101,6 @@ static hg_return_t  get_handler(hg_handle_t h)
 	TREE.GetValue(in.key, value);
 
 	if (value.size() >= 1) {
-		printf("SERVER: GET: key=%d, value=%d\n",
-				in.key, value.front());
 		out.value = value.front();
 	} else {
 	    out.ret = -1;
