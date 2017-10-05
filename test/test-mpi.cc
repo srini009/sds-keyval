@@ -88,8 +88,6 @@ int main(int argc, char *argv[])
       printf("client (rank %d): client add_str: %s\n", rank, client_addr_str);
       kv_context *context = kv_client_register(client_addr_str);
       
-      sleep(2*rank);
-
       // open specified "DB" (pass in the server's address)
       const char *db = "kv-test-db";
       ret = kv_open(context, server_addr_str, (char*)db, KV_UINT, KV_BULK);
@@ -101,6 +99,8 @@ int main(int argc, char *argv[])
       put_data.resize(sizeof(put_val));
       memcpy(put_data.data(), &put_val, sizeof(put_val));
       ret = kv_bulk_put(context, (void*)&key, (void*)put_data.data(), put_data.size());
+
+      sleep(2);
 
       // get
       int get_val;

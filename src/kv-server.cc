@@ -155,12 +155,16 @@ struct my_equal_to {
 
 using namespace wangziqi2013::bwtree;
 
+// since this is global, we're assuming this server instance
+// will manage a single DB
 BwTree<uint64_t, std::vector<char>,
        std::less<uint64_t>,
        std::equal_to<uint64_t>,
        std::hash<uint64_t>,
        my_equal_to,
-       my_hash> *TREE;
+       my_hash> *TREE = NULL;
+
+const char *my_db = "kv-test-db";
 
 static hg_return_t open_handler(hg_handle_t h)
 {
@@ -170,23 +174,33 @@ static hg_return_t open_handler(hg_handle_t h)
 
 	ret = margo_get_input(h, &in);
 
-	TREE = new BwTree<uint64_t, std::vector<char>,
-			  std::less<uint64_t>,
-			  std::equal_to<uint64_t>,
-			  std::hash<uint64_t>,
-			  my_equal_to,
-			  my_hash>();
+	if (strcmp(in.name, my_db) == 0) {
+	  if (!TREE) {
+	    printf("SERVER: initializing BwTree instance to manage %s\n", in.name);
+	    TREE = new BwTree<uint64_t, std::vector<char>,
+			      std::less<uint64_t>,
+			      std::equal_to<uint64_t>,
+			      std::hash<uint64_t>,
+			      my_equal_to,
+			      my_hash>();
 
-	TREE->SetDebugLogging(0);
-	TREE->UpdateThreadLocal(1);
-	TREE->AssignGCID(0);
+	    TREE->SetDebugLogging(0);
+	    TREE->UpdateThreadLocal(1);
+	    TREE->AssignGCID(0);
+	  }
+	  else {
+	    printf("SERVER: %s already open and BwTree is initialized\n", in.name);
+	  }
+	  out.ret = HG_SUCCESS;
+	}
+	else {
+	  printf("SERVER: currently managing %s and unable to process OPEN request for %s\n", my_db, in.name);
+	  out.ret = HG_OTHER_ERROR;
+	}
 
 	/* TODO: something with in.keytype and in.valtype.  In C I would get
 	 * away with sloppy casting.  Not sure how to do the same with a C++
 	 * template.  */
-
-	/* I don't know how to check for error */
-	out.ret = HG_SUCCESS;
 
 	// this works
 	ret = HG_Respond(h, NULL, NULL, &out);
@@ -271,8 +285,16 @@ static hg_return_t bulk_put_handler(hg_handle_t h)
 	ret = margo_bulk_transfer(mid, HG_BULK_PULL, hgi->addr, bpin.bulk_handle, 0, bulk_handle, 0, bpin.size);
 	assert(ret == HG_SUCCESS);
 	
-	TREE->Insert(bpin.key, data);
-	assert(ret == HG_SUCCESS);
+	if (TREE->Insert(bpin.key, data)) {
+	  printf("SERVER: TREE Insert succeeded for key = %lu\n", bpin.key);
+	  bpout.ret = HG_SUCCESS;
+	}
+	else {
+	  // BwTree Insert returns False if the key-value pair already
+	  // exists in the DB.
+	  printf("SERVER: TREE Insert failed for key = %lu\n", bpin.key);
+	  bpout.ret = HG_OTHER_ERROR;
+	}
 
 	bpout.ret = ret;
 	ret = HG_Respond(h, NULL, NULL, &bpout);
@@ -390,7 +412,7 @@ static void shutdown_handler(hg_handle_t handle)
     hg_return_t ret;
     margo_instance_id mid;
 
-    printf("Got RPC request to shutdown!\n");
+    printf("SERVER: got RPC request to shutdown\n");
 
     /* get handle info and margo instance */
     mid = margo_hg_handle_get_instance(handle);
@@ -406,6 +428,8 @@ static void shutdown_handler(hg_handle_t handle)
      * is no need to send any extra signal to notify it.
      */
     margo_finalize(mid);
+
+    printf("SERVER: margo finalized\n");
 
     return;
 }
@@ -588,6 +612,7 @@ int kv_server_wait_for_shutdown(kv_context *context) {
 int kv_server_deregister(kv_context *context) {
   free(context);
   delete(TREE);
+  printf("SERVER: deregistered, cleaned up BwTree instance\n");
   return HG_SUCCESS;
 }
 
