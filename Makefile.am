@@ -1,7 +1,9 @@
 ACLOCAL_AMFLAGS="-Im4"
 
-#bin_PROGRAMS = kv-client\
-#		kv-server
+bin_PROGRAMS = test/bench-client
+test_bench_client_SOURCES = test/bench-client.cc
+test_bench_client_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src
+test_bench_client_LDADD = ${LIBS} -lkvclient
 
 lib_LTLIBRARIES = libkvclient.la \
                   libkvserver.la

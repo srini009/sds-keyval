@@ -106,8 +106,10 @@ static hg_return_t  get_handler(hg_handle_t h)
 	if (value.size() >= 1) {
 		printf("SERVER: GET: key=%d, value=%d\n",
 				in.key, value.front());
+		out.value = value.front();
+	} else {
+	    out.ret = -1;
 	}
-	out.value = value.front();
 
 	ret = HG_Respond(h, NULL, NULL, &out);
 	assert(ret == HG_SUCCESS);
