@@ -185,8 +185,11 @@ static hg_return_t open_handler(hg_handle_t h)
 			      my_hash>();
 
 	    TREE->SetDebugLogging(0);
-	    TREE->UpdateThreadLocal(1);
-	    TREE->AssignGCID(0);
+	    //TREE->UpdateThreadLocal(1);
+	    //TREE->AssignGCID(0);
+
+	    size_t num_threads = TREE->GetThreadNum();
+	    printf("SERVER: BwTree initialized, using %lu threads\n", num_threads);
 	  }
 	  else {
 	    printf("SERVER: %s already open and BwTree is initialized\n", in.name);
