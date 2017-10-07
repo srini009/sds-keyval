@@ -178,11 +178,11 @@ static hg_return_t open_handler(hg_handle_t h)
 			      std::equal_to<uint64_t>,
 			      std::hash<uint64_t>,
 			      my_equal_to,
-			      my_hash>(false);
+			      my_hash>();
 
 	    TREE->SetDebugLogging(1);
-	    //TREE->UpdateThreadLocal(1);
-	    //TREE->AssignGCID(0);
+	    TREE->UpdateThreadLocal(1);
+	    TREE->AssignGCID(0);
 
 	    size_t num_threads = TREE->GetThreadNum();
 	    printf("SERVER: BwTree initialized, using %lu thread(s)\n", num_threads);
@@ -621,8 +621,9 @@ int kv_server_wait_for_shutdown(kv_context *context) {
 /* this is the same as client. should be moved to common utility library */
 int kv_server_deregister(kv_context *context) {
   free(context);
-  delete TREE;
-  printf("SERVER: deregistered, cleaned up BwTree instance\n");
+  //delete TREE; // there seems to be a bug somewhere in BwTree
+  //printf("SERVER: deregistered, cleaned up BwTree instance\n");
+  printf("SERVER: deregistered\n");
   return HG_SUCCESS;
 }
 
