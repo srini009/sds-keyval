@@ -2722,6 +2722,10 @@ class BwTree : public BwTreeBase {
     bwt_printf("Next node ID at exit: %lu\n", next_unused_node_id.load());
     bwt_printf("Destructor: Free tree nodes\n");
 
+    bwt_printf("Destructor: Terminate GC thread\n");
+    epoch_manager.TerminateGCThread();
+    bwt_printf("Destructor: GC thread terminated\n");
+    
     // Clear all garbage nodes awaiting cleaning
     // First of all it should set all last active epoch counter to -1
     ClearThreadLocalGarbage();
@@ -7930,7 +7934,7 @@ before_switch:
       // check this flag everytime it does cleaning since otherwise
       // the un-thread-safe function ClearEpoch() would be ran
       // by more than 1 threads
-      exited_flag.store(true);
+      //exited_flag.store(true);
 
       // If thread pointer is nullptr then we know the GC thread
       // is not started. In this case do not wait for the thread, and just
@@ -7941,16 +7945,16 @@ before_switch:
       // exited_flag everytime it wants to do GC
       //
       // If the external thread calls ThreadFunc() then it is safe
-      if(thread_p != nullptr) {
-        bwt_printf("Waiting for thread\n");
-        
-        thread_p->join();
-
-        // Free memory
-        delete thread_p;
-        
-        bwt_printf("Thread stops\n");
-      }
+      //if(thread_p != nullptr) {
+      //  bwt_printf("Waiting for thread\n");
+      //  
+      //  thread_p->join();
+      // 
+      //  // Free memory
+      //  delete thread_p;
+      //  
+      //  bwt_printf("Thread stops\n");
+      //}
 
       // So that in the following function the comparison
       // would always fail, until we have cleaned all epoch nodes
@@ -8000,6 +8004,20 @@ before_switch:
       return;
     }
 
+    void TerminateGCThread() {
+      exited_flag.store(true);
+      if(thread_p != nullptr) {
+        bwt_printf("Waiting for thread\n");
+        
+        thread_p->join();
+        delete thread_p;
+	thread_p = nullptr;
+        
+        bwt_printf("Thread stops\n");
+      }
+      return;
+    }
+    
     /*
      * CreateNewEpoch() - Create a new epoch node
      *

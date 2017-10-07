@@ -621,7 +621,7 @@ int kv_server_wait_for_shutdown(kv_context *context) {
 /* this is the same as client. should be moved to common utility library */
 int kv_server_deregister(kv_context *context) {
   free(context);
-  //delete(TREE);
+  delete TREE;
   printf("SERVER: deregistered, cleaned up BwTree instance\n");
   return HG_SUCCESS;
 }
