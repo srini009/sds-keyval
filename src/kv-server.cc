@@ -145,11 +145,7 @@ struct my_hash {
 
 struct my_equal_to {
   bool operator()(const std::vector<char> &v1, const std::vector<char> &v2) const {
-    size_t h1 = 0;
-    size_t h2 = 0;
-    boost::hash_range(h1, v1.begin(), v1.end());
-    boost::hash_range(h2, v2.begin(), v2.end());
-    return (h1 == h2);
+    return (v1 == v2);
   }
 };
 
@@ -184,7 +180,7 @@ static hg_return_t open_handler(hg_handle_t h)
 			      my_equal_to,
 			      my_hash>();
 
-	    TREE->SetDebugLogging(0);
+	    TREE->SetDebugLogging(1);
 	    TREE->UpdateThreadLocal(1);
 	    TREE->AssignGCID(0);
 
@@ -327,8 +323,8 @@ static hg_return_t get_handler(hg_handle_t h)
 
 	int value = 0;
 	if (values.size() == 1) {
-	  std::vector<char> data = values.front();
-	  memcpy(&value, data.data(), sizeof(value));
+	  std::vector<char> &data = values.front();
+	  memcpy(&value, data.data(), data.size());
 	  out.value = value;
 	  out.ret = HG_SUCCESS;
 	}
@@ -625,7 +621,7 @@ int kv_server_wait_for_shutdown(kv_context *context) {
 /* this is the same as client. should be moved to common utility library */
 int kv_server_deregister(kv_context *context) {
   free(context);
-  delete(TREE);
+  //delete(TREE);
   printf("SERVER: deregistered, cleaned up BwTree instance\n");
   return HG_SUCCESS;
 }
