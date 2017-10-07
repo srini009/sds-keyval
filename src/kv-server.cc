@@ -247,9 +247,10 @@ static hg_return_t put_handler(hg_handle_t h)
 
 
 	ret = HG_Get_input(h, &in);
-	std::vector<char> *data = new std::vector<char>(sizeof(in.value));
-	memcpy(data->data(), &in.value, sizeof(in.value));
-	TREE->Insert(in.key, *data);
+	std::vector<char> data;
+	data.resize(sizeof(in.value));
+	memcpy(data.data(), &in.value, sizeof(in.value));
+	TREE->Insert(in.key, data);
 	assert(ret == HG_SUCCESS);
 
 	ret = HG_Respond(h, NULL, NULL, &out);
@@ -279,15 +280,15 @@ static hg_return_t bulk_put_handler(hg_handle_t h)
 	mid = margo_hg_info_get_instance(hgi);
 	assert(mid != MARGO_INSTANCE_NULL);
 
-	std::vector<char> *data = new std::vector<char>(bpin.size);
-	void *buffer = (void*)data->data();
+	std::vector<char> data;
+	data.resize(bpin.size);
+	void *buffer = (void*)&data;
 	ret = margo_bulk_create(mid, 1, (void**)&buffer, &bpin.size, HG_BULK_WRITE_ONLY, &bulk_handle);
 	assert(ret == HG_SUCCESS);
 	ret = margo_bulk_transfer(mid, HG_BULK_PULL, hgi->addr, bpin.bulk_handle, 0, bulk_handle, 0, bpin.size);
 	assert(ret == HG_SUCCESS);
 	
-	// TREE manages buffer memory once we Insert?
-	if (TREE->Insert(bpin.key, *data)) {
+	if (TREE->Insert(bpin.key, data)) {
 	  printf("SERVER: TREE Insert succeeded for key = %lu\n", bpin.key);
 	  bpout.ret = HG_SUCCESS;
 	}
@@ -382,7 +383,7 @@ static hg_return_t bulk_get_handler(hg_handle_t h)
 	    mid = margo_hg_info_get_instance(hgi);
 	    assert(mid != MARGO_INSTANCE_NULL);
 
-	    void *buffer = (void*)data.data();
+	    void *buffer = (void*)&data;
 	    ret = margo_bulk_create(mid, 1, (void**)&buffer, &bgout.size, HG_BULK_READ_ONLY, &bulk_handle);
 	    assert(ret == HG_SUCCESS);
 	    ret = margo_bulk_transfer(mid, HG_BULK_PUSH, hgi->addr, bgin.bulk_handle, 0, bulk_handle, 0, bgout.size);
