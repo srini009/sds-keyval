@@ -334,11 +334,13 @@ static hg_return_t get_handler(hg_handle_t h)
 	}
 	else if (values.size() > 1) {
 	  // get on key returned more than 1 value (return number found)
+	  printf("SERVER: GET: found %lu values for key=%d\n", values.size(), in.key);
 	  out.value = values.size(); // assuming caller will check return code
 	  out.ret = HG_OTHER_ERROR;
 	}
 	else {
 	  // get on key did not find a value (return 0 for number found)
+	  printf("SERVER: GET: found 0 values for key=%d\n", in.key);
 	  out.value = 0; // assuming caller will check return code
 	  out.ret = HG_OTHER_ERROR;
 	}
