@@ -282,7 +282,7 @@ static hg_return_t bulk_put_handler(hg_handle_t h)
 
 	std::vector<char> data;
 	data.resize(bpin.size);
-	void *buffer = (void*)&data;
+	void *buffer = (void*)data.data();
 	ret = margo_bulk_create(mid, 1, (void**)&buffer, &bpin.size, HG_BULK_WRITE_ONLY, &bulk_handle);
 	assert(ret == HG_SUCCESS);
 	ret = margo_bulk_transfer(mid, HG_BULK_PULL, hgi->addr, bpin.bulk_handle, 0, bulk_handle, 0, bpin.size);
@@ -385,7 +385,7 @@ static hg_return_t bulk_get_handler(hg_handle_t h)
 	    mid = margo_hg_info_get_instance(hgi);
 	    assert(mid != MARGO_INSTANCE_NULL);
 
-	    void *buffer = (void*)&data;
+	    void *buffer = (void*)data.data();
 	    ret = margo_bulk_create(mid, 1, (void**)&buffer, &bgout.size, HG_BULK_READ_ONLY, &bulk_handle);
 	    assert(ret == HG_SUCCESS);
 	    ret = margo_bulk_transfer(mid, HG_BULK_PUSH, hgi->addr, bgin.bulk_handle, 0, bulk_handle, 0, bgout.size);
