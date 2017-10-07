@@ -178,11 +178,11 @@ static hg_return_t open_handler(hg_handle_t h)
 			      std::equal_to<uint64_t>,
 			      std::hash<uint64_t>,
 			      my_equal_to,
-			      my_hash>();
+			      my_hash>(false);
 
 	    TREE->SetDebugLogging(1);
-	    TREE->UpdateThreadLocal(1);
-	    TREE->AssignGCID(0);
+	    //TREE->UpdateThreadLocal(1);
+	    //TREE->AssignGCID(0);
 
 	    size_t num_threads = TREE->GetThreadNum();
 	    printf("SERVER: BwTree initialized, using %lu thread(s)\n", num_threads);
