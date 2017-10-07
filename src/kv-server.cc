@@ -247,10 +247,9 @@ static hg_return_t put_handler(hg_handle_t h)
 
 
 	ret = HG_Get_input(h, &in);
-	std::vector<char> data;
-	data.resize(sizeof(in.value));
-	memcpy(data.data(), &in.value, sizeof(in.value));
-	TREE->Insert(in.key, data);
+	std::vector<char> *data = new std::vector<char>(sizeof(in.value));
+	memcpy(data->data(), &in.value, sizeof(in.value));
+	TREE->Insert(in.key, *data);
 	assert(ret == HG_SUCCESS);
 
 	ret = HG_Respond(h, NULL, NULL, &out);
@@ -280,15 +279,15 @@ static hg_return_t bulk_put_handler(hg_handle_t h)
 	mid = margo_hg_info_get_instance(hgi);
 	assert(mid != MARGO_INSTANCE_NULL);
 
-	std::vector<char> data;
-	data.resize(bpin.size);
-	void *buffer = (void*)data.data();
+	std::vector<char> *data = new std::vector<char>(bpin.size);
+	void *buffer = (void*)data->data();
 	ret = margo_bulk_create(mid, 1, (void**)&buffer, &bpin.size, HG_BULK_WRITE_ONLY, &bulk_handle);
 	assert(ret == HG_SUCCESS);
 	ret = margo_bulk_transfer(mid, HG_BULK_PULL, hgi->addr, bpin.bulk_handle, 0, bulk_handle, 0, bpin.size);
 	assert(ret == HG_SUCCESS);
 	
-	if (TREE->Insert(bpin.key, data)) {
+	// TREE manages buffer memory once we Insert?
+	if (TREE->Insert(bpin.key, *data)) {
 	  printf("SERVER: TREE Insert succeeded for key = %lu\n", bpin.key);
 	  bpout.ret = HG_SUCCESS;
 	}
@@ -325,14 +324,23 @@ static hg_return_t get_handler(hg_handle_t h)
 	std::vector<std::vector<char>> values;
 	TREE->GetValue(in.key, values);
 
-	// this needs to deal with cases where values.size() > 1 or == 0
 	int value = 0;
-	if (values.size() >= 1) {
+	if (values.size() == 1) {
 	  std::vector<char> data = values.front();
 	  memcpy(&value, data.data(), sizeof(value));
-	} else {
-	    out.ret = -1;
-	out.value = value;
+	  out.value = value;
+	  out.ret = HG_SUCCESS;
+	}
+	else if (values.size() > 1) {
+	  // get on key returned more than 1 value (return number found)
+	  out.value = values.size(); // assuming caller will check return code
+	  out.ret = HG_OTHER_ERROR;
+	}
+	else {
+	  // get on key did not find a value (return 0 for number found)
+	  out.value = 0; // assuming caller will check return code
+	  out.ret = HG_OTHER_ERROR;
+	}
 
 	ret = HG_Respond(h, NULL, NULL, &out);
 	assert(ret == HG_SUCCESS);
@@ -364,7 +372,7 @@ static hg_return_t bulk_get_handler(hg_handle_t h)
 	// perhaps > 1 or 0 results in an error return value?
 	if (values.size() == 1) {
 	  printf("SERVER: BULK GET: found 1 value for key=%lu\n", bgin.key);
-	  std::vector<char> data = values.front();
+	  std::vector<char> &data = values.front();
 	  // will the transfer fit on the client side?
 	  bgout.size = data.size();
 	  if (bgout.size <= bgin.size) {
@@ -389,13 +397,13 @@ static hg_return_t bulk_get_handler(hg_handle_t h)
 	else if (values.size() > 1) {
 	  // get on key returned more than 1 value (return number found)
 	  printf("SERVER: BULK GET: found %lu values for key=%lu\n", values.size(), bgin.key);
-	  bgout.size = values.size();
+	  bgout.size = values.size(); // assuming caller will check return code
 	  bgout.ret = HG_OTHER_ERROR;
 	}
 	else {
 	  // get on key did not find a value (return 0 for number found)
 	  printf("SERVER: BULK GET: found 0 values for key=%lu\n", bgin.key);
-	  bgout.size = 0;
+	  bgout.size = 0; // assuming caller will check return code
 	  bgout.ret = HG_OTHER_ERROR;
 	}
 	
