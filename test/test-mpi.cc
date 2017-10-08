@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
       printf("client (rank %d): server add_str: %s\n", rank, server_addr_str);
 
       // kv-client
-      sprintf(client_addr_str, "cci+tcp://localhost:5345%d", rank);
+      sprintf(client_addr_str, "cci+tcp://localhost:534%02d", rank);
       printf("client (rank %d): client add_str: %s\n", rank, client_addr_str);
       kv_context *context = kv_client_register(client_addr_str);
       

@@ -7945,7 +7945,7 @@ before_switch:
         bwt_printf("Waiting for thread\n");
         
         thread_p->join();
-       
+
         // Free memory
         delete thread_p;
         
