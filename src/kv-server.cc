@@ -162,13 +162,13 @@ BwTree<uint64_t, std::vector<char>,
 
 const char *my_db = "kv-test-db";
 
-static hg_return_t open_handler(hg_handle_t h)
+static hg_return_t open_handler(hg_handle_t handle)
 {
 	hg_return_t ret;
 	open_in_t in;
 	open_out_t out;
 
-	ret = margo_get_input(h, &in);
+	ret = margo_get_input(handle, &in);
 
 	if (strcmp(in.name, my_db) == 0) {
 	  if (!TREE) {
@@ -201,64 +201,62 @@ static hg_return_t open_handler(hg_handle_t h)
 	 * away with sloppy casting.  Not sure how to do the same with a C++
 	 * template.  */
 
-	// this works
-	ret = HG_Respond(h, NULL, NULL, &out);
-	// but this did not?
-	//mid = margo_hg_class_to_instance(info->hg_class);
-	//ret = margo_respond(mid, h, &out);
+	ret = margo_respond(handle, &out);
 	assert(ret == HG_SUCCESS);
 
-	HG_Free_input(h, &in);
-	HG_Destroy(h);
+	margo_free_input(handle, &in);
+	margo_destroy(handle);
 
 
 	return HG_SUCCESS;
 }
 DEFINE_MARGO_RPC_HANDLER(open_handler)
 
-static hg_return_t close_handler(hg_handle_t h)
+static hg_return_t close_handler(hg_handle_t handle)
 {
 	hg_return_t ret;
 	close_in_t in;
 	close_out_t out;
 
 
-	ret = HG_Get_input(h, &in);
+	ret = margo_get_input(handle, &in);
 	assert(ret == HG_SUCCESS);
-	ret = HG_Respond(h, NULL, NULL, &out);
+	ret = margo_respond(handle, &out);
 	assert(ret == HG_SUCCESS);
 
-	HG_Free_input(h, &in);
-	HG_Destroy(h);
+	margo_free_input(handle, &in);
+	margo_destroy(handle);
 
 	return HG_SUCCESS;
 }
 DEFINE_MARGO_RPC_HANDLER(close_handler)
 
-static hg_return_t put_handler(hg_handle_t h)
+static hg_return_t put_handler(hg_handle_t handle)
 {
 	hg_return_t ret;
 	put_in_t in;
 	put_out_t out;
 
 
-	ret = HG_Get_input(h, &in);
+	ret = margo_get_input(handle, &in);
+	assert(ret == HG_SUCCESS);
+	
 	std::vector<char> data;
 	data.resize(sizeof(in.value));
 	memcpy(data.data(), &in.value, sizeof(in.value));
 	TREE->Insert(in.key, data);
+
+	ret = margo_respond(handle, &out);
 	assert(ret == HG_SUCCESS);
 
-	ret = HG_Respond(h, NULL, NULL, &out);
-	assert(ret == HG_SUCCESS);
-
-	HG_Free_input(h, &in);
-	HG_Destroy(h);
+	margo_free_input(handle, &in);
+	margo_destroy(handle);
+	
 	return HG_SUCCESS;
 }
 DEFINE_MARGO_RPC_HANDLER(put_handler)
 
-static hg_return_t bulk_put_handler(hg_handle_t h)
+static hg_return_t bulk_put_handler(hg_handle_t handle)
 {
 	hg_return_t ret;
 	bulk_put_in_t bpin;
@@ -267,11 +265,12 @@ static hg_return_t bulk_put_handler(hg_handle_t h)
 	const struct hg_info *hgi;
 	margo_instance_id mid;
 
-	ret = HG_Get_input(h, &bpin);
+	ret = margo_get_input(handle, &bpin);
+	assert(ret == HG_SUCCESS);
 	printf("SERVER: BULK PUT key = %lu size = %lu\n", bpin.key, bpin.size);
 
 	/* get handle info and margo instance */
-	hgi = margo_get_info(h);
+	hgi = margo_get_info(handle);
 	assert(hgi);
 	mid = margo_hg_info_get_instance(hgi);
 	assert(mid != MARGO_INSTANCE_NULL);
@@ -296,25 +295,25 @@ static hg_return_t bulk_put_handler(hg_handle_t h)
 	}
 
 	bpout.ret = ret;
-	ret = HG_Respond(h, NULL, NULL, &bpout);
+	ret = margo_respond(handle, &bpout);
 	assert(ret == HG_SUCCESS);
 
-	HG_Free_input(h, &bpin);
+	margo_free_input(handle, &bpin);
 	margo_bulk_free(bulk_handle);
-	HG_Destroy(h);
+	margo_destroy(handle);
 	
 	return HG_SUCCESS;
 }
 DEFINE_MARGO_RPC_HANDLER(bulk_put_handler)
 
-static hg_return_t get_handler(hg_handle_t h)
+static hg_return_t get_handler(hg_handle_t handle)
 {
 	hg_return_t ret;
 	get_in_t in;
 	get_out_t out;
 
 
-	ret = HG_Get_input(h, &in);
+	ret = margo_get_input(handle, &in);
 	assert(ret == HG_SUCCESS);
 
 	/*void 	GetValue (const KeyType &search_key, std::vector< ValueType > &value_list) */
@@ -341,17 +340,17 @@ static hg_return_t get_handler(hg_handle_t h)
 	  out.ret = HG_OTHER_ERROR;
 	}
 
-	ret = HG_Respond(h, NULL, NULL, &out);
+	ret = margo_respond(handle, &out);
 	assert(ret == HG_SUCCESS);
 
-	HG_Free_input(h, &in);
-	HG_Destroy(h);
+	margo_free_input(handle, &in);
+	margo_destroy(handle);
 
 	return HG_SUCCESS;
 }
 DEFINE_MARGO_RPC_HANDLER(get_handler)
 
-static hg_return_t bulk_get_handler(hg_handle_t h)
+static hg_return_t bulk_get_handler(hg_handle_t handle)
 {
 	hg_return_t ret;
 	bulk_get_in_t bgin;
@@ -360,7 +359,7 @@ static hg_return_t bulk_get_handler(hg_handle_t h)
 	const struct hg_info *hgi;
 	margo_instance_id mid;
 
-	ret = HG_Get_input(h, &bgin);
+	ret = margo_get_input(handle, &bgin);
 	assert(ret == HG_SUCCESS);
 
 	/* void GetValue (const KeyType &search_key, std::vector< ValueType > &value_list) */
@@ -376,7 +375,7 @@ static hg_return_t bulk_get_handler(hg_handle_t h)
 	  bgout.size = data.size();
 	  if (bgout.size <= bgin.size) {
 	    /* get handle info and margo instance */
-	    hgi = margo_get_info(h);
+	    hgi = margo_get_info(handle);
 	    assert(hgi);
 	    mid = margo_hg_info_get_instance(hgi);
 	    assert(mid != MARGO_INSTANCE_NULL);
@@ -406,12 +405,12 @@ static hg_return_t bulk_get_handler(hg_handle_t h)
 	  bgout.ret = HG_OTHER_ERROR;
 	}
 	
-	ret = HG_Respond(h, NULL, NULL, &bgout);
+	ret = margo_respond(handle, &bgout);
 	assert(ret == HG_SUCCESS);
 
-	HG_Free_input(h, &bgin);
+	margo_free_input(handle, &bgin);
 	margo_bulk_free(bulk_handle);
-	HG_Destroy(h);
+	margo_destroy(handle);
 	
 	return HG_SUCCESS;
 }
@@ -528,15 +527,14 @@ static void RandomInsertSpeedTest(size_t key_num, bench_result *results)
   return;
 }
 
-
-static hg_return_t bench_handler(hg_handle_t h)
+static hg_return_t bench_handler(hg_handle_t handle)
 {
     hg_return_t ret = HG_SUCCESS;
     bench_in_t bench_in;
     bench_out_t bench_out;
     bench_result random_insert;
 
-    ret = HG_Get_input(h, &bench_in);
+    ret = margo_get_input(handle, &bench_in);
     assert(ret == HG_SUCCESS);
     printf("benchmarking %d keys\n", bench_in.count);
     RandomInsertSpeedTest(bench_in.count, &random_insert);
@@ -545,10 +543,10 @@ static hg_return_t bench_handler(hg_handle_t h)
     bench_out.result.read_time = random_insert.read_time;
     bench_out.result.overhead = random_insert.overhead;
 
-    ret = HG_Respond(h, NULL, NULL, &bench_out);
+    ret = margo_respond(handle, NULL);
 
-    HG_Free_input(h, &bench_in);
-    HG_Destroy(h);
+    margo_free_input(handle, &bench_in);
+    margo_destroy(handle);
     return ret;
 }
 DEFINE_MARGO_RPC_HANDLER(bench_handler)
