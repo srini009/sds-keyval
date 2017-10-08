@@ -73,7 +73,10 @@ int main(int argc, char *argv[])
     else {
       int sleep_time = 0;
       char server_addr_str[128];
-      char client_addr_str[128];
+      char client_addr_str_in[128];
+      char client_addr_str_out[128];
+      hg_size_t client_addr_str_sz = 128;
+      hg_addr_t client_addr;
       hg_return_t hret;
       
       MPI_Comm_split(MPI_COMM_WORLD, 1, rank, &clientComm);
@@ -83,9 +86,16 @@ int main(int argc, char *argv[])
       printf("client (rank %d): server addr_str: %s\n", rank, server_addr_str);
 
       // kv-client
-      sprintf(client_addr_str, "cci+tcp://534%02d", rank);
-      printf("client (rank %d): client addr_str: %s\n", rank, client_addr_str);
-      kv_context *context = kv_client_register(client_addr_str);
+      sprintf(client_addr_str_in, "cci+tcp://534%02d", rank);
+      kv_context *context = kv_client_register(client_addr_str_in);
+      hret = margo_addr_self(context->mid, &client_addr);
+      DIE_IF(hret != HG_SUCCESS, "margo_addr_self");
+
+      // get client address
+      hret = margo_addr_to_string(context->mid, client_addr_str_out, &client_addr_str_sz, client_addr);
+      DIE_IF(hret != HG_SUCCESS, "margo_addr_to_string");
+      margo_addr_free(context->mid, client_addr);
+      printf("client (rank %d): client addr_str: %s\n", rank, client_addr_str_out);
       
       // open specified "DB" (pass in the server's address)
       const char *db = "kv-test-db";
