@@ -571,7 +571,7 @@ kv_context *kv_server_register(margo_instance_id mid);
 	ret = margo_addr_self(context->mid, &addr_self);
 	if(ret != HG_SUCCESS)
 	{
-		fprintf(stderr, "Error: mago_addr_selff()\n");
+		fprintf(stderr, "Error: margo_addr_selff()\n");
 		margo_finalize(context->mid);
 		return(NULL);
 	}

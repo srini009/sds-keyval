@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
       hret = HG_Addr_to_string(hgcl, server_addr_str, &server_addr_str_sz, server_addr);
       DIE_IF(hret != HG_SUCCESS, "HG_Addr_to_string");
       HG_Addr_free(hgcl, server_addr);
-      printf("server (rank %d): server add_str: %s\n", rank, server_addr_str);
+      printf("server (rank %d): server addr_str: %s\n", rank, server_addr_str);
 
       // broadcast (send) server address to all clients
       MPI_Bcast(server_addr_str, 128, MPI_BYTE, 0, MPI_COMM_WORLD);
@@ -81,11 +81,11 @@ int main(int argc, char *argv[])
       MPI_Comm_split(MPI_COMM_WORLD, 1, rank, &clientComm);
       // broadcast (recv) server address
       MPI_Bcast(server_addr_str, 128, MPI_BYTE, 0, MPI_COMM_WORLD);
-      printf("client (rank %d): server add_str: %s\n", rank, server_addr_str);
+      printf("client (rank %d): server addr_str: %s\n", rank, server_addr_str);
 
       // kv-client
       sprintf(client_addr_str, "cci+tcp://localhost:534%02d", rank);
-      printf("client (rank %d): client add_str: %s\n", rank, client_addr_str);
+      printf("client (rank %d): client addr_str: %s\n", rank, client_addr_str);
       kv_context *context = kv_client_register(client_addr_str);
       
       // open specified "DB" (pass in the server's address)

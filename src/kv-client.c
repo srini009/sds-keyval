@@ -75,6 +75,7 @@ int kv_open(kv_context *context, char * server, char *name,
 	ret = HG_Get_output(handle, &open_out);
 	assert(ret == HG_SUCCESS);
 	ret = open_out.ret;
+	assert(ret == HG_SUCCESS);
 
 	/* set up the other calls here: idea is we'll pay the registration cost
 	 * once here but can reuse the handles and identifiers multiple times*/
