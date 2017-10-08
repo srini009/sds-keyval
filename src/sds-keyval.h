@@ -17,7 +17,6 @@ sdskeyval_get();
 
 typedef int kv_id;
 
-
 typedef enum {
 	KV_INT,
 	KV_UINT,
@@ -59,7 +58,7 @@ MERCURY_GEN_PROC(put_in_t,
 		((int32_t)(key))\
 		((int32_t)(value)) )
 
-MERCURY_GEN_PROC(put_out_t, ((int32_t)(ret)) )
+MERCURY_GEN_PROC(put_out_t, ((hg_return_t)(ret)) )
 
 DECLARE_MARGO_RPC_HANDLER(put_handler)
 
@@ -67,7 +66,7 @@ MERCURY_GEN_PROC(get_in_t,
 		((int32_t)(key)) )
 
 MERCURY_GEN_PROC(get_out_t,
-		((int32_t)(value)) ((int32_t)(ret)) )
+		((int32_t)(value)) ((hg_return_t)(ret)) )
 
 DECLARE_MARGO_RPC_HANDLER(get_handler)
 
@@ -76,7 +75,7 @@ MERCURY_GEN_PROC(open_in_t,
 		((int32_t) (keytype))\
 		((int32_t) (valtype)) )
 
-MERCURY_GEN_PROC(open_out_t, ((int32_t)(ret)))
+MERCURY_GEN_PROC(open_out_t, ((hg_return_t)(ret)))
 
 DECLARE_MARGO_RPC_HANDLER(open_handler)
 
@@ -84,7 +83,7 @@ MERCURY_GEN_PROC(close_in_t,
 		((int32_t)(x))\
 		((int32_t)(y)) )
 
-MERCURY_GEN_PROC(close_out_t, ((int32_t)(ret)) )
+MERCURY_GEN_PROC(close_out_t, ((hg_return_t)(ret)) )
 DECLARE_MARGO_RPC_HANDLER(close_handler)
 
 MERCURY_GEN_PROC(bench_in_t, ((int32_t)(count)) )
@@ -110,7 +109,7 @@ MERCURY_GEN_PROC(bulk_put_in_t,
 		 ((uint64_t)(key))		\
 		 ((uint64_t)(size))		\
 		 ((hg_bulk_t)(bulk_handle)) )
-MERCURY_GEN_PROC(bulk_put_out_t, ((int32_t)(ret)))
+MERCURY_GEN_PROC(bulk_put_out_t, ((hg_return_t)(ret)))
 DECLARE_MARGO_RPC_HANDLER(bulk_put_handler)
 
 MERCURY_GEN_PROC(bulk_get_in_t,
@@ -119,7 +118,7 @@ MERCURY_GEN_PROC(bulk_get_in_t,
 		 ((hg_bulk_t)(bulk_handle)) )
 MERCURY_GEN_PROC(bulk_get_out_t,
 		 ((uint64_t)(size))		\
-		 ((int32_t)(ret)))
+		 ((hg_return_t)(ret)))
 DECLARE_MARGO_RPC_HANDLER(bulk_get_handler)
 
 kv_context *kv_client_register(char *addr_str=0);
@@ -129,23 +128,22 @@ DECLARE_MARGO_RPC_HANDLER(shutdown_handler)
 
 
 /* both the same: should probably move to common */
-int kv_client_deregister(kv_context *context);
-int kv_server_deregister(kv_context *context);
+hg_return_t kv_client_deregister(kv_context *context);
+hg_return_t kv_server_deregister(kv_context *context);
 
 /* server-side routine */
-int kv_server_wait_for_shutdown(kv_context *context);
+hg_return_t kv_server_wait_for_shutdown(kv_context *context);
 
 /* client-side routines wrapping up all the RPC stuff  */
-int kv_client_shutdown_server(kv_context *context);
-int kv_open(kv_context *context, char *server, char *name,
+hg_return_t kv_client_shutdown_server(kv_context *context);
+hg_return_t kv_open(kv_context *context, char *server, char *name,
 		kv_type keytype, kv_type valtype);
-int kv_put(kv_context *context, void *key, void *value);
-int kv_bulk_put(kv_context *context, void *key, void *data, hg_size_t data_size);
-int kv_get(kv_context *context, void *key, void *value);
+hg_return_t kv_put(kv_context *context, void *key, void *value);
+hg_return_t kv_bulk_put(kv_context *context, void *key, void *data, hg_size_t data_size);
+hg_return_t kv_get(kv_context *context, void *key, void *value);
+hg_return_t kv_bulk_get(kv_context *context, void *key, void *data, hg_size_t data_size);
+hg_return_t kv_close(kv_context *context);
 bench_result *kv_benchmark(kv_context *context, int count);
-int kv_bulk_get(kv_context *context, void *key, void *data, hg_size_t data_size);
-int kv_close(kv_context *context);
-
 
 #if defined(__cplusplus)
 }

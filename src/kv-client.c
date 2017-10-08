@@ -10,7 +10,7 @@
 
 // pass in NULL pointer to get default behavior
 kv_context *kv_client_register(char *addr_str) {
-	int ret;
+	hg_return_t ret;
 	kv_context * context;
 	context = malloc(sizeof(kv_context));
 
@@ -56,7 +56,7 @@ kv_context *kv_client_register(char *addr_str) {
 
 int kv_open(kv_context *context, char * server, char *name,
 		kv_type keytype, kv_type valtype) {
-	int ret = HG_SUCCESS;
+	hg_return_t ret = HG_SUCCESS;
 	hg_handle_t handle;
 	open_in_t open_in;
 	open_out_t open_out;
@@ -110,7 +110,7 @@ int kv_open(kv_context *context, char * server, char *name,
 /* we gave types in the open call.  Will need to maintain in 'context' the
  * size. */
 int kv_put(kv_context *context, void *key, void *value) {
-	int ret=0;
+	hg_return_t ret;
 	put_in_t put_in;
 	put_out_t put_out;
 
@@ -125,7 +125,7 @@ int kv_put(kv_context *context, void *key, void *value) {
 }
 
 int kv_bulk_put(kv_context *context, void *key, void *data, hg_size_t data_size) {
-	int ret;
+	hg_return_t ret;
 	bulk_put_in_t bpin;
 	bulk_put_out_t bpout;
 
@@ -146,7 +146,7 @@ int kv_bulk_put(kv_context *context, void *key, void *data, hg_size_t data_size)
 
 int kv_get(kv_context *context, void *key, void *value)
 {
-	int ret=0;
+	hg_return_t ret;
 	get_in_t get_in;
 	get_out_t get_out;
 
@@ -162,7 +162,7 @@ int kv_get(kv_context *context, void *key, void *value)
 
 int kv_bulk_get(kv_context *context, void *key, void *data, hg_size_t data_size)
 {
-	int ret;
+	hg_return_t ret;
 	bulk_get_in_t bgin;
 	bulk_get_out_t bgout;
 
@@ -183,7 +183,7 @@ int kv_bulk_get(kv_context *context, void *key, void *data, hg_size_t data_size)
 
 int kv_close(kv_context *context)
 {
-	int ret=0;
+	hg_return_t ret;
 	hg_handle_t handle;
 	put_in_t close_in;
 	put_out_t close_out;
@@ -202,7 +202,7 @@ int kv_close(kv_context *context)
 }
 
 bench_result *kv_benchmark(kv_context *context, int count) {
-    int ret;
+    hg_return_t ret;
     hg_handle_t handle;
     bench_in_t bench_in;
     bench_out_t bench_out;
@@ -238,7 +238,7 @@ bench_result *kv_benchmark(kv_context *context, int count) {
 }
 
 int kv_client_deregister(kv_context *context) {
-  int ret;
+  hg_return_t ret;
 
   margo_destroy(context->put_handle);
   margo_destroy(context->get_handle);
@@ -259,7 +259,7 @@ int kv_client_deregister(kv_context *context) {
 }
 
 int kv_client_shutdown_server(kv_context *context) {
-  int ret;
+  hg_return_t ret;
 
   ret = margo_forward(context->shutdown_handle, NULL);
   assert(ret == HG_SUCCESS);
