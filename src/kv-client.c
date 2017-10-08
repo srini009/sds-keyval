@@ -74,8 +74,7 @@ hg_return_t kv_open(kv_context *context, char * server, char *name,
 	assert(ret == HG_SUCCESS);
 	ret = margo_get_output(handle, &open_out);
 	assert(ret == HG_SUCCESS);
-	ret = open_out.ret;
-	assert(ret == HG_SUCCESS);
+	assert(open_out.ret == HG_SUCCESS);
 
 	/* set up the other calls here: idea is we'll pay the registration cost
 	 * once here but can reuse the handles and identifiers multiple times*/
@@ -120,6 +119,7 @@ hg_return_t kv_put(kv_context *context, void *key, void *value) {
 	assert(ret == HG_SUCCESS);
 	ret = margo_get_output(context->put_handle, &put_out);
 	assert(ret == HG_SUCCESS);
+	assert(put_out.ret == HG_SUCCESS);
 	margo_free_output(context->put_handle, &put_out);
 	return ret;
 }
@@ -154,8 +154,9 @@ hg_return_t kv_get(kv_context *context, void *key, void *value)
 	ret = margo_forward(context->get_handle, &get_in);
 	assert(ret == HG_SUCCESS);
 	ret = margo_get_output(context->get_handle, &get_out);
-	*(int*) value  = get_out.value;
 	assert(ret == HG_SUCCESS);
+	assert(get_out.ret == HG_SUCCESS);
+	*(int*) value  = get_out.value;
 	margo_free_output(context->get_handle, &get_out);
 	return ret;
 }
@@ -195,6 +196,8 @@ hg_return_t kv_close(kv_context *context)
 	assert(ret == HG_SUCCESS);
 	ret = margo_get_output(handle, &close_out);
 	assert(ret == HG_SUCCESS);
+	assert(close_out.ret == HG_SUCCESS);
+
 	margo_free_output(handle, &close_out);
 	margo_destroy(handle);
 

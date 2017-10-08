@@ -171,26 +171,19 @@ static hg_return_t open_handler(hg_handle_t handle)
 	ret = margo_get_input(handle, &in);
 
 	if (strcmp(in.name, my_db) == 0) {
-	  if (!TREE) {
-	    printf("SERVER: initializing BwTree instance to manage %s\n", in.name);
-	    TREE = new BwTree<uint64_t, std::vector<char>,
-			      std::less<uint64_t>,
-			      std::equal_to<uint64_t>,
-			      std::hash<uint64_t>,
-			      my_equal_to,
-			      my_hash>();
-
+	  if (TREE) {
 	    TREE->SetDebugLogging(1);
 	    TREE->UpdateThreadLocal(1);
 	    TREE->AssignGCID(0);
-
+	    
 	    size_t num_threads = TREE->GetThreadNum();
 	    printf("SERVER: BwTree initialized, using %lu thread(s)\n", num_threads);
+	    out.ret = HG_SUCCESS;
 	  }
 	  else {
-	    printf("SERVER: %s already open and BwTree is initialized\n", in.name);
+	    printf("SERVER: BwTree is uninitialized, open failed for %s\n", in.name);
 	  }
-	  out.ret = HG_SUCCESS;
+	  out.ret = HG_OTHER_ERROR;
 	}
 	else {
 	  printf("SERVER: currently managing %s and unable to process OPEN request for %s\n", my_db, in.name);
@@ -559,8 +552,14 @@ kv_context *kv_server_register(margo_instance_id mid);
 	char addr_self_string[128];
 	hg_size_t addr_self_string_sz = 128;
 	kv_context *context;
-	context = (kv_context *)malloc(sizeof(*context));
-	/* sds keyval server init */
+	
+	printf("SERVER: initializing BwTree instance to manage %s\n", my_db);
+	TREE = new BwTree<uint64_t, std::vector<char>,
+			  std::less<uint64_t>,
+			  std::equal_to<uint64_t>,
+			  std::hash<uint64_t>,
+			  my_equal_to,
+			  my_hash>();
 
 	context->mid = mid;
 	assert(context->mid);
