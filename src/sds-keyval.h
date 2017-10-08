@@ -58,7 +58,7 @@ MERCURY_GEN_PROC(put_in_t,
 		((int32_t)(key))\
 		((int32_t)(value)) )
 
-MERCURY_GEN_PROC(put_out_t, ((hg_return_t)(ret)) )
+MERCURY_GEN_PROC(put_out_t, ((int32_t)(ret)) )
 
 DECLARE_MARGO_RPC_HANDLER(put_handler)
 
@@ -66,7 +66,7 @@ MERCURY_GEN_PROC(get_in_t,
 		((int32_t)(key)) )
 
 MERCURY_GEN_PROC(get_out_t,
-		((int32_t)(value)) ((hg_return_t)(ret)) )
+		((int32_t)(value)) ((int32_t)(ret)) )
 
 DECLARE_MARGO_RPC_HANDLER(get_handler)
 
@@ -75,7 +75,7 @@ MERCURY_GEN_PROC(open_in_t,
 		((int32_t) (keytype))\
 		((int32_t) (valtype)) )
 
-MERCURY_GEN_PROC(open_out_t, ((hg_return_t)(ret)))
+MERCURY_GEN_PROC(open_out_t, ((int32_t)(ret)))
 
 DECLARE_MARGO_RPC_HANDLER(open_handler)
 
@@ -83,7 +83,7 @@ MERCURY_GEN_PROC(close_in_t,
 		((int32_t)(x))\
 		((int32_t)(y)) )
 
-MERCURY_GEN_PROC(close_out_t, ((hg_return_t)(ret)) )
+MERCURY_GEN_PROC(close_out_t, ((int32_t)(ret)) )
 DECLARE_MARGO_RPC_HANDLER(close_handler)
 
 MERCURY_GEN_PROC(bench_in_t, ((int32_t)(count)) )
@@ -109,7 +109,7 @@ MERCURY_GEN_PROC(bulk_put_in_t,
 		 ((uint64_t)(key))		\
 		 ((uint64_t)(size))		\
 		 ((hg_bulk_t)(bulk_handle)) )
-MERCURY_GEN_PROC(bulk_put_out_t, ((hg_return_t)(ret)))
+MERCURY_GEN_PROC(bulk_put_out_t, ((int32_t)(ret)))
 DECLARE_MARGO_RPC_HANDLER(bulk_put_handler)
 
 MERCURY_GEN_PROC(bulk_get_in_t,
@@ -118,7 +118,7 @@ MERCURY_GEN_PROC(bulk_get_in_t,
 		 ((hg_bulk_t)(bulk_handle)) )
 MERCURY_GEN_PROC(bulk_get_out_t,
 		 ((uint64_t)(size))		\
-		 ((hg_return_t)(ret)))
+		 ((int32_t)(ret)))
 DECLARE_MARGO_RPC_HANDLER(bulk_get_handler)
 
 kv_context *kv_client_register(char *addr_str=0);

@@ -611,13 +611,13 @@ kv_context *kv_server_register(margo_instance_id mid);
 	return context;
 }
 
-int kv_server_wait_for_shutdown(kv_context *context) {
+hg_return_t kv_server_wait_for_shutdown(kv_context *context) {
   margo_wait_for_finalize(context->mid);
   return HG_SUCCESS;
 }
 
 /* this is the same as client. should be moved to common utility library */
-int kv_server_deregister(kv_context *context) {
+hg_return_t kv_server_deregister(kv_context *context) {
   free(context);
   //delete TREE; // there seems to be a bug somewhere in BwTree
   //printf("SERVER: deregistered, cleaned up BwTree instance\n");
