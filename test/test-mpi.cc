@@ -102,7 +102,7 @@ int main(int argc, char *argv[])
       hret = kv_open(context, server_addr_str, (char*)db, KV_UINT, KV_BULK);
       DIE_IF(hret != HG_SUCCESS, "kv_open");
       
-      uint64_t key = rank+i;
+      uint64_t key = rank;
 	
       // put
       int put_val = rank;
