@@ -102,31 +102,36 @@ int main(int argc, char *argv[])
       hret = kv_open(context, server_addr_str, (char*)db, KV_UINT, KV_BULK);
       DIE_IF(hret != HG_SUCCESS, "kv_open");
       
-      // put
-      uint64_t key = rank;
-      int put_val = rank;
-      std::vector<char> put_data;
-      put_data.resize(sizeof(put_val));
-      memcpy(put_data.data(), &put_val, sizeof(put_val));
+      // do a set of puts/gets
+      for (i=0; i<rank; i++) {
+	uint64_t key = rank+i;
+	
+	// put
+	int put_val = rank+i;
+	std::vector<char> put_data;
+	put_data.resize(sizeof(put_val));
+	memcpy(put_data.data(), &put_val, sizeof(put_val));
 
-      hret = kv_bulk_put(context, (void*)&key, (void*)put_data.data(), put_data.size());
-      printf("(put) key %lu, size=%lu, rc=%d\n", key, put_data.size(), (int32_t)ret);
-      DIE_IF(hret != HG_SUCCESS, "kv_bulk_put");
+	hret = kv_bulk_put(context, (void*)&key, (void*)put_data.data(), put_data.size());
+	printf("(put) key %lu, size=%lu, rc=%d\n", key, put_data.size(), (int32_t)ret);
+	DIE_IF(hret != HG_SUCCESS, "kv_bulk_put");
 
-      sleep(2);
+	sleep(2);
 
-      // get
-      int get_val;
-      std::vector<char> get_data;
-      get_data.resize(sizeof(get_val));
-      std::pair<size_t, int32_t> get_ret = kv_bulk_get(context, (void*)&key, (void*)get_data.data(), get_data.size());
-      size_t data_size = get_ret.first;
-      int32_t ret = get_ret.second;
-      printf("(get) key %lu, size=%lu, rc=%d\n", key, data_size, ret);
-      DIE_IF(ret != HG_SUCCESS, "kv_bulk_get");
+	// get
+	int get_val;
+	std::vector<char> get_data;
+	get_data.resize(sizeof(get_val));
+	uint64_t data_size = get_data.size();
+	printf("(get) key %lu, estimated size=%lu\n", key, data_size);
+	hret = kv_bulk_get(context, (void*)&key, (void*)get_data.data(), data_size);
+	DIE_IF(hret != HG_SUCCESS, "kv_bulk_get");
+	printf("(get) key %lu, actual size=%lu\n", key, data_size);
 
-      memcpy(&get_val, get_data.data(), sizeof(get_val));
-      printf("key: %lu in: %d out: %d\n", key, put_val, get_val);
+	get_data.resize(data_size);
+	memcpy(&get_val, get_data.data(), sizeof(get_val));
+	printf("key: %lu in: %d out: %d\n", key, put_val, get_val);
+      }
 
       // close
       hret = kv_close(context);

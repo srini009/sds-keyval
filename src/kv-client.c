@@ -161,7 +161,7 @@ hg_return_t kv_get(kv_context *context, void *key, void *value)
 	return ret;
 }
 
-std::pair<size_t, int32_t> kv_bulk_get(kv_context *context, void *key, void *data, hg_size_t data_size)
+hg_return_t kv_bulk_get(kv_context *context, void *key, void *data, hg_size_t &data_size)
 {
 	hg_return_t ret;
 	bulk_get_in_t bgin;
@@ -179,11 +179,10 @@ std::pair<size_t, int32_t> kv_bulk_get(kv_context *context, void *key, void *dat
 	ret = margo_get_output(context->bulk_get_handle, &bgout);
 	assert(ret == HG_SUCCESS);
 	assert(bgout.ret == HG_SUCCESS); // make sure the server side says all is OK
-	bgsize = bgout.size;
-	bgret = bgout.ret;
+	data_size = bgout.size; // report actual size of data transferred to caller
 	margo_free_output(context->bulk_get_handle, &bgout);
 
-	return (bgsize, bgret);
+	return HG_SUCCESS;
 }
 
 hg_return_t kv_close(kv_context *context)
