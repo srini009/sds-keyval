@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
 	get_data.resize(sizeof(get_val));
 	uint64_t data_size = get_data.size();
 	printf("(get) key %lu, estimated size=%lu\n", key, data_size);
-	hret = kv_bulk_get(context, (void*)&key, (void*)get_data.data(), data_size);
+	hret = kv_bulk_get(context, (void*)&key, (void*)get_data.data(), &data_size);
 	DIE_IF(hret != HG_SUCCESS, "kv_bulk_get");
 	printf("(get) key %lu, actual size=%lu\n", key, data_size);
 

@@ -124,13 +124,13 @@ hg_return_t kv_put(kv_context *context, void *key, void *value) {
 	return ret;
 }
 
-hg_return_t kv_bulk_put(kv_context *context, void *key, void *data, hg_size_t data_size) {
+hg_return_t kv_bulk_put(kv_context *context, void *key, void *data, uint64_t *data_size) {
 	hg_return_t ret;
 	bulk_put_in_t bpin;
 	bulk_put_out_t bpout;
 
 	bpin.key = *(uint64_t*)key;
-	bpin.size = data_size;
+	bpin.size = *(uint64_t*)data_size;
 	ret = margo_bulk_create(context->mid, 1, &data, &data_size,
 				HG_BULK_READ_ONLY, &bpin.bulk_handle);
 	assert(ret == HG_SUCCESS);
@@ -161,7 +161,7 @@ hg_return_t kv_get(kv_context *context, void *key, void *value)
 	return ret;
 }
 
-hg_return_t kv_bulk_get(kv_context *context, void *key, void *data, hg_size_t &data_size)
+hg_return_t kv_bulk_get(kv_context *context, void *key, void *data, uint64_t *data_size)
 {
 	hg_return_t ret;
 	bulk_get_in_t bgin;
@@ -170,8 +170,8 @@ hg_return_t kv_bulk_get(kv_context *context, void *key, void *data, hg_size_t &d
 	int32_t bgret;
 
 	bgin.key = *(uint64_t*)key;
-	bgin.size = data_size;
-	ret = margo_bulk_create(context->mid, 1, &data, &data_size,
+	bgin.size = *(uint64_t*)data_size;
+	ret = margo_bulk_create(context->mid, 1, &data, data_size,
 				HG_BULK_WRITE_ONLY, &bgin.bulk_handle);
 	assert(ret == HG_SUCCESS);
 	ret = margo_forward(context->bulk_get_handle, &bgin);
@@ -179,7 +179,7 @@ hg_return_t kv_bulk_get(kv_context *context, void *key, void *data, hg_size_t &d
 	ret = margo_get_output(context->bulk_get_handle, &bgout);
 	assert(ret == HG_SUCCESS);
 	assert(bgout.ret == HG_SUCCESS); // make sure the server side says all is OK
-	data_size = bgout.size; // report actual size of data transferred to caller
+	*data_size = (uint64_t)bgout.size; // report actual size of data transferred to caller
 	margo_free_output(context->bulk_get_handle, &bgout);
 
 	return HG_SUCCESS;
