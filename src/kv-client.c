@@ -28,9 +28,6 @@ kv_context *kv_client_register(const char *addr_str) {
 	context->put_id = MARGO_REGISTER(context->mid, "put",
 					 put_in_t, put_out_t, NULL);
 
-	context->put_id = MARGO_REGISTER(context->mid, "put",
-					 put_in_t, put_out_t, NULL);
-
 	context->bulk_put_id = MARGO_REGISTER(context->mid, "bulk_put",
 					      bulk_put_in_t, bulk_put_out_t, NULL);
 
@@ -83,22 +80,22 @@ hg_return_t kv_open(kv_context *context, const char *server_addr, const char *db
 	 * BAKE has a handle-caching mechanism we should consult.
 	 * should margo be caching handles? */
 	ret = margo_create(context->mid, context->svr_addr,
-			   context->put_id, &(context->put_handle) );
+			   context->put_id, &(context->put_handle));
 	assert(ret == HG_SUCCESS);
 	ret = margo_create(context->mid, context->svr_addr,
-			   context->bulk_put_id, &(context->bulk_put_handle) );
+			   context->bulk_put_id, &(context->bulk_put_handle));
 	assert(ret == HG_SUCCESS);
 	ret = margo_create(context->mid, context->svr_addr,
-			   context->get_id, &(context->get_handle) );
+			   context->get_id, &(context->get_handle));
 	assert(ret == HG_SUCCESS);
 	ret = margo_create(context->mid, context->svr_addr,
-			   context->bulk_get_id, &(context->bulk_get_handle) );
+			   context->bulk_get_id, &(context->bulk_get_handle));
 	assert(ret == HG_SUCCESS);
 	ret = margo_create(context->mid, context->svr_addr,
-			   context->bench_id, &(context->bench_handle) );
+			   context->bench_id, &(context->bench_handle));
 	assert(ret == HG_SUCCESS);
 	ret = margo_create(context->mid, context->svr_addr,
-			   context->shutdown_id, &(context->shutdown_handle) );
+			   context->shutdown_id, &(context->shutdown_handle));
 	assert(ret == HG_SUCCESS);
 	
 	margo_free_output(handle, &open_out);
