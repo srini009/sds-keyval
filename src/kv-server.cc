@@ -160,7 +160,7 @@ BwTree<uint64_t, std::vector<char>,
        my_equal_to,
        my_hash> *TREE = NULL;
 
-const char *my_db = "kv-test-db";
+const char *my_db = "minima_store";
 
 static hg_return_t open_handler(hg_handle_t handle)
 {
