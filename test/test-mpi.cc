@@ -98,7 +98,7 @@ int main(int argc, char *argv[])
       printf("client (rank %d): client addr_str: %s\n", rank, client_addr_str_out);
       
       // open specified "DB" (pass in the server's address)
-      const char *db = "kv-test-db";
+      const char *db = "minima_store";
       hret = kv_open(context, server_addr_str, (char*)db, KV_UINT, KV_BULK);
       DIE_IF(hret != HG_SUCCESS, "kv_open");
       
