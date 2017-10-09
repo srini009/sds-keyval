@@ -131,7 +131,7 @@ hg_return_t kv_bulk_put(kv_context *context, void *key, void *data, uint64_t *da
 
 	bpin.key = *(uint64_t*)key;
 	bpin.size = *(uint64_t*)data_size;
-	ret = margo_bulk_create(context->mid, 1, &data, &data_size,
+	ret = margo_bulk_create(context->mid, 1, &data, data_size,
 				HG_BULK_READ_ONLY, &bpin.bulk_handle);
 	assert(ret == HG_SUCCESS);
 	ret = margo_forward(context->bulk_put_handle, &bpin);

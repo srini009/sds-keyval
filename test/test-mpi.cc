@@ -103,17 +103,18 @@ int main(int argc, char *argv[])
       DIE_IF(hret != HG_SUCCESS, "kv_open");
       
       // do a set of puts/gets
-      for (i=0; i<rank; i++) {
+      for (int i=0; i<rank; i++) {
 	uint64_t key = rank+i;
 	
 	// put
 	int put_val = rank+i;
 	std::vector<char> put_data;
 	put_data.resize(sizeof(put_val));
-	memcpy(put_data.data(), &put_val, sizeof(put_val));
+	uint64_t data_size = put_data.size();
+	memcpy(put_data.data(), &put_val, data_size);
 
-	hret = kv_bulk_put(context, (void*)&key, (void*)put_data.data(), put_data.size());
-	printf("(put) key %lu, size=%lu, rc=%d\n", key, put_data.size(), (int32_t)ret);
+	hret = kv_bulk_put(context, (void*)&key, (void*)put_data.data(), &data_size);
+	printf("(put) key %lu, size=%lu\n", key, data_size);
 	DIE_IF(hret != HG_SUCCESS, "kv_bulk_put");
 
 	sleep(2);
@@ -122,14 +123,14 @@ int main(int argc, char *argv[])
 	int get_val;
 	std::vector<char> get_data;
 	get_data.resize(sizeof(get_val));
-	uint64_t data_size = get_data.size();
+	data_size = get_data.size();
 	printf("(get) key %lu, estimated size=%lu\n", key, data_size);
 	hret = kv_bulk_get(context, (void*)&key, (void*)get_data.data(), &data_size);
 	DIE_IF(hret != HG_SUCCESS, "kv_bulk_get");
 	printf("(get) key %lu, actual size=%lu\n", key, data_size);
 
 	get_data.resize(data_size);
-	memcpy(&get_val, get_data.data(), sizeof(get_val));
+	memcpy(&get_val, get_data.data(), data_size);
 	printf("key: %lu in: %d out: %d\n", key, put_val, get_val);
       }
 
