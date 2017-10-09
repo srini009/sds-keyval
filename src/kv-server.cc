@@ -204,6 +204,7 @@ static hg_return_t close_handler(hg_handle_t handle)
 
 	ret = margo_get_input(handle, &in);
 	assert(ret == HG_SUCCESS);
+        out.ret = HG_SUCCESS;
 	ret = margo_respond(handle, &out);
 	assert(ret == HG_SUCCESS);
 
@@ -552,7 +553,7 @@ kv_context *kv_server_register(margo_instance_id mid);
 			  my_hash>();
 
 	context->mid = mid;
-	TREE->SetDebugLogging(1);
+	TREE->SetDebugLogging(0);
 	TREE->UpdateThreadLocal(1);
 	TREE->AssignGCID(0);
 
