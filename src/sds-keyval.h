@@ -121,11 +121,10 @@ MERCURY_GEN_PROC(bulk_get_out_t,
 		 ((int32_t)(ret)))
 DECLARE_MARGO_RPC_HANDLER(bulk_get_handler)
 
-kv_context *kv_client_register(char *addr_str=0);
+kv_context *kv_client_register(const char *addr_str=0);
 kv_context * kv_server_register(margo_instance_id mid);
 
 DECLARE_MARGO_RPC_HANDLER(shutdown_handler)
-
 
 /* both the same: should probably move to common */
 hg_return_t kv_client_deregister(kv_context *context);
@@ -136,7 +135,7 @@ hg_return_t kv_server_wait_for_shutdown(kv_context *context);
 
 /* client-side routines wrapping up all the RPC stuff  */
 hg_return_t kv_client_signal_shutdown(kv_context *context);
-hg_return_t kv_open(kv_context *context, char *server, char *name,
+hg_return_t kv_open(kv_context *context, const char *server, const char *db_name,
 		    kv_type keytype, kv_type valtype);
 hg_return_t kv_put(kv_context *context, void *key, void *value);
 hg_return_t kv_bulk_put(kv_context *context, void *key, void *data, uint64_t *data_size);

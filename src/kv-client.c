@@ -9,7 +9,7 @@
 
 
 // pass in NULL pointer to get default behavior
-kv_context *kv_client_register(char *addr_str) {
+kv_context *kv_client_register(const char *addr_str) {
 	hg_return_t ret;
 	kv_context * context;
 	context = malloc(sizeof(kv_context));
@@ -54,21 +54,21 @@ kv_context *kv_client_register(char *addr_str) {
 	return context;
 }
 
-hg_return_t kv_open(kv_context *context, char * server, char *name,
-		kv_type keytype, kv_type valtype) {
+hg_return_t kv_open(kv_context *context, const char *server_addr, const char *db_name,
+		    kv_type keytype, kv_type valtype) {
 	hg_return_t ret = HG_SUCCESS;
 	hg_handle_t handle;
 	open_in_t open_in;
 	open_out_t open_out;
 
-	ret = margo_addr_lookup(context->mid, server, &(context->svr_addr));
+	ret = margo_addr_lookup(context->mid, server_addr, &(context->svr_addr));
 	assert(ret == HG_SUCCESS);
 
 	ret = margo_create(context->mid, context->svr_addr,
 			   context->open_id, &handle);
 	assert(ret == HG_SUCCESS);
 
-	open_in.name = name;
+	strcpy(open_in.name, db_name);
 
 	ret = margo_forward(handle, &open_in);
 	assert(ret == HG_SUCCESS);
