@@ -135,13 +135,13 @@ hg_return_t kv_server_deregister(kv_context *context);
 hg_return_t kv_server_wait_for_shutdown(kv_context *context);
 
 /* client-side routines wrapping up all the RPC stuff  */
-hg_return_t kv_client_shutdown_server(kv_context *context);
+hg_return_t kv_client_signal_shutdown(kv_context *context);
 hg_return_t kv_open(kv_context *context, char *server, char *name,
-		kv_type keytype, kv_type valtype);
+		    kv_type keytype, kv_type valtype);
 hg_return_t kv_put(kv_context *context, void *key, void *value);
 hg_return_t kv_bulk_put(kv_context *context, void *key, void *data, hg_size_t data_size);
 hg_return_t kv_get(kv_context *context, void *key, void *value);
-hg_return_t kv_bulk_get(kv_context *context, void *key, void *data, hg_size_t data_size);
+std::pair<size_t, int32_t> kv_bulk_get(kv_context *context, void *key, void *data, hg_size_t data_size);
 hg_return_t kv_close(kv_context *context);
 bench_result *kv_benchmark(kv_context *context, int count);
 

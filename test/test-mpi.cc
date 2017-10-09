@@ -108,7 +108,9 @@ int main(int argc, char *argv[])
       std::vector<char> put_data;
       put_data.resize(sizeof(put_val));
       memcpy(put_data.data(), &put_val, sizeof(put_val));
+
       hret = kv_bulk_put(context, (void*)&key, (void*)put_data.data(), put_data.size());
+      printf("(put) key %lu, size=%lu, rc=%d\n", key, put_data.size(), (int32_t)ret);
       DIE_IF(hret != HG_SUCCESS, "kv_bulk_put");
 
       sleep(2);
@@ -117,8 +119,12 @@ int main(int argc, char *argv[])
       int get_val;
       std::vector<char> get_data;
       get_data.resize(sizeof(get_val));
-      hret = kv_bulk_get(context, (void*)&key, (void*)get_data.data(), get_data.size());
-      DIE_IF(hret != HG_SUCCESS, "kv_bulk_get");
+      std::pair<size_t, int32_t> get_ret = kv_bulk_get(context, (void*)&key, (void*)get_data.data(), get_data.size());
+      size_t data_size = get_ret.first;
+      int32_t ret = get_ret.second;
+      printf("(get) key %lu, size=%lu, rc=%d\n", key, data_size, ret);
+      DIE_IF(ret != HG_SUCCESS, "kv_bulk_get");
+
       memcpy(&get_val, get_data.data(), sizeof(get_val));
       printf("key: %lu in: %d out: %d\n", key, put_val, get_val);
 
@@ -130,7 +136,7 @@ int main(int argc, char *argv[])
       MPI_Barrier(clientComm);
       if (rank==1) {
 	printf("rank %d: sending server a shutdown request\n", rank);
-	kv_client_shutdown_server(context);
+	kv_client_signal_shutdown(context);
       }
 
       // now finish cleaning up

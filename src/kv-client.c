@@ -161,11 +161,13 @@ hg_return_t kv_get(kv_context *context, void *key, void *value)
 	return ret;
 }
 
-hg_return_t kv_bulk_get(kv_context *context, void *key, void *data, hg_size_t data_size)
+std::pair<size_t, int32_t> kv_bulk_get(kv_context *context, void *key, void *data, hg_size_t data_size)
 {
 	hg_return_t ret;
 	bulk_get_in_t bgin;
 	bulk_get_out_t bgout;
+	size_t bgsize;
+	int32_t bgret;
 
 	bgin.key = *(uint64_t*)key;
 	bgin.size = data_size;
@@ -177,9 +179,11 @@ hg_return_t kv_bulk_get(kv_context *context, void *key, void *data, hg_size_t da
 	ret = margo_get_output(context->bulk_get_handle, &bgout);
 	assert(ret == HG_SUCCESS);
 	assert(bgout.ret == HG_SUCCESS); // make sure the server side says all is OK
+	bgsize = bgout.size;
+	bgret = bgout.ret;
 	margo_free_output(context->bulk_get_handle, &bgout);
 
-	return HG_SUCCESS;
+	return (bgsize, bgret);
 }
 
 hg_return_t kv_close(kv_context *context)
@@ -261,7 +265,7 @@ hg_return_t kv_client_deregister(kv_context *context) {
   return HG_SUCCESS;
 }
 
-hg_return_t kv_client_shutdown_server(kv_context *context) {
+hg_return_t kv_client_signal_shutdown(kv_context *context) {
   hg_return_t ret;
 
   ret = margo_forward(context->shutdown_handle, NULL);
