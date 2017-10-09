@@ -62,8 +62,10 @@ hg_return_t kv_open(kv_context *context, const char *server_addr, const char *db
 	ret = margo_addr_lookup(context->mid, server_addr, &(context->svr_addr));
 	assert(ret == HG_SUCCESS);
 
-	ret = margo_create(context->mid, context->svr_addr,
-			   context->open_id, &handle);
+	// grab hg_context for mid
+	hg_context_t *hg_context = margo_get_context(context->mid);
+	ret = HG_Create(hg_context, context->svr_addr,
+			context->open_id, &handle);
 	assert(ret == HG_SUCCESS);
 
 	strcpy(open_in.name, db_name);
@@ -79,23 +81,23 @@ hg_return_t kv_open(kv_context *context, const char *server_addr, const char *db
 	/* put/get handles: can have as many in flight as we have registered.
 	 * BAKE has a handle-caching mechanism we should consult.
 	 * should margo be caching handles? */
-	ret = margo_create(context->mid, context->svr_addr,
-			   context->put_id, &(context->put_handle));
+	ret = HG_Create(hg_context, context->svr_addr,
+			context->put_id, &(context->put_handle));
 	assert(ret == HG_SUCCESS);
-	ret = margo_create(context->mid, context->svr_addr,
-			   context->bulk_put_id, &(context->bulk_put_handle));
+	ret = HG_Create(hg_context, context->svr_addr,
+			context->bulk_put_id, &(context->bulk_put_handle));
 	assert(ret == HG_SUCCESS);
-	ret = margo_create(context->mid, context->svr_addr,
-			   context->get_id, &(context->get_handle));
+	ret = HG_Create(hg_context, context->svr_addr,
+			context->get_id, &(context->get_handle));
 	assert(ret == HG_SUCCESS);
-	ret = margo_create(context->mid, context->svr_addr,
-			   context->bulk_get_id, &(context->bulk_get_handle));
+	ret = HG_Create(hg_context, context->svr_addr,
+			context->bulk_get_id, &(context->bulk_get_handle));
 	assert(ret == HG_SUCCESS);
-	ret = margo_create(context->mid, context->svr_addr,
-			   context->bench_id, &(context->bench_handle));
+	ret = HG_Create(hg_context, context->svr_addr,
+			context->bench_id, &(context->bench_handle));
 	assert(ret == HG_SUCCESS);
-	ret = margo_create(context->mid, context->svr_addr,
-			   context->shutdown_id, &(context->shutdown_handle));
+	ret = HG_Create(hg_context, context->svr_addr,
+			context->shutdown_id, &(context->shutdown_handle));
 	assert(ret == HG_SUCCESS);
 	
 	margo_free_output(handle, &open_out);
@@ -190,8 +192,10 @@ hg_return_t kv_close(kv_context *context)
 	put_in_t close_in;
 	put_out_t close_out;
 
-	ret = margo_create(context->mid, context->svr_addr,
-			   context->close_id, &handle);
+	// grab hg_context for mid
+	hg_context_t *hg_context = margo_get_context(context->mid);
+	ret = HG_Create(hg_context, context->svr_addr,
+			context->close_id, &handle);
 	assert(ret == HG_SUCCESS);
 	ret = margo_forward(handle, &close_in);
 	assert(ret == HG_SUCCESS);
@@ -217,10 +221,12 @@ bench_result *kv_benchmark(kv_context *context, int count) {
     ret = margo_create(context->mid, context->svr_addr,
 		context->bench_id, &(context->bench_handle) );
 
-    bench_in.count = count;
-    ret = margo_create(context->mid, context->svr_addr,
-		       context->bench_id, &handle);
+    // grab hg_context for mid
+    hg_context_t *hg_context = margo_get_context(context->mid);
+    ret = HG_Create(hg_context, context->svr_addr,
+		    context->bench_id, &handle);
     assert(ret == HG_SUCCESS);
+    bench_in.count = count;
     ret = margo_forward(context->bench_handle, &bench_in);
     assert(ret == HG_SUCCESS);
     ret = margo_get_output(context->bench_handle, &bench_out);
