@@ -171,24 +171,14 @@ static hg_return_t open_handler(hg_handle_t handle)
 	ret = margo_get_input(handle, &in);
 
 	if (strcmp(in.name, my_db) == 0) {
-	  if (TREE) {
-	    TREE->SetDebugLogging(1);
-	    TREE->UpdateThreadLocal(1);
-	    TREE->AssignGCID(0);
-	    
-	    size_t num_threads = TREE->GetThreadNum();
-	    printf("SERVER: BwTree initialized, using %lu thread(s)\n", num_threads);
-	    out.ret = HG_SUCCESS;
-	  }
-	  else {
-	    printf("SERVER: BwTree is uninitialized, open failed for %s\n", in.name);
-	  }
-	  out.ret = HG_OTHER_ERROR;
+	  printf("SERVER: BwTree initialized and ready for %s\n", my_db);
+	  out.ret = HG_SUCCESS;
 	}
 	else {
 	  printf("SERVER: currently managing %s and unable to process OPEN request for %s\n", my_db, in.name);
 	  out.ret = HG_OTHER_ERROR;
 	}
+	assert(out.ret == HG_SUCCESS);
 
 	/* TODO: something with in.keytype and in.valtype.  In C I would get
 	 * away with sloppy casting.  Not sure how to do the same with a C++
@@ -552,7 +542,7 @@ kv_context *kv_server_register(margo_instance_id mid);
 	char addr_self_string[128];
 	hg_size_t addr_self_string_sz = 128;
 	kv_context *context;
-	
+
 	printf("SERVER: initializing BwTree instance to manage %s\n", my_db);
 	TREE = new BwTree<uint64_t, std::vector<char>,
 			  std::less<uint64_t>,
@@ -562,6 +552,23 @@ kv_context *kv_server_register(margo_instance_id mid);
 			  my_hash>();
 
 	context->mid = mid;
+	TREE->SetDebugLogging(1);
+	TREE->UpdateThreadLocal(1);
+	TREE->AssignGCID(0);
+
+	size_t num_threads = TREE->GetThreadNum();
+	printf("SERVER: BwTree initialized, using %lu thread(s)\n", num_threads);
+
+	/* sds keyval server init */
+	context = (kv_context *)malloc(sizeof(*context));
+	if (!addr_str) {
+	  context->mid = margo_init("cci+tcp://localhost:52345",
+				    MARGO_SERVER_MODE, 0, -1);
+	}
+	else {
+	  context->mid = margo_init(addr_str,
+				    MARGO_SERVER_MODE, 0, -1);
+	}
 	assert(context->mid);
 
 	/* figure out what address this server is listening on */
