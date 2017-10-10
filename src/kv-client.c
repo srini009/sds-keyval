@@ -58,7 +58,7 @@ hg_return_t kv_open(kv_context *context, const char *server_addr, const char *db
 	open_in_t open_in;
 	open_out_t open_out;
 
-	printf("CLIENT: kv_open, server_addr %s\n", server_addr);
+	printf("kv-client: kv_open, server_addr %s\n", server_addr);
 	ret = margo_addr_lookup(context->mid, server_addr, &(context->svr_addr));
 	assert(ret == HG_SUCCESS);
 

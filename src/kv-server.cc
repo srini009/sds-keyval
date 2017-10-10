@@ -169,6 +169,7 @@ static hg_return_t open_handler(hg_handle_t handle)
 	open_out_t out;
 
 	ret = margo_get_input(handle, &in);
+	printf("SERVER: OPEN %s, k-type %d, v-type %d\n", in.name, in.keytype, in.valtype);
 
 	if (strcmp(in.name, my_db) == 0) {
 	  printf("SERVER: BwTree initialized and ready for %s\n", my_db);
