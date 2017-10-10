@@ -43,11 +43,11 @@ kv_context *kv_client_register(const char *addr_str) {
 	context->close_id = MARGO_REGISTER(context->mid, "close",
 					   close_in_t, close_out_t, NULL);
 
-	context->bench_id= MARGO_REGISTER(context->mid, "bench",
-					  bench_in_t, bench_out_t, NULL);
+	context->bench_id = MARGO_REGISTER(context->mid, "bench",
+					   bench_in_t, bench_out_t, NULL);
 
-	context->shutdown_id= MARGO_REGISTER(context->mid, "shutdown",
-					     void, void, NULL);
+	context->shutdown_id = MARGO_REGISTER(context->mid, "shutdown",
+					      void, void, NULL);
 	return context;
 }
 
