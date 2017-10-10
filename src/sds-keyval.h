@@ -23,8 +23,14 @@ typedef enum {
 	KV_FLOAT,
 	KV_DOUBLE,
 	KV_STRING,
-	KV_BULK
+	KV_BULK,
 } kv_type;
+
+typedef enum {
+  KV_ALLOWDUPKEY   = 0x0001,
+  KV_IGNOREDUPKEY  = 0x0002,
+  KV_ERASEONGETKEY = 0x0004,
+} kv_options;
 
 /* do we need one for server, one for client? */
 typedef struct kv_context_s {
@@ -71,17 +77,18 @@ MERCURY_GEN_PROC(get_out_t,
 DECLARE_MARGO_RPC_HANDLER(get_handler)
 
 MERCURY_GEN_PROC(open_in_t,
-		((hg_string_t)(name))\
-		((int32_t) (keytype))\
-		((int32_t) (valtype)) )
+		 ((hg_string_t)(name))		\
+		 ((uint32_t) (keytype))		\
+		 ((uint32_t) (valtype)))
 
 MERCURY_GEN_PROC(open_out_t, ((int32_t)(ret)))
 
+  KV_ALLOWDUP=0x010,
 DECLARE_MARGO_RPC_HANDLER(open_handler)
 
 MERCURY_GEN_PROC(close_in_t,
-		((int32_t)(x))\
-		((int32_t)(y)) )
+		 ((int32_t)(x))			\
+		 ((int32_t)(y)) )
 
 MERCURY_GEN_PROC(close_out_t, ((int32_t)(ret)) )
 DECLARE_MARGO_RPC_HANDLER(close_handler)

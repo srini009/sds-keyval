@@ -162,6 +162,9 @@ BwTree<uint64_t, std::vector<char>,
 
 const char *my_db = "minima_store";
 
+// these should probably be passed in put/get calls
+uint16_t db_options = KV_IGNOREDUPKEY;
+
 static hg_return_t open_handler(hg_handle_t handle)
 {
 	hg_return_t ret;
@@ -229,6 +232,7 @@ static hg_return_t put_handler(hg_handle_t handle)
 	std::vector<char> data;
 	data.resize(sizeof(in.value));
 	memcpy(data.data(), &in.value, sizeof(in.value));
+	// TODO: check return value here (see bulk_put_handler)
 	TREE->Insert(in.key, data);
 
 	ret = margo_respond(handle, &out);
@@ -268,15 +272,36 @@ static hg_return_t bulk_put_handler(hg_handle_t handle)
 	ret = margo_bulk_transfer(mid, HG_BULK_PULL, hgi->addr, bpin.bulk_handle, 0, bulk_handle, 0, bpin.size);
 	assert(ret == HG_SUCCESS);
 	
-	if (TREE->Insert(bpin.key, data)) {
-	  printf("SERVER: TREE Insert succeeded for key = %lu\n", bpin.key);
-	  bpout.ret = HG_SUCCESS;
+	std::vector<std::vector<char>> values;
+	TREE->GetValue(bpin.key, values);
+	bool duplicate_key = (values.size() != 0);
+	
+	// only option currently implemented is to ignore duplicate Insert attempts
+	if (duplicate_key) {
+	  if ((db_options & KV_IGNOREDUPKEY) == KV_IGNOREDUPKEY) {
+	    printf("SERVER: TREE ignoring duplicate Insert attempt for key = %lu\n", bpin.key);
+	    bpout.ret = HG_SUCCESS;
+	  }
+	  else if ((db_options & KV_ALLOWDUPKEY) == KV_ALLOWDUPKEY) {
+	    printf("SERVER: TREE duplicate Insert support not implemented, key = %lu\n", bpin.key);
+	    bpout.ret = HG_OTHER_ERROR;
+	  }
+	  else {
+	    printf("SERVER: TREE unhandled duplicate Insert attempt for key = %lu\n", bpin.key);
+	    bpout.ret = HG_OTHER_ERROR;
+	  }
 	}
 	else {
-	  // BwTree Insert returns False if the key-value pair already
-	  // exists in the DB.
-	  printf("SERVER: TREE Insert failed for key = %lu\n", bpin.key);
-	  bpout.ret = HG_OTHER_ERROR;
+	  if (TREE->Insert(bpin.key, data)) {
+	    printf("SERVER: TREE Insert succeeded for key = %lu\n", bpin.key);
+	    bpout.ret = HG_SUCCESS;
+	  }
+	  else {
+	    // BwTree Insert returns False if the key-value pair already
+	    // exists in the DB.
+	    printf("SERVER: TREE unexpected duplicate Insert failed for key = %lu\n", bpin.key);
+	    bpout.ret = HG_OTHER_ERROR; // shouldn't get here, but...
+	  }
 	}
 
 	bpout.ret = ret;
@@ -601,14 +626,14 @@ kv_context *kv_server_register(margo_instance_id mid);
 	context->put_id = MARGO_REGISTER(context->mid, "put",
 					 put_in_t, put_out_t, put_handler);
 
-	context->put_id = MARGO_REGISTER(context->mid, "bulk_put",
-					 bulk_put_in_t, bulk_put_out_t, bulk_put_handler);
+	context->bulk_put_id = MARGO_REGISTER(context->mid, "bulk_put",
+					      bulk_put_in_t, bulk_put_out_t, bulk_put_handler);
 
 	context->get_id = MARGO_REGISTER(context->mid, "get",
 					 get_in_t, get_out_t, get_handler);
 
-	context->get_id = MARGO_REGISTER(context->mid, "bulk_get",
-					 bulk_get_in_t, bulk_get_out_t, bulk_get_handler);
+	context->bulk_get_id = MARGO_REGISTER(context->mid, "bulk_get",
+					      bulk_get_in_t, bulk_get_out_t, bulk_get_handler);
 
 	context->bench_id = MARGO_REGISTER(context->mid, "bench",
 					   bench_in_t, bench_out_t, bench_handler);
