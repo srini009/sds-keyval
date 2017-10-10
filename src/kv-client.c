@@ -66,7 +66,10 @@ hg_return_t kv_open(kv_context *context, const char *server_addr, const char *db
 			   context->open_id, &handle);
 	assert(ret == HG_SUCCESS);
 
-	open_in.name = (char*)db_name;
+	open_in.name = (hg_string_t)db_name;
+	open_in.keytype = keytype;
+	open_in.valtype = valtype;
+	
 	ret = margo_forward(handle, &open_in);
 	assert(ret == HG_SUCCESS);
 	ret = margo_get_output(handle, &open_out);
