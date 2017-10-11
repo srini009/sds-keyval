@@ -235,7 +235,7 @@ kv_context * kv_server_register(int argc, char **argv)
 	context = (kv_context *)malloc(sizeof(*context));
 	/* sds keyval server init */
 
-	context->mid = margo_init("cci+tcp://localhost:52345",
+	context->mid = margo_init("ofi+tcp://",
 		MARGO_SERVER_MODE, 0, -1);
 	assert(context->mid);
 

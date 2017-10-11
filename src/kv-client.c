@@ -14,7 +14,7 @@ kv_context *kv_client_register(int argc, char **argv) {
 
 	/* client side: no custom xstreams */
 
-	context->mid = margo_init("cci+tcp://localhost:1234",
+	context->mid = margo_init("ofi+tcp://",
 		MARGO_CLIENT_MODE, 0, -1);
 
 	context->put_id = MARGO_REGISTER(context->mid, "put",
