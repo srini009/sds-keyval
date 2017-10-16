@@ -86,7 +86,8 @@ int main(int argc, char *argv[])
       printf("client (rank %d): server addr_str: %s\n", rank, server_addr_str);
 
       // kv-client
-      sprintf(client_addr_str_in, "cci+tcp://534%02d", rank);
+      //sprintf(client_addr_str_in, "cci+tcp://534%02d", rank);
+      sprintf(client_addr_str_in, "cci+tcp://");
       kv_context *context = kv_client_register(client_addr_str_in);
       hret = margo_addr_self(context->mid, &client_addr);
       DIE_IF(hret != HG_SUCCESS, "margo_addr_self");
