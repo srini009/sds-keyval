@@ -332,7 +332,7 @@ static hg_return_t get_handler(hg_handle_t handle)
 
 	int value = 0;
 	if (values.size() == 1) {
-	  std::vector<char> &data = values.front();
+	  std::vector<char> data = values.front();
 	  memcpy(&value, data.data(), data.size());
 	  out.value = value;
 	  out.ret = HG_SUCCESS;
@@ -380,7 +380,7 @@ static hg_return_t bulk_get_handler(hg_handle_t handle)
 	// perhaps > 1 or 0 results in an error return value?
 	if (values.size() == 1) {
 	  printf("SERVER: BULK GET: found 1 value for key=%lu\n", bgin.key);
-	  std::vector<char> &data = values.front();
+	  std::vector<char> data = values.front();
 	  // will the transfer fit on the client side?
 	  bgout.size = data.size();
 	  if (bgout.size <= bgin.size) {
