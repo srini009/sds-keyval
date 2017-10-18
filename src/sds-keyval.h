@@ -99,7 +99,7 @@ DECLARE_MARGO_RPC_HANDLER(bench_handler)
 MERCURY_GEN_PROC(bench_out_t, ((bench_result)(result)) )
 
 kv_context *kv_client_register(int argc, char **argv);
-kv_context * kv_server_register(int argc, char **argv);
+kv_context * kv_server_register(margo_instance_id mid);
 
 /* both the same: should probably move to common */
 int kv_client_deregister(kv_context *context);

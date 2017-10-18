@@ -225,7 +225,7 @@ static hg_return_t  bench_handler(hg_handle_t h)
 }
 DEFINE_MARGO_RPC_HANDLER(bench_handler)
 
-kv_context * kv_server_register(int argc, char **argv)
+kv_context * kv_server_register(margo_instance_id mid)
 {
 	int ret;
 	hg_addr_t addr_self;
@@ -235,8 +235,7 @@ kv_context * kv_server_register(int argc, char **argv)
 	context = (kv_context *)malloc(sizeof(*context));
 	/* sds keyval server init */
 
-	context->mid = margo_init("ofi+tcp://",
-		MARGO_SERVER_MODE, 0, -1);
+	context->mid = mid;
 	assert(context->mid);
 
 	/* figure out what address this server is listening on */
