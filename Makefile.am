@@ -1,10 +1,5 @@
 ACLOCAL_AMFLAGS="-Im4"
 
-bin_PROGRAMS = test/bench-client
-test_bench_client_SOURCES = test/bench-client.cc
-test_bench_client_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src
-test_bench_client_LDADD = ${LIBS} -lkvclient
-
 lib_LTLIBRARIES = libkvclient.la \
                   libkvserver.la
 
@@ -23,7 +18,12 @@ noinst_HEADERS = src/BwTree/src/bwtree.h \
 		 src/BwTree/src/sorted_small_set.h
 
 check_PROGRAMS = test/test-client \
-		test/test-server
+		test/test-server \
+		test/bench-client
+
+test_bench_client_SOURCES = test/bench-client.cc
+test_bench_client_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src
+test_bench_client_LDADD = ${LIBS} -lkvclient
 
 TESTS = test/test-client \
         test/test-server
