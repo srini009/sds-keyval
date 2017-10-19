@@ -33,7 +33,3 @@ test_test_client_LDADD =  ${LIBS} -lkvclient
 
 test_test_server_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src
 test_test_server_LDADD =  ${LIBS} -lkvserver
-
-pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = maint/kv-server.pc \
-		 maint/kv-client.pc

@@ -45,6 +45,6 @@ AC_TYPE_SSIZE_T
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
 
-AC_CONFIG_FILES([Makefile maint/kv-client.pc maint/kv-server.pc])
+AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
 
