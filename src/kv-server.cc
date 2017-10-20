@@ -553,7 +553,7 @@ static hg_return_t bench_handler(hg_handle_t handle)
     bench_out.result.read_time = random_insert.read_time;
     bench_out.result.overhead = random_insert.overhead;
 
-    ret = margo_respond(handle, NULL);
+    ret = margo_respond(handle, &bench_out);
 
     margo_free_input(handle, &bench_in);
     margo_destroy(handle);

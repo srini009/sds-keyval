@@ -62,7 +62,7 @@ int main(int argc, char **argv)
     kv_context *context;
     size_t items = atoi(argv[1]);
 
-    context = kv_client_register(argc, argv);
+    context = kv_client_register(NULL);
     kv_open(context, argv[2], NULL, KV_INT, KV_INT);
 
     RandomInsertSpeedTest(context, items, &rpc);
