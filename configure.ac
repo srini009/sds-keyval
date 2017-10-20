@@ -3,7 +3,7 @@
 
 AC_PREREQ([2.69])
 AC_INIT([sds-keyval], [0.1], [robl@mcs.anl.gov])
-AM_INIT_AUTOMAKE([1.15 -Wall -Werror foreign subdir-objects silent-rules])
+AM_INIT_AUTOMAKE([1.14.1 -Wall -Werror foreign subdir-objects silent-rules])
 AM_SILENT_RULES([yes])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([src/sds-keyval.h])
