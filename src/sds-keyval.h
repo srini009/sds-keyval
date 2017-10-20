@@ -26,12 +26,6 @@ typedef enum {
 	KV_BULK,
 } kv_type;
 
-typedef enum {
-  KV_ALLOWDUPKEY   = 0x0001,
-  KV_IGNOREDUPKEY  = 0x0002,
-  KV_ERASEONGETKEY = 0x0004,
-} kv_options;
-
 /* do we need one for server, one for client? */
 typedef struct kv_context_s {
 	margo_instance_id mid;

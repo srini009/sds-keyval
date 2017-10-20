@@ -6,7 +6,7 @@ lib_LTLIBRARIES = libkvclient.la \
 libkvclient_la_SOURCES = src/kv-client.c
 
 libkvserver_la_SOURCES = src/kv-server.cc \
-			src/BwTree/src/bwtree.cpp
+			 src/BwTree/src/bwtree.cpp
 
 libkvserver_la_CXXFLAGS = -pthread -std=c++11 -g -Wall -mcx16 -Wno-invalid-offsetof
 libkvserver_la_CPPFLAGS = -I${srcdir}/src/BwTree/src
