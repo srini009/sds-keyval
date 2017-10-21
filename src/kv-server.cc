@@ -8,6 +8,128 @@
 #include <abt.h>
 #include <assert.h>
 
+#ifdef DISABLE_BWTREE
+#ifdef HAVE_DB_H
+#include <db.h>
+#endif
+
+DB *dbp;
+
+
+static hg_return_t open_handler(hg_handle_t h)
+{
+    hg_return_t ret;
+    open_in_t in;
+    open_out_t out;
+
+    ret = margo_get_input(h, &in);
+
+    db_create(&dbp, NULL, 0);
+    u_int32_t oflags = DB_CREATE;
+    dbp->open(dbp, NULL, in.name, NULL, DB_BTREE, oflags, 0);
+
+    out.ret = HG_SUCCESS;
+    ret = HG_Respond(h, NULL, NULL, &out);
+    HG_Free_input(h, &in);
+    HG_Destroy(h);
+
+    return ret;
+}
+DEFINE_MARGO_RPC_HANDLER(open_handler)
+
+static hg_return_t close_handler(hg_handle_t h)
+{
+    hg_return_t ret;
+    close_in_t in;
+    close_out_t out;
+
+
+    ret = HG_Get_input(h, &in);
+    assert(ret == HG_SUCCESS);
+
+    dbp->close(dbp, 0);
+    ret = HG_Respond(h, NULL, NULL, &out);
+    assert(ret == HG_SUCCESS);
+
+    HG_Free_input(h, &in);
+    HG_Destroy(h);
+
+    return ret;
+
+}
+DEFINE_MARGO_RPC_HANDLER(close_handler)
+
+static hg_return_t put_handler(hg_handle_t h)
+{
+    DBT key, value;
+    int ret;
+    put_in_t in;
+    put_out_t out;
+
+    ret = margo_get_input(h, &in);
+    memset(&key, 0, sizeof(key));
+    memset(&value, 0, sizeof(value));
+
+    key.data = &(in.key);
+    key.size = sizeof(in.key);
+
+    value.data = &(in.value);
+    value.size = sizeof(in.value);
+
+    dbp->put(dbp, NULL, &key, &value,  0);
+    ret = HG_Respond(h, NULL, NULL, &out);
+    assert(ret == HG_SUCCESS);
+
+    HG_Free_input(h, &in);
+    HG_Destroy(h);
+    return HG_SUCCESS;
+}
+
+DEFINE_MARGO_RPC_HANDLER(put_handler)
+
+static hg_return_t get_handler(hg_handle_t h)
+{
+    hg_return_t ret;
+    get_in_t in;
+    get_out_t out;
+    DBT key, value;
+
+    ret = margo_get_input(h, &in);
+    memset(&key, 0, sizeof(key));
+    memset(&value, 0, sizeof(value));
+
+    key.data = &(in.key);
+    key.size = sizeof(in.key);
+
+    value.data = &(out.value);
+    value.ulen = sizeof(out.value);
+
+    dbp->get(dbp, NULL, &key, &value, 0);
+    ret = HG_Respond(h, NULL, NULL, &out);
+    assert(ret == HG_SUCCESS);
+
+    HG_Free_input(h, &in);
+    HG_Destroy(h);
+
+    return ret;
+}
+DEFINE_MARGO_RPC_HANDLER(get_handler)
+
+static hg_return_t  bench_handler(hg_handle_t h)
+{
+    bench_out_t bench_out;
+
+    bench_out.result.nkeys = 0;
+    bench_out.result.insert_time = 0;
+    bench_out.result.read_time = 0;
+    bench_out.result.overhead = 0;
+
+    HG_Respond(h, NULL, NULL, &bench_out);
+    return HG_SUCCESS;
+}
+DEFINE_MARGO_RPC_HANDLER(bench_handler)
+
+#else
 /* keyval-specific stuff can go here */
 #include <bwtree.h>
 #include <vector>
@@ -42,6 +164,7 @@ static hg_return_t open_handler(hg_handle_t h)
 
 	HG_Free_input(h, &in);
 	HG_Destroy(h);
+
 
 	return HG_SUCCESS;
 }
@@ -224,6 +347,7 @@ static hg_return_t  bench_handler(hg_handle_t h)
     return ret;
 }
 DEFINE_MARGO_RPC_HANDLER(bench_handler)
+#endif
 
 kv_context * kv_server_register(margo_instance_id mid)
 {
