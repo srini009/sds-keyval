@@ -7,417 +7,274 @@
 #include <abt.h>
 #include <assert.h>
 
-#ifdef DISABLE_BWTREE
-#ifdef HAVE_DB_H
-#include <db.h>
-#endif
+// since this is global, we're assuming this server instance will manage a single DB
+AbstractDataStore *datastore = NULL; // created by caller, passed into kv_server_register
+std::string db_name;
 
-DB *dbp;
-
-
-static hg_return_t open_handler(hg_handle_t h)
+static hg_return_t open_handler(hg_handle_t handle)
 {
     hg_return_t ret;
     open_in_t in;
     open_out_t out;
 
-    ret = margo_get_input(h, &in);
+    ret = margo_get_input(handle, &in);
+    std::string in_name(in.name);
+    std::cout << "SERVER: OPEN " << in_name << std::endl;
 
-    db_create(&dbp, NULL, 0);
-    u_int32_t oflags = DB_CREATE;
-    dbp->open(dbp, NULL, in.name, NULL, DB_BTREE, oflags, 0);
-
-    out.ret = HG_SUCCESS;
-    ret = HG_Respond(h, NULL, NULL, &out);
-    HG_Free_input(h, &in);
-    HG_Destroy(h);
-
-    return ret;
-}
-DEFINE_MARGO_RPC_HANDLER(open_handler)
-
-static hg_return_t close_handler(hg_handle_t h)
-{
-    hg_return_t ret;
-    close_in_t in;
-    close_out_t out;
-
-
-    ret = HG_Get_input(h, &in);
-    assert(ret == HG_SUCCESS);
-
-    dbp->close(dbp, 0);
-    ret = HG_Respond(h, NULL, NULL, &out);
-    assert(ret == HG_SUCCESS);
-
-    HG_Free_input(h, &in);
-    HG_Destroy(h);
-
-    return ret;
-
-}
-DEFINE_MARGO_RPC_HANDLER(close_handler)
-
-static hg_return_t put_handler(hg_handle_t h)
-{
-    DBT key, value;
-    int ret;
-    put_in_t in;
-    put_out_t out;
-
-    ret = margo_get_input(h, &in);
-    memset(&key, 0, sizeof(key));
-    memset(&value, 0, sizeof(value));
-
-    key.data = &(in.key);
-    key.size = sizeof(in.key);
-
-    value.data = &(in.value);
-    value.size = sizeof(in.value);
-
-    dbp->put(dbp, NULL, &key, &value,  0);
-    ret = HG_Respond(h, NULL, NULL, &out);
-    assert(ret == HG_SUCCESS);
-
-    HG_Free_input(h, &in);
-    HG_Destroy(h);
-    return HG_SUCCESS;
-}
-
-DEFINE_MARGO_RPC_HANDLER(put_handler)
-
-static hg_return_t get_handler(hg_handle_t h)
-{
-    hg_return_t ret;
-    get_in_t in;
-    get_out_t out;
-    DBT key, value;
-
-    ret = margo_get_input(h, &in);
-    memset(&key, 0, sizeof(key));
-    memset(&value, 0, sizeof(value));
-
-    key.data = &(in.key);
-    key.size = sizeof(in.key);
-
-    value.data = &(out.value);
-    value.ulen = sizeof(out.value);
-
-    dbp->get(dbp, NULL, &key, &value, 0);
-    ret = HG_Respond(h, NULL, NULL, &out);
-    assert(ret == HG_SUCCESS);
-
-    HG_Free_input(h, &in);
-    HG_Destroy(h);
-
-    return ret;
-}
-DEFINE_MARGO_RPC_HANDLER(get_handler)
-
-static hg_return_t  bench_handler(hg_handle_t h)
-{
-    bench_out_t bench_out;
-
-    bench_out.result.nkeys = 0;
-    bench_out.result.insert_time = 0;
-    bench_out.result.read_time = 0;
-    bench_out.result.overhead = 0;
-
-    HG_Respond(h, NULL, NULL, &bench_out);
-    return HG_SUCCESS;
-}
-DEFINE_MARGO_RPC_HANDLER(bench_handler)
-
-#else
-/* keyval-specific stuff can go here */
-#include <vector>
-#include <boost/functional/hash.hpp>
-
-struct my_hash {
-  size_t operator()(const std::vector<char> &v) const {
-    size_t hash = 0;
-    boost::hash_range(hash, v.begin(), v.end());
-    return hash;
-  }
-};
-
-struct my_equal_to {
-  bool operator()(const std::vector<char> &v1, const std::vector<char> &v2) const {
-    return (v1 == v2);
-  }
-};
-
-using namespace wangziqi2013::bwtree;
-
-// since this is global, we're assuming this server instance
-// will manage a single DB
-BwTreeDataStore<uint64_t, std::vector<char>,
-		std::less<uint64_t>,
-		std::equal_to<uint64_t>,
-		std::hash<uint64_t>,
-		my_equal_to,
-		my_hash> *dbm = NULL;
-
-const char *my_db = "minima_store";
-
-static hg_return_t open_handler(hg_handle_t handle)
-{
-	hg_return_t ret;
-	open_in_t in;
-	open_out_t out;
-
-	ret = margo_get_input(handle, &in);
-	printf("SERVER: OPEN %s, k-type %d, v-type %d\n", in.name, in.keytype, in.valtype);
-
-	if (strcmp(in.name, my_db) == 0) {
-	  if (!dbm) {
-	    printf("SERVER: initializing DataStore instance to manage %s\n", my_db);
-	    dbm = new BwTreeDataStore<uint64_t, std::vector<char>,
-				      std::less<uint64_t>,
-				      std::equal_to<uint64_t>,
-				      std::hash<uint64_t>,
-				      my_equal_to,
-				      my_hash>(Duplicates::IGNORE, false, false);
-	    dbm->createDatabase(std::string(""), std::string(my_db));
-	  }
-	  printf("SERVER: DataStore initialized and ready for %s\n", my_db);
-	  out.ret = HG_SUCCESS;
+    if (!datastore) {
+	//datastore = new BwTreeDataStore(); // testing BwTree
+	datastore = new LevelDBDataStore(); // testing LevelDB
+	db_name = in_name;
+	datastore->createDatabase(db_name);
+	std::cout << "SERVER OPEN: DataStore initialized and ready for " << db_name << std::endl;
+	out.ret = HG_SUCCESS;
+    }
+    else {
+	if (db_name == in_name) {
+	    std::cout << "SERVER OPEN: DataStore initialized and ready for " << db_name << std::endl;
+	    out.ret = HG_SUCCESS;
 	}
 	else {
-	  printf("SERVER: currently managing %s and unable to process OPEN request for %s\n", my_db, in.name);
-	  out.ret = HG_OTHER_ERROR;
+	    std::cout << "SERVER OPEN failed: currently managing " << db_name
+		<< " and unable to process OPEN request for " << in_name << std::endl;
+	    out.ret = HG_OTHER_ERROR;
 	}
-	assert(out.ret == HG_SUCCESS);
+    }
 
-	/* TODO: something with in.keytype and in.valtype.  In C I would get
-	 * away with sloppy casting.  Not sure how to do the same with a C++
-	 * template.  */
+    ret = margo_respond(handle, &out);
+    assert(ret == HG_SUCCESS);
 
-	ret = margo_respond(handle, &out);
-	assert(ret == HG_SUCCESS);
+    margo_free_input(handle, &in);
+    margo_destroy(handle);
 
-	margo_free_input(handle, &in);
-	margo_destroy(handle);
-
-
-	return HG_SUCCESS;
+    return HG_SUCCESS;
 }
 DEFINE_MARGO_RPC_HANDLER(open_handler)
 
 static hg_return_t close_handler(hg_handle_t handle)
 {
-	hg_return_t ret;
-	close_in_t in;
-	close_out_t out;
+  hg_return_t ret;
+  close_out_t out;
 
+  // there may be cleanup we want to do here
+  out.ret = HG_SUCCESS;
+  
+  ret = margo_respond(handle, &out);
+  assert(ret == HG_SUCCESS);
 
-	ret = margo_get_input(handle, &in);
-	assert(ret == HG_SUCCESS);
-        out.ret = HG_SUCCESS;
-	ret = margo_respond(handle, &out);
-	assert(ret == HG_SUCCESS);
+  margo_destroy(handle);
 
-	margo_free_input(handle, &in);
-	margo_destroy(handle);
-
-	return HG_SUCCESS;
+  return HG_SUCCESS;
 }
 DEFINE_MARGO_RPC_HANDLER(close_handler)
 
 static hg_return_t put_handler(hg_handle_t handle)
 {
-	hg_return_t ret;
-	put_in_t in;
-	put_out_t out;
+  hg_return_t ret;
+  put_in_t in;
+  put_out_t out;
 
-
-	ret = margo_get_input(handle, &in);
-	assert(ret == HG_SUCCESS);
+  ret = margo_get_input(handle, &in);
+  assert(ret == HG_SUCCESS);
 	
-	std::vector<char> data;
-	data.resize(sizeof(in.value));
-	memcpy(data.data(), &in.value, sizeof(in.value));
+  ds_bulk_t data;
+  data.resize(sizeof(in.value));
+  memcpy(data.data(), &in.value, sizeof(in.value));
 
-	if (dbm->put(in.key, data)) {
-	  printf("SERVER: PUT succeeded for key = %d value = %d\n", in.key, in.value);
-	}
-	else {
-	  printf("SERVER: PUT failed for key = %d value = %d\n", in.key, in.value);
-	}
+  if (datastore->put(in.key, data)) {
+    std::cout << "SERVER: PUT succeeded for key = " << in.key
+	      << " value = " << in.value << std::endl;
+    out.ret = HG_SUCCESS;
+  }
+  else {
+    std::cout << "SERVER: PUT failed for key = " << in.key
+	      << " value = " << in.value << std::endl;
+    out.ret = HG_OTHER_ERROR;
+  }
 
-	ret = margo_respond(handle, &out);
-	assert(ret == HG_SUCCESS);
+  ret = margo_respond(handle, &out);
+  assert(ret == HG_SUCCESS);
 
-	margo_free_input(handle, &in);
-	margo_destroy(handle);
+  margo_free_input(handle, &in);
+  margo_destroy(handle);
 	
-	return HG_SUCCESS;
+  return HG_SUCCESS;
 }
 DEFINE_MARGO_RPC_HANDLER(put_handler)
 
 static hg_return_t bulk_put_handler(hg_handle_t handle)
 {
-	hg_return_t ret;
-	bulk_put_in_t bpin;
-	bulk_put_out_t bpout;
-	hg_bulk_t bulk_handle;
-	const struct hg_info *hgi;
-	margo_instance_id mid;
+  hg_return_t ret;
+  bulk_put_in_t bpin;
+  bulk_put_out_t bpout;
+  hg_bulk_t bulk_handle;
+  const struct hg_info *hgi;
+  margo_instance_id mid;
 
-	ret = margo_get_input(handle, &bpin);
-	assert(ret == HG_SUCCESS);
+  ret = margo_get_input(handle, &bpin);
+  assert(ret == HG_SUCCESS);
 
-	/* get handle info and margo instance */
-	hgi = margo_get_info(handle);
-	assert(hgi);
-	mid = margo_hg_info_get_instance(hgi);
-	assert(mid != MARGO_INSTANCE_NULL);
+  /* get handle info and margo instance */
+  hgi = margo_get_info(handle);
+  assert(hgi);
+  mid = margo_hg_info_get_instance(hgi);
+  assert(mid != MARGO_INSTANCE_NULL);
 
-	std::vector<char> data;
-	data.resize(bpin.size);
-	void *buffer = (void*)data.data();
-	ret = margo_bulk_create(mid, 1, (void**)&buffer, &bpin.size, HG_BULK_WRITE_ONLY, &bulk_handle);
-	assert(ret == HG_SUCCESS);
-	ret = margo_bulk_transfer(mid, HG_BULK_PULL, hgi->addr, bpin.bulk_handle, 0, bulk_handle, 0, bpin.size);
-	assert(ret == HG_SUCCESS);
+  ds_bulk_t data;
+  data.resize(bpin.size);
+  void *buffer = (void*)data.data();
+  ret = margo_bulk_create(mid, 1, (void**)&buffer, &bpin.size, HG_BULK_WRITE_ONLY, &bulk_handle);
+  assert(ret == HG_SUCCESS);
+  ret = margo_bulk_transfer(mid, HG_BULK_PULL, hgi->addr, bpin.bulk_handle, 0, bulk_handle, 0, bpin.size);
+  assert(ret == HG_SUCCESS);
 
-	if (dbm->put(bpin.key, data)) {
-	  printf("SERVER: BULK PUT succeeded for key = %lu size = %lu\n", bpin.key, bpin.size);
-	  bpout.ret = HG_SUCCESS;
-	}
-	else {
-	  // put returns False if the key-value pair already
-	  // exists in the DB.
-	  printf("SERVER: BULK PUT failed for key = %lu\n", bpin.key);
-	  bpout.ret = HG_OTHER_ERROR; // shouldn't get here, but...
-	}
+  if (datastore->put(bpin.key, data)) {
+    std::cout << "SERVER: BULK PUT succeeded for key = " << bpin.key
+	      << " size = " << bpin.size << std::endl;
+    bpout.ret = HG_SUCCESS;
+  }
+  else {
+    // e.g. put returns false if the key-value pair already
+    // exists in the DB and duplicates are not allowed or ignored
+    std::cout << "SERVER: BULK PUT failed for key = " << bpin.key << std::endl;
+    bpout.ret = HG_OTHER_ERROR;
+  }
 
-	bpout.ret = ret;
-	ret = margo_respond(handle, &bpout);
-	assert(ret == HG_SUCCESS);
+  bpout.ret = ret;
+  ret = margo_respond(handle, &bpout);
+  assert(ret == HG_SUCCESS);
 
-	margo_free_input(handle, &bpin);
-	margo_bulk_free(bulk_handle);
-	margo_destroy(handle);
+  margo_free_input(handle, &bpin);
+  margo_bulk_free(bulk_handle);
+  margo_destroy(handle);
 	
-	return HG_SUCCESS;
+  return HG_SUCCESS;
 }
 DEFINE_MARGO_RPC_HANDLER(bulk_put_handler)
 
 static hg_return_t get_handler(hg_handle_t handle)
 {
-	hg_return_t ret;
-	get_in_t in;
-	get_out_t out;
+  hg_return_t ret;
+  get_in_t in;
+  get_out_t out;
 
+  ret = margo_get_input(handle, &in);
+  assert(ret == HG_SUCCESS);
 
-	ret = margo_get_input(handle, &in);
-	assert(ret == HG_SUCCESS);
+  ds_bulk_t data;
+  if (datastore->get(in.key, data)) {
+    kv_value_t value;
+    if (data.size() <= sizeof(value)) {
+      memcpy(&value, data.data(), data.size());
+      std::cout << "SERVER: GET succeeded for key = " << in.key
+		<< " value = " << value << std::endl;
+      out.value = value;
+      out.ret = HG_SUCCESS;
+    }
+    else {
+      std::cout << "SERVER: GET failed for key = " << in.key
+		<< " value returned too large for kv_value_t" << std::endl;
+      out.ret = HG_SIZE_ERROR; // caller should be checking return value
+    }
+  }
+  else {
+    // get on key did not succeed
+    std::cout << "SERVER: GET failed for key = " << in.key << std::endl;
+    out.ret = HG_OTHER_ERROR; // caller should be checking return value
+  }
 
-	std::vector<char> data;
-	if (dbm->get(in.key, data)) {
-	  int value = 0;
-	  memcpy(&value, data.data(), data.size());
-	  printf("SERVER: GET succeeded for key=%d, value=%d\n", in.key, value);
-	  out.value = value;
-	  out.ret = HG_SUCCESS;
-	}
-	else {
-	  // get on key did not succeed
-	  printf("SERVER: GET failed for key=%d\n", in.key);
-	  out.value = 0; // assuming caller will check return code
-	  out.ret = HG_OTHER_ERROR;
-	}
+  ret = margo_respond(handle, &out);
+  assert(ret == HG_SUCCESS);
 
-	ret = margo_respond(handle, &out);
-	assert(ret == HG_SUCCESS);
+  margo_free_input(handle, &in);
+  margo_destroy(handle);
 
-	margo_free_input(handle, &in);
-	margo_destroy(handle);
-
-	return HG_SUCCESS;
+  return HG_SUCCESS;
 }
 DEFINE_MARGO_RPC_HANDLER(get_handler)
 
 static hg_return_t bulk_get_handler(hg_handle_t handle)
 {
-	hg_return_t ret;
-	bulk_get_in_t bgin;
-	bulk_get_out_t bgout;
-	hg_bulk_t bulk_handle;
-	const struct hg_info *hgi;
-	margo_instance_id mid;
+  hg_return_t ret;
+  bulk_get_in_t bgin;
+  bulk_get_out_t bgout;
+  hg_bulk_t bulk_handle;
+  const struct hg_info *hgi;
+  margo_instance_id mid;
 
-	ret = margo_get_input(handle, &bgin);
-	assert(ret == HG_SUCCESS);
+  ret = margo_get_input(handle, &bgin);
+  assert(ret == HG_SUCCESS);
 
-	std::vector<char> data;
-	if (dbm->get(bgin.key, data)) {
-	  printf("SERVER: BULK GET succeeded for key=%lu\n", bgin.key);
-	  // will the transfer fit on the client side?
-	  bgout.size = data.size();
-	  if (bgout.size <= bgin.size) {
-	    /* get handle info and margo instance */
-	    hgi = margo_get_info(handle);
-	    assert(hgi);
-	    mid = margo_hg_info_get_instance(hgi);
-	    assert(mid != MARGO_INSTANCE_NULL);
+  ds_bulk_t data;
+  if (datastore->get(bgin.key, data)) {
+    std::cout << "SERVER: BULK GET succeeded for key = " << bgin.key << std::endl;
+    // will the transfer fit on the client side?
+    bgout.size = data.size();
+    if (bgout.size <= bgin.size) {
+      /* get handle info and margo instance */
+      hgi = margo_get_info(handle);
+      assert(hgi);
+      mid = margo_hg_info_get_instance(hgi);
+      assert(mid != MARGO_INSTANCE_NULL);
 
-	    void *buffer = (void*)data.data();
-	    ret = margo_bulk_create(mid, 1, (void**)&buffer, &bgout.size, HG_BULK_READ_ONLY, &bulk_handle);
-	    assert(ret == HG_SUCCESS);
-	    ret = margo_bulk_transfer(mid, HG_BULK_PUSH, hgi->addr, bgin.bulk_handle, 0, bulk_handle, 0, bgout.size);
-	    assert(ret == HG_SUCCESS);
+      void *buffer = (void*)data.data();
+      ret = margo_bulk_create(mid, 1, (void**)&buffer, &bgout.size, HG_BULK_READ_ONLY, &bulk_handle);
+      assert(ret == HG_SUCCESS);
+      ret = margo_bulk_transfer(mid, HG_BULK_PUSH, hgi->addr, bgin.bulk_handle, 0, bulk_handle, 0, bgout.size);
+      assert(ret == HG_SUCCESS);
 
-	    bgout.ret = HG_SUCCESS;
-	  }
-	  else {
-	    bgout.ret = HG_SIZE_ERROR;
-	  }
-	}
-	else {
-	  // get on key did not find a value (return 0 for number found)
-	  printf("SERVER: BULK GET failed for key=%lu\n", bgin.key);
-	  bgout.size = 0; // assuming caller will check return code
-	  bgout.ret = HG_OTHER_ERROR;
-	}
+      bgout.ret = HG_SUCCESS;
+    }
+    else {
+      std::cout << "SERVER: BULK GET failed for key = " << bgin.key
+		<< " value returned too large for kv_value_t" << std::endl;
+      bgout.ret = HG_SIZE_ERROR;
+    }
+  }
+  else {
+    // get on key did not find a value (return 0 for size)
+    std::cout << "SERVER: BULK GET failed for key = " << bgin.key << std::endl;
+    bgout.size = 0; // assuming caller will check return code
+    bgout.ret = HG_OTHER_ERROR;
+  }
 	
-	ret = margo_respond(handle, &bgout);
-	assert(ret == HG_SUCCESS);
+  ret = margo_respond(handle, &bgout);
+  assert(ret == HG_SUCCESS);
 
-	margo_free_input(handle, &bgin);
-	margo_bulk_free(bulk_handle);
-	margo_destroy(handle);
+  margo_free_input(handle, &bgin);
+  margo_bulk_free(bulk_handle);
+  margo_destroy(handle);
 	
-	return HG_SUCCESS;
+  return HG_SUCCESS;
 }
 DEFINE_MARGO_RPC_HANDLER(bulk_get_handler)
 
 static void shutdown_handler(hg_handle_t handle)
 {
-    hg_return_t ret;
-    margo_instance_id mid;
+  hg_return_t ret;
+  margo_instance_id mid;
 
-    printf("SERVER: got RPC request to shutdown\n");
+  std::cout << "SERVER: got RPC request to shutdown" << std::endl;
 
-    /* get handle info and margo instance */
-    mid = margo_hg_handle_get_instance(handle);
-    assert(mid != MARGO_INSTANCE_NULL);
+  /* get handle info and margo instance */
+  mid = margo_hg_handle_get_instance(handle);
+  assert(mid != MARGO_INSTANCE_NULL);
 
-    ret = margo_respond(handle, NULL);
-    assert(ret == HG_SUCCESS);
+  ret = margo_respond(handle, NULL);
+  assert(ret == HG_SUCCESS);
 
-    margo_destroy(handle);
+  margo_destroy(handle);
 
-    /* NOTE: we assume that the server daemon is using
-     * margo_wait_for_finalize() to suspend until this RPC executes, so there
-     * is no need to send any extra signal to notify it.
-     */
-    margo_finalize(mid);
+  /* NOTE: We assume that the server daemon is using
+   * margo_wait_for_finalize() to suspend until this
+   * RPC executes, so there is no need to send any 
+   * extra signal to notify it.
+   */
+  margo_finalize(mid);
 
-    printf("SERVER: margo finalized\n");
+  std::cout << "SERVER: margo finalized" << std::endl;
 
-    return;
+  return;
 }
 DEFINE_MARGO_RPC_HANDLER(shutdown_handler)
 
@@ -425,6 +282,7 @@ DEFINE_MARGO_RPC_HANDLER(shutdown_handler)
  * from BwTree tests:
  * RandomInsertSpeedTest() - Tests how fast it is to insert keys randomly
  */
+#include "bwtree.h"
 #include <random>
 #include <iostream>
 
@@ -466,7 +324,6 @@ static void RandomInsertSpeedTest(size_t key_num, bench_result *results)
   v.reserve(100);
 
   start = std::chrono::system_clock::now();
-
   for(size_t i = 0;i < key_num * 2;i++) {
     int key = uniform_dist(e1);
 
@@ -474,7 +331,7 @@ static void RandomInsertSpeedTest(size_t key_num, bench_result *results)
 
     v.clear();
   }
-
+  
   end = std::chrono::system_clock::now();
 
   elapsed_seconds = end - start;
@@ -506,25 +363,28 @@ static void RandomInsertSpeedTest(size_t key_num, bench_result *results)
 
 static hg_return_t bench_handler(hg_handle_t handle)
 {
-    hg_return_t ret = HG_SUCCESS;
-    bench_in_t bench_in;
-    bench_out_t bench_out;
-    bench_result random_insert;
+  hg_return_t ret = HG_SUCCESS;
+  bench_in_t bench_in;
+  bench_out_t bench_out;
+  bench_result random_insert;
 
-    ret = margo_get_input(handle, &bench_in);
-    assert(ret == HG_SUCCESS);
-    printf("benchmarking %d keys\n", bench_in.count);
-    RandomInsertSpeedTest(bench_in.count, &random_insert);
-    bench_out.result.nkeys = random_insert.nkeys*2;
-    bench_out.result.insert_time = random_insert.insert_time;
-    bench_out.result.read_time = random_insert.read_time;
-    bench_out.result.overhead = random_insert.overhead;
+  ret = margo_get_input(handle, &bench_in);
+  assert(ret == HG_SUCCESS);
 
-    ret = margo_respond(handle, &bench_out);
+  printf("benchmarking %d keys\n", bench_in.count);
+  RandomInsertSpeedTest(bench_in.count, &random_insert);
 
-    margo_free_input(handle, &bench_in);
-    margo_destroy(handle);
-    return ret;
+  bench_out.result.nkeys = random_insert.nkeys*2;
+  bench_out.result.insert_time = random_insert.insert_time;
+  bench_out.result.read_time = random_insert.read_time;
+  bench_out.result.overhead = random_insert.overhead;
+
+  ret = margo_respond(handle, &bench_out);
+
+  margo_free_input(handle, &bench_in);
+  margo_destroy(handle);
+
+  return ret;
 }
 DEFINE_MARGO_RPC_HANDLER(bench_handler)
 #endif
@@ -537,13 +397,6 @@ kv_context *kv_server_register(margo_instance_id mid);
 	hg_size_t addr_self_string_sz = 128;
 	kv_context *context;
 
-	printf("SERVER: initializing BwTree instance to manage %s\n", my_db);
-	TREE = new BwTree<uint64_t, std::vector<char>,
-			  std::less<uint64_t>,
-			  std::equal_to<uint64_t>,
-			  std::hash<uint64_t>,
-			  my_equal_to,
-			  my_hash>();
 
 	context->mid = mid;
 	TREE->SetDebugLogging(0);
@@ -609,6 +462,7 @@ kv_context *kv_server_register(margo_instance_id mid);
 					      void, void, shutdown_handler);
 
 	return context;
+
 }
 
 hg_return_t kv_server_wait_for_shutdown(kv_context *context) {
@@ -619,8 +473,7 @@ hg_return_t kv_server_wait_for_shutdown(kv_context *context) {
 /* this is the same as client. should be moved to common utility library */
 hg_return_t kv_server_deregister(kv_context *context) {
   free(context);
-  delete dbm;
-  printf("SERVER: deregistered, cleaned up DataStore instance\n");
+  delete datastore;
+  std::cout << "SERVER: cleanup complete, deregistered" << std::endl;
   return HG_SUCCESS;
 }
-

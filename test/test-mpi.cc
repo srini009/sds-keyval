@@ -27,11 +27,6 @@
         } \
     } while(0)
 
-static void usage()
-{
-  fprintf(stderr, "Usage: test-mpi <addr>\n");
-}
-
 int main(int argc, char *argv[])
 {
     int rank;
@@ -71,7 +66,6 @@ int main(int argc, char *argv[])
       printf("rank %d: server deregistered\n", rank);
     }
     else {
-      int sleep_time = 0;
       char server_addr_str[128];
       char client_addr_str_in[128];
       char client_addr_str_out[128];
@@ -99,8 +93,8 @@ int main(int argc, char *argv[])
       printf("client (rank %d): client addr_str: %s\n", rank, client_addr_str_out);
       
       // open specified "DB" (pass in the server's address)
-      const char *db = "minima_store";
-      hret = kv_open(context, server_addr_str, (char*)db, KV_UINT, KV_BULK);
+      const char *db = "db/minima_store";
+      hret = kv_open(context, server_addr_str, (char*)db);
       DIE_IF(hret != HG_SUCCESS, "kv_open");
       
       uint64_t key = rank;

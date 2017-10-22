@@ -1,15 +1,21 @@
 ACLOCAL_AMFLAGS="-Im4"
 
+bin_PROGRAMS = test/bench-client
+test_bench_client_SOURCES = test/bench-client.cc
+test_bench_client_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src
+test_bench_client_LDADD = -lkvclient
+
 lib_LTLIBRARIES = libkvclient.la \
                   libkvserver.la
 
 libkvclient_la_SOURCES = src/kv-client.c
 
 libkvserver_la_SOURCES = src/kv-server.cc \
+			 src/datastore.cc \
 			 src/BwTree/src/bwtree.cpp
 
 libkvserver_la_CXXFLAGS = -pthread -std=c++11 -g -Wall -mcx16 -Wno-invalid-offsetof
-libkvserver_la_CPPFLAGS = -I${srcdir}/src/BwTree/src
+libkvserver_la_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src/BwTree/src
 
 include_HEADERS = src/sds-keyval.h
 noinst_HEADERS = src/BwTree/src/bwtree.h \
@@ -32,16 +38,21 @@ TESTS = test/test-client \
 	test/test-mpi
 
 test_test_client_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src
-test_test_client_LDADD =  ${LIBS} -lkvclient
+test_test_client_LDADD = -lkvclient
 
-test_test_server_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src
-test_test_server_LDADD =  ${LIBS} -lkvserver -lstdc++
+test_test_server_SOURCES = test/test-server.cc
+test_test_server_CXXFLAGS = -pthread -std=c++11 -g -Wall -mcx16 -Wno-invalid-offsetof
+test_test_server_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src -I${srcdir}/src/BwTree/src
+test_test_server_LDADD = -lkvserver -lleveldb -lsnappy
 
 test_test_mpi_SOURCES = test/test-mpi.cc
-test_test_mpi_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src
-test_test_mpi_LDADD =  ${LIBS} -lkvclient -lkvserver
+
+test_test_mpi_CXXFLAGS = -pthread -std=c++11 -g -Wall -mcx16 -Wno-invalid-offsetof
+test_test_mpi_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src -I${srcdir}/src/BwTree/src
+test_test_mpi_LDADD = -lkvclient -lkvserver -lleveldb -lsnappy
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = maint/kv-server.pc \
 		 maint/kv-client.pc
+
 
