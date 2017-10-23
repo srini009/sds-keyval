@@ -16,21 +16,26 @@ std::string db_name;
 
 static hg_return_t open_handler(hg_handle_t handle)
 {
-    hg_return_t ret;
-    open_in_t in;
-    open_out_t out;
+  hg_return_t ret;
+  open_in_t in;
+  open_out_t out;
 
-    ret = margo_get_input(handle, &in);
-    std::string in_name(in.name);
-    std::cout << "SERVER: OPEN " << in_name << std::endl;
+  ret = margo_get_input(handle, &in);
+  std::string in_name(in.name);
+  std::cout << "SERVER: OPEN " << in_name << std::endl;
 
-    if (!datastore) {
-	//datastore = new BwTreeDataStore(); // testing BwTree
-	datastore = new LevelDBDataStore(); // testing LevelDB
-	db_name = in_name;
-	datastore->createDatabase(db_name);
-	std::cout << "SERVER OPEN: DataStore initialized and ready for " << db_name << std::endl;
-	out.ret = HG_SUCCESS;
+  if (!datastore) {
+    datastore = new BwTreeDataStore(); // testing BwTree
+    //datastore = new LevelDBDataStore(); // testing LevelDB
+    db_name = in_name;
+    datastore->createDatabase(db_name);
+    std::cout << "SERVER OPEN: DataStore initialized and ready for " << db_name << std::endl;
+    out.ret = HG_SUCCESS;
+  }
+  else {
+    if (db_name == in_name) {
+      std::cout << "SERVER OPEN: DataStore initialized and ready for " << db_name << std::endl;
+      out.ret = HG_SUCCESS;
     }
     else {
 	if (db_name == in_name) {
@@ -286,10 +291,11 @@ DEFINE_MARGO_RPC_HANDLER(shutdown_handler)
 
 static void RandomInsertSpeedTest(int32_t key_num, bench_result *results)
 {
-  std::random_device rd;
-  std::uniform_int_distribution<int> uniform_dist(0, key_num - 1);
+  std::random_device r{};
+  std::default_random_engine e1(r());
+  std::uniform_int_distribution<int32_t> uniform_dist(0, key_num - 1);
 
-  BwTree<int, int> *t = new BwTree<int, int>();
+  BwTree<int32_t, int32_t> *t = new BwTree<int32_t, int32_t>();
   t->SetDebugLogging(0);
   t->UpdateThreadLocal(1);
   t->AssignGCID(0);
@@ -301,7 +307,7 @@ static void RandomInsertSpeedTest(int32_t key_num, bench_result *results)
   // We loop for keynum * 2 because in average half of the insertion
   // will hit an empty slot
   for(int32_t i = 0;i < key_num * 2;i++) {
-    int key = uniform_dist(rd);
+    int32_t key = uniform_dist(e1);
 
     t->Insert(key, key);
   }
@@ -310,22 +316,21 @@ static void RandomInsertSpeedTest(int32_t key_num, bench_result *results)
 
   std::chrono::duration<double> elapsed_seconds = end - start;
 
-  results->nkeys = key_num;
+  results->nkeys = (size_t)key_num;
   results->insert_time = elapsed_seconds.count();
 
   std::cout << "BwTree: at least " << (key_num * 2.0 / (1024 * 1024)) / elapsed_seconds.count()
            << " million random insertion/sec" << "\n";
 
   // Then test random read after random insert
-  std::vector<int> v{};
+  std::vector<int32_t> v{};
   v.reserve(100);
 
   start = std::chrono::system_clock::now();
   for(int32_t i = 0;i < key_num * 2;i++) {
-    int key = uniform_dist(rd);
+    int32_t key = uniform_dist(e1);
 
     t->GetValue(key, v);
-
     v.clear();
   }
   
@@ -341,10 +346,9 @@ static void RandomInsertSpeedTest(int32_t key_num, bench_result *results)
   start = std::chrono::system_clock::now();
 
   for(int32_t i = 0;i < key_num * 2;i++) {
-    int key = uniform_dist(rd);
+    int32_t key = uniform_dist(e1);
 
     v.push_back(key);
-
     v.clear();
   }
 

@@ -22,14 +22,12 @@ int main(int argc, char **argv) {
   assert(ret == HG_SUCCESS);
   printf("key: %d in: %d out: %d\n", key, val, remote_val);
 
-#if 0
   bench_result *output;
   output = kv_benchmark(context, 1000);
   printf("insert: %zd keys in %f seconds: %f Million-insert per sec\n",
 	 output->nkeys, output->insert_time,
 	 output->nkeys/(output->insert_time*1024*1024) );
   free(output);
-#endif
   
   /* close */
   ret = kv_close(context);

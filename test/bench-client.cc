@@ -71,11 +71,9 @@ int main(int argc, char **argv)
   RandomInsertSpeedTest(context, items, &rpc);
   print_results(&rpc);
 
-#if 0
   server = kv_benchmark(context, items);
   print_results(server);
   free(server);
-#endif
   
   /* close */
   ret = kv_close(context);
