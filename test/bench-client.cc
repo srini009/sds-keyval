@@ -65,15 +65,17 @@ int main(int argc, char **argv)
   size_t items = atoi(argv[1]);
 
   context = kv_client_register(NULL);
-  ret = kv_open(context, argv[2], "testdb");
+  ret = kv_open(context, argv[2], "db/testdb");
   assert(ret == HG_SUCCESS);
 
   RandomInsertSpeedTest(context, items, &rpc);
   print_results(&rpc);
 
+#if 0 // ifdef out when testing with LevelDB or BerkeleyDB
   server = kv_benchmark(context, items);
   print_results(server);
   free(server);
+#endif
   
   /* close */
   ret = kv_close(context);

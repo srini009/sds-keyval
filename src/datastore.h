@@ -82,4 +82,22 @@ private:
   kv_key_t string2key(std::string &keystr);
 };
 
+// may want to implement some caching for persistent stores like BerkeleyDB
+class BerkeleyDBDataStore : public AbstractDataStore {
+public:
+  BerkeleyDBDataStore();
+  BerkeleyDBDataStore(Duplicates duplicates, bool eraseOnGet, bool debug);
+  virtual ~BerkeleyDBDataStore();
+  virtual void createDatabase(std::string db_name);
+  virtual bool put(const kv_key_t &key, ds_bulk_t &data);
+  virtual bool get(const kv_key_t &key, ds_bulk_t &data);
+  virtual bool get(const kv_key_t &key, std::vector<ds_bulk_t> &data);
+protected:
+  DbEnv *_dbenv = NULL;
+  Db *_dbm = NULL;
+private:
+  ds_bulk_t key2ds_bulk(const kv_key_t &key);
+  kv_key_t ds_bulk2key(ds_bulk_t &keydata);
+};
+
 #endif // datastore_h

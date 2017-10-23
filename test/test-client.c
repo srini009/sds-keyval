@@ -7,7 +7,7 @@ int main(int argc, char **argv) {
   kv_context * context = kv_client_register(NULL);
 
   /* open */
-  ret = kv_open(context, argv[1], "booger");
+  ret = kv_open(context, argv[1], "db/booger");
   assert(ret == HG_SUCCESS);
 
   /* put */
@@ -22,12 +22,14 @@ int main(int argc, char **argv) {
   assert(ret == HG_SUCCESS);
   printf("key: %d in: %d out: %d\n", key, val, remote_val);
 
+#if 0 // ifdef out when testing with LevelDB or BerkeleyDB
   bench_result *output;
   output = kv_benchmark(context, 1000);
   printf("insert: %zd keys in %f seconds: %f Million-insert per sec\n",
 	 output->nkeys, output->insert_time,
 	 output->nkeys/(output->insert_time*1024*1024) );
   free(output);
+#endif
   
   /* close */
   ret = kv_close(context);

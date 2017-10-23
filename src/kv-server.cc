@@ -26,7 +26,8 @@ static hg_return_t open_handler(hg_handle_t handle)
 
   if (!datastore) {
     //datastore = new BwTreeDataStore(); // testing BwTree
-    datastore = new LevelDBDataStore(); // testing LevelDB
+    //datastore = new LevelDBDataStore(); // testing LevelDB
+    datastore = new BerkeleyDBDataStore(); // testing BerkeleyDB
     db_name = in_name;
     datastore->createDatabase(db_name);
     std::cout << "SERVER OPEN: DataStore initialized and ready for " << db_name << std::endl;
