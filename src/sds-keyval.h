@@ -51,7 +51,6 @@ typedef struct kv_context_s {
         hg_handle_t bulk_put_handle; // necessary?
 	hg_handle_t get_handle;
 	hg_handle_t bulk_get_handle; // necessary?
-	hg_handle_t bench_handle;
 	hg_handle_t shutdown_handle;
 	/* some keyval dodad goes here so the server can discriminate
 	 * seems like it should be some universal identifier we can
@@ -89,10 +88,10 @@ typedef struct {
     double overhead;
 } bench_result;
 
-static inline hg_return_t hg_proc_bench_result(hg_proc_t proc, bench_result *result)
+static inline hg_return_t hg_proc_bench_result(hg_proc_t proc, void *data)
 {
   /* TODO: needs a portable encoding */
-  return(hg_proc_memcpy(proc, result, sizeof(*result)));
+  return(hg_proc_memcpy(proc, data, sizeof(bench_result)));
 }
 
 DECLARE_MARGO_RPC_HANDLER(bench_handler)

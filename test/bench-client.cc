@@ -1,14 +1,15 @@
-
 #include <sds-keyval.h>
+#include <assert.h>
+
 #include <random>
 #include <chrono>
 
 void RandomInsertSpeedTest(kv_context *context,
-	size_t key_num, bench_result *results)
+			   size_t key_num, bench_result *results)
 {
     std::random_device r{};
     std::default_random_engine e1(r());
-    std::uniform_int_distribution<int> uniform_dist(0, key_num - 1);
+    std::uniform_int_distribution<uint64_t> uniform_dist(0, key_num - 1);
 
     std::chrono::time_point<std::chrono::system_clock> start, end;
 
@@ -18,7 +19,7 @@ void RandomInsertSpeedTest(kv_context *context,
     // We loop for keynum * 2 because in average half of the insertion
     // will hit an empty slot
     for(size_t i = 0;i < key_num * 2;i++) {
-	int key = uniform_dist(e1);
+	uint64_t key = uniform_dist(e1);
 	kv_put(context, &key, &key);
     }
     end = std::chrono::system_clock::now();
@@ -29,11 +30,11 @@ void RandomInsertSpeedTest(kv_context *context,
     results->insert_time = elapsed_seconds.count();
 
     // Then test random read after random insert
-    int v;
+    uint64_t v;
     start = std::chrono::system_clock::now();
 
     for(size_t i = 0;i < key_num * 2;i++) {
-	int key = uniform_dist(e1);
+	uint64_t key = uniform_dist(e1);
 
 	kv_get(context, &key,  &v);
     }
@@ -57,21 +58,34 @@ void print_results(bench_result *r)
 
 int main(int argc, char **argv)
 {
-    bench_result rpc;
-    bench_result *server;
-    kv_context *context;
-    size_t items = atoi(argv[1]);
+  hg_return_t ret;
+  bench_result rpc;
+  bench_result *server;
+  kv_context *context;
+  size_t items = atoi(argv[1]);
 
-    context = kv_client_register(NULL);
-    kv_open(context, argv[2], NULL);
+  context = kv_client_register(NULL);
+  ret = kv_open(context, argv[2], "testdb");
+  assert(ret == HG_SUCCESS);
 
-    RandomInsertSpeedTest(context, items, &rpc);
-    print_results(&rpc);
-    kv_close(context);
+  RandomInsertSpeedTest(context, items, &rpc);
+  print_results(&rpc);
 
-    server = kv_benchmark(context, items);
-    print_results(server);
-    free(server);
-    // kv_client_deregister(context);
-    return 0;
+#if 0
+  server = kv_benchmark(context, items);
+  print_results(server);
+  free(server);
+#endif
+  
+  /* close */
+  ret = kv_close(context);
+  assert(ret == HG_SUCCESS);
+
+  /* signal server */
+  ret = kv_client_signal_shutdown(context);
+  assert(ret == HG_SUCCESS);
+  
+  /* cleanup */
+  ret = kv_client_deregister(context);
+  assert(ret == HG_SUCCESS);
 }

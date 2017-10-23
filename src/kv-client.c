@@ -92,9 +92,6 @@ hg_return_t kv_open(kv_context *context, const char *server_addr, const char *db
 		     context->bulk_get_id, &(context->bulk_get_handle));
   assert(ret == HG_SUCCESS);
   ret = margo_create(context->mid, context->svr_addr,
-		     context->bench_id, &(context->bench_handle));
-  assert(ret == HG_SUCCESS);
-  ret = margo_create(context->mid, context->svr_addr,
 		     context->shutdown_id, &(context->shutdown_handle));
   assert(ret == HG_SUCCESS);
 	
@@ -119,10 +116,11 @@ hg_return_t kv_put(kv_context *context, void *key, void *value) {
     ret = margo_get_output(context->put_handle, &put_out);
     assert(ret == HG_SUCCESS);
     assert(put_out.ret == HG_SUCCESS);
+    ret = put_out.ret;
 
     margo_free_output(context->put_handle, &put_out);
 
-    return HG_SUCCESS;
+    return ret;
 }
 
 hg_return_t kv_bulk_put(kv_context *context, void *key, void *data, size_t *data_size) {
@@ -142,11 +140,11 @@ hg_return_t kv_bulk_put(kv_context *context, void *key, void *data, size_t *data
 
   ret = margo_get_output(context->bulk_put_handle, &bpout);
   assert(ret == HG_SUCCESS);
-  assert(bpout.ret == HG_SUCCESS); // make sure the server side says all is OK
+  ret = bpout.ret; // make sure the server side says all is OK
 
   margo_free_output(context->bulk_put_handle, &bpout);
 
-  return HG_SUCCESS;
+  return ret;
 }
 
 hg_return_t kv_get(kv_context *context, void *key, void *value)
@@ -163,39 +161,40 @@ hg_return_t kv_get(kv_context *context, void *key, void *value)
     ret = margo_get_output(context->get_handle, &get_out);
     assert(ret == HG_SUCCESS);
     assert(get_out.ret == HG_SUCCESS);
+    ret = get_out.ret;
 
     *(kv_value_t*)value = get_out.value;
 
     margo_free_output(context->get_handle, &get_out);
 
-    return HG_SUCCESS;
+    return ret;
 }
 
 hg_return_t kv_bulk_get(kv_context *context, void *key, void *data, size_t *data_size)
 {
-	hg_return_t ret;
-	bulk_get_in_t bgin;
-	bulk_get_out_t bgout;
+  hg_return_t ret;
+  bulk_get_in_t bgin;
+  bulk_get_out_t bgout;
 
-	bgin.key = *(kv_key_t*)key;
-	bgin.size = *(size_t*)data_size;
+  bgin.key = *(kv_key_t*)key;
+  bgin.size = *(size_t*)data_size;
 
-	ret = margo_bulk_create(context->mid, 1, &data, data_size,
-				HG_BULK_WRITE_ONLY, &bgin.bulk_handle);
-	assert(ret == HG_SUCCESS);
+  ret = margo_bulk_create(context->mid, 1, &data, data_size,
+			  HG_BULK_WRITE_ONLY, &bgin.bulk_handle);
+  assert(ret == HG_SUCCESS);
 
-	ret = margo_forward(context->bulk_get_handle, &bgin);
-	assert(ret == HG_SUCCESS);
+  ret = margo_forward(context->bulk_get_handle, &bgin);
+  assert(ret == HG_SUCCESS);
 
-	ret = margo_get_output(context->bulk_get_handle, &bgout);
-	assert(ret == HG_SUCCESS);
-	assert(bgout.ret == HG_SUCCESS); // make sure the server side says all is OK
+  ret = margo_get_output(context->bulk_get_handle, &bgout);
+  assert(ret == HG_SUCCESS);
+  ret = bgout.ret; // make sure the server side says all is OK
 
-	*data_size = (size_t)bgout.size; // report actual size of data transferred to caller
+  *data_size = (size_t)bgout.size; // report actual size of data transferred to caller
 
-	margo_free_output(context->bulk_get_handle, &bgout);
+  margo_free_output(context->bulk_get_handle, &bgout);
 
-	return HG_SUCCESS;
+  return ret;
 }
 
 hg_return_t kv_close(kv_context *context)
@@ -221,39 +220,24 @@ hg_return_t kv_close(kv_context *context)
     return HG_SUCCESS;
 }
 
-bench_result *kv_benchmark(kv_context *context, int count) {
-    hg_return_t ret;
-    hg_handle_t handle;
-    bench_in_t bench_in;
-    bench_out_t bench_out;
-    bench_result *result=NULL;
-
-    context->bench_id= MARGO_REGISTER(context->mid, "bench",
-	    bench_in_t, bench_out_t, NULL);
-    ret = margo_create(context->mid, context->svr_addr,
-	    context->bench_id, &(context->bench_handle) );
-    assert(ret == HG_SUCCESS);
+bench_result *kv_benchmark(kv_context *context, int32_t count) {
 
     ret = margo_create(context->mid, context->svr_addr,
 	    context->bench_id, &handle);
     assert(ret == HG_SUCCESS);
+
     bench_in.count = count;
-    ret = margo_forward(context->bench_handle, &bench_in);
-    assert(ret == HG_SUCCESS);
-    ret = margo_get_output(context->bench_handle, &bench_out);
-
-    margo_free_output(handle, &bench_out);
-    margo_destroy(handle);
-    ret = margo_forward(context->bench_handle, &bench_in);
+    ret = margo_forward(handle, &bench_in);
     assert(ret == HG_SUCCESS);
 
-    ret = margo_get_output(context->bench_handle, &bench_out);
+    ret = margo_get_output(handle, &bench_out);
     assert(ret == HG_SUCCESS);
 
     result = malloc(sizeof(bench_result));
     result->nkeys = bench_out.result.nkeys;
     result->insert_time = bench_out.result.insert_time;
     result->read_time = bench_out.result.read_time;
+    result->overhead = bench_out.result.overhead;
 
     margo_free_output(handle, &bench_out);
     margo_destroy(handle);
@@ -268,7 +252,6 @@ hg_return_t kv_client_deregister(kv_context *context) {
   margo_destroy(context->get_handle);
   margo_destroy(context->bulk_put_handle);
   margo_destroy(context->bulk_get_handle);
-  margo_destroy(context->bench_handle);
   margo_destroy(context->shutdown_handle);
 
   assert(ret == HG_SUCCESS);

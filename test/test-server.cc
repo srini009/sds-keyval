@@ -1,9 +1,13 @@
 #include "sds-keyval.h"
+#include <assert.h>
 
 int main(int argc, char **argv) {
-  kv_context * context = kv_server_register(NULL);
+  kv_context *context = kv_server_register(argv[1]);
 
-  margo_wait_for_finalize(context->mid);
+  hg_return_t ret;
+  ret = kv_server_wait_for_shutdown(context);
+  assert(ret == HG_SUCCESS);
 
-  kv_server_deregister(context);
+  ret = kv_server_deregister(context);
+  assert(ret == HG_SUCCESS);
 }

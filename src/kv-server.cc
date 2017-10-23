@@ -7,6 +7,9 @@
 #include <abt.h>
 #include <assert.h>
 
+#include <random>
+#include <iostream>
+
 // since this is global, we're assuming this server instance will manage a single DB
 AbstractDataStore *datastore = NULL; // created by caller, passed into kv_server_register
 std::string db_name;
@@ -273,8 +276,6 @@ static void shutdown_handler(hg_handle_t handle)
   margo_finalize(mid);
 
   std::cout << "SERVER: margo finalized" << std::endl;
-
-  return;
 }
 DEFINE_MARGO_RPC_HANDLER(shutdown_handler)
 
@@ -282,17 +283,13 @@ DEFINE_MARGO_RPC_HANDLER(shutdown_handler)
  * from BwTree tests:
  * RandomInsertSpeedTest() - Tests how fast it is to insert keys randomly
  */
-#include "bwtree.h"
-#include <random>
-#include <iostream>
 
-static void RandomInsertSpeedTest(size_t key_num, bench_result *results)
+static void RandomInsertSpeedTest(int32_t key_num, bench_result *results)
 {
-  std::random_device r{};
-  std::default_random_engine e1(r());
+  std::random_device rd;
   std::uniform_int_distribution<int> uniform_dist(0, key_num - 1);
 
-  auto *t = new wangziqi2013::bwtree::BwTree<int, int>;
+  BwTree<int, int> *t = new BwTree<int, int>();
   t->SetDebugLogging(0);
   t->UpdateThreadLocal(1);
   t->AssignGCID(0);
@@ -303,8 +300,8 @@ static void RandomInsertSpeedTest(size_t key_num, bench_result *results)
 
   // We loop for keynum * 2 because in average half of the insertion
   // will hit an empty slot
-  for(size_t i = 0;i < key_num * 2;i++) {
-    int key = uniform_dist(e1);
+  for(int32_t i = 0;i < key_num * 2;i++) {
+    int key = uniform_dist(rd);
 
     t->Insert(key, key);
   }
@@ -324,8 +321,8 @@ static void RandomInsertSpeedTest(size_t key_num, bench_result *results)
   v.reserve(100);
 
   start = std::chrono::system_clock::now();
-  for(size_t i = 0;i < key_num * 2;i++) {
-    int key = uniform_dist(e1);
+  for(int32_t i = 0;i < key_num * 2;i++) {
+    int key = uniform_dist(rd);
 
     t->GetValue(key, v);
 
@@ -343,8 +340,8 @@ static void RandomInsertSpeedTest(size_t key_num, bench_result *results)
 
   start = std::chrono::system_clock::now();
 
-  for(size_t i = 0;i < key_num * 2;i++) {
-    int key = uniform_dist(e1);
+  for(int32_t i = 0;i < key_num * 2;i++) {
+    int key = uniform_dist(rd);
 
     v.push_back(key);
 
@@ -358,7 +355,7 @@ static void RandomInsertSpeedTest(size_t key_num, bench_result *results)
   std::cout << "    Overhead = " << overhead.count() << " seconds" << std::endl;
   results->overhead = overhead.count();
 
-  return;
+  delete t;
 }
 
 static hg_return_t bench_handler(hg_handle_t handle)
@@ -380,88 +377,78 @@ static hg_return_t bench_handler(hg_handle_t handle)
   bench_out.result.overhead = random_insert.overhead;
 
   ret = margo_respond(handle, &bench_out);
+  assert(ret == HG_SUCCESS);
 
   margo_free_input(handle, &bench_in);
   margo_destroy(handle);
 
-  return ret;
+  return HG_SUCCESS;
 }
 DEFINE_MARGO_RPC_HANDLER(bench_handler)
 #endif
 
 kv_context *kv_server_register(margo_instance_id mid);
 {
-	int ret;
-	hg_addr_t addr_self;
-	char addr_self_string[128];
-	hg_size_t addr_self_string_sz = 128;
-	kv_context *context;
+    hg_return_t ret;
+    hg_addr_t addr_self;
+    char addr_self_string[128];
+    hg_size_t addr_self_string_sz = 128;
+    kv_context *context;
 
+    /* sds keyval server init */
+    context = (kv_context *)malloc(sizeof(*context));
+    if (!addr_str) {
+	context->mid = margo_init("cci+tcp://",
+		MARGO_SERVER_MODE, 0, -1);
+    }
+    else {
+	context->mid = margo_init(addr_str,
+		MARGO_SERVER_MODE, 0, -1);
+    }
+    assert(context->mid);
 
-	context->mid = mid;
-	TREE->SetDebugLogging(0);
-	TREE->UpdateThreadLocal(1);
-	TREE->AssignGCID(0);
+    /* figure out what address this server is listening on */
+    ret = margo_addr_self(context->mid, &addr_self);
+    if(ret != HG_SUCCESS)
+    {
+	std::cerr << "Error: margo_addr_self()" << std::endl;
+	margo_finalize(context->mid);
+	return NULL;
+    }
+    ret = margo_addr_to_string(context->mid, addr_self_string,
+	    &addr_self_string_sz, addr_self);
+    if(ret != HG_SUCCESS)
+    {
+	std::cerr << "Error: margo_addr_to_string()" << std::endl;
+	margo_finalize(context->mid);
+	return NULL;
+    }
+    margo_addr_free(context->mid, addr_self);
+    std::cout << "accepting RPCs on address " << std::string(addr_self_string) << std::endl;
 
-	size_t num_threads = TREE->GetThreadNum();
-	printf("SERVER: BwTree initialized, using %lu thread(s)\n", num_threads);
+    context->open_id = MARGO_REGISTER(context->mid, "open",
+	    open_in_t, open_out_t, open_handler);
 
-	/* sds keyval server init */
-	context = (kv_context *)malloc(sizeof(*context));
-	if (!addr_str) {
-	  context->mid = margo_init("cci+tcp://localhost:52345",
-				    MARGO_SERVER_MODE, 0, -1);
-	}
-	else {
-	  context->mid = margo_init(addr_str,
-				    MARGO_SERVER_MODE, 0, -1);
-	}
-	assert(context->mid);
+    context->close_id = MARGO_REGISTER(context->mid, "close",
+	    void, close_out_t, close_handler);
 
-	/* figure out what address this server is listening on */
-	ret = margo_addr_self(context->mid, &addr_self);
-	if(ret != HG_SUCCESS)
-	{
-		fprintf(stderr, "Error: margo_addr_selff()\n");
-		margo_finalize(context->mid);
-		return(NULL);
-	}
-	ret = margo_addr_to_string(context->mid, addr_self_string,
-				   &addr_self_string_sz, addr_self);
-	if(ret != HG_SUCCESS)
-	{
-		fprintf(stderr, "Error: HG_Addr_self()\n");
-		margo_finalize(context->mid);
-		return(NULL);
-	}
-	margo_addr_free(context->mid, addr_self);
-	printf("# accepting RPCs on address \"%s\"\n", addr_self_string);
+    context->put_id = MARGO_REGISTER(context->mid, "put",
+	    put_in_t, put_out_t, put_handler);
 
-	context->open_id = MARGO_REGISTER(context->mid, "open",
-					  open_in_t, open_out_t, open_handler);
+    context->bulk_put_id = MARGO_REGISTER(context->mid, "bulk_put",
+	    bulk_put_in_t, bulk_put_out_t, bulk_put_handler);
 
-	context->close_id = MARGO_REGISTER(context->mid, "close",
-					   close_in_t, close_out_t, close_handler);
+    context->get_id = MARGO_REGISTER(context->mid, "get",
+	    get_in_t, get_out_t, get_handler);
 
-	context->put_id = MARGO_REGISTER(context->mid, "put",
-					 put_in_t, put_out_t, put_handler);
+    context->bulk_get_id = MARGO_REGISTER(context->mid, "bulk_get",
+	    bulk_get_in_t, bulk_get_out_t, bulk_get_handler);
 
-	context->bulk_put_id = MARGO_REGISTER(context->mid, "bulk_put",
-					      bulk_put_in_t, bulk_put_out_t, bulk_put_handler);
+    context->bench_id = MARGO_REGISTER(context->mid, "bench",
+	    bench_in_t, bench_out_t, bench_handler);
 
-	context->get_id = MARGO_REGISTER(context->mid, "get",
-					 get_in_t, get_out_t, get_handler);
-
-	context->bulk_get_id = MARGO_REGISTER(context->mid, "bulk_get",
-					      bulk_get_in_t, bulk_get_out_t, bulk_get_handler);
-
-	context->bench_id = MARGO_REGISTER(context->mid, "bench",
-					   bench_in_t, bench_out_t, bench_handler);
-
-	context->shutdown_id = MARGO_REGISTER(context->mid, "shutdown",
-					      void, void, shutdown_handler);
-
-	return context;
+    context->shutdown_id = MARGO_REGISTER(context->mid, "shutdown",
+	    void, void, shutdown_handler);
 
 }
 

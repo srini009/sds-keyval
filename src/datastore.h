@@ -76,9 +76,6 @@ public:
   virtual bool get(const kv_key_t &key, std::vector<ds_bulk_t> &data);
 protected:
   leveldb::DB *_dbm = NULL;
-  Duplicates _duplicates;
-  bool _eraseOnGet;
-  bool _debug;
 private:
   std::string key2string(const kv_key_t &key);
   kv_key_t string2key(std::string &keystr);

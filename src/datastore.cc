@@ -18,7 +18,7 @@ AbstractDataStore::~AbstractDataStore()
 {};
 
 BwTreeDataStore::BwTreeDataStore() :
-  AbstractDataStore() {
+  AbstractDataStore(Duplicates::IGNORE, false, false) {
   _tree = NULL;
 };
 
@@ -111,7 +111,7 @@ bool BwTreeDataStore::get(const kv_key_t &key, std::vector<ds_bulk_t> &data) {
 
 
 LevelDBDataStore::LevelDBDataStore() :
-  AbstractDataStore() {
+  AbstractDataStore(Duplicates::IGNORE, false, false) {
   _dbm = NULL;
 };
 
