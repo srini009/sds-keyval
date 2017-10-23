@@ -6,6 +6,7 @@
 #include <boost/functional/hash.hpp>
 #include <vector>
 #include <leveldb/db.h>
+#include <leveldb/env.h>
 #include <db_cxx.h>
 #include <dbstl_map.h>
 

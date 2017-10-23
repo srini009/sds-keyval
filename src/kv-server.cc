@@ -25,8 +25,8 @@ static hg_return_t open_handler(hg_handle_t handle)
   std::cout << "SERVER: OPEN " << in_name << std::endl;
 
   if (!datastore) {
-    datastore = new BwTreeDataStore(); // testing BwTree
-    //datastore = new LevelDBDataStore(); // testing LevelDB
+    //datastore = new BwTreeDataStore(); // testing BwTree
+    datastore = new LevelDBDataStore(); // testing LevelDB
     db_name = in_name;
     datastore->createDatabase(db_name);
     std::cout << "SERVER OPEN: DataStore initialized and ready for " << db_name << std::endl;
@@ -64,7 +64,6 @@ static hg_return_t close_handler(hg_handle_t handle)
   hg_return_t ret;
   close_out_t out;
 
-  // there may be cleanup we want to do here
   out.ret = HG_SUCCESS;
   
   ret = margo_respond(handle, &out);
@@ -393,23 +392,23 @@ DEFINE_MARGO_RPC_HANDLER(bench_handler)
 
 kv_context *kv_server_register(margo_instance_id mid);
 {
-    hg_return_t ret;
-    hg_addr_t addr_self;
-    char addr_self_string[128];
-    hg_size_t addr_self_string_sz = 128;
-    kv_context *context;
-
-    /* sds keyval server init */
-    context = (kv_context *)malloc(sizeof(*context));
-    if (!addr_str) {
-	context->mid = margo_init("cci+tcp://",
-		MARGO_SERVER_MODE, 0, -1);
-    }
-    else {
-	context->mid = margo_init(addr_str,
-		MARGO_SERVER_MODE, 0, -1);
-    }
-    assert(context->mid);
+  hg_return_t ret;
+  hg_addr_t addr_self;
+  char addr_self_string[128];
+  hg_size_t addr_self_string_sz = 128;
+  kv_context *context;
+	
+  /* sds keyval server init */
+  context = (kv_context *)malloc(sizeof(*context));
+  if (!addr_str) {
+    context->mid = margo_init("ofi+tcp://",
+			      MARGO_SERVER_MODE, 0, -1);
+  }
+  else {
+    context->mid = margo_init(addr_str,
+			      MARGO_SERVER_MODE, 0, -1);
+  }
+  assert(context->mid);
 
     /* figure out what address this server is listening on */
     ret = margo_addr_self(context->mid, &addr_self);

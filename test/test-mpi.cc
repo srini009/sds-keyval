@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
 
       // kv-client
       //sprintf(client_addr_str_in, "cci+tcp://534%02d", rank);
-      sprintf(client_addr_str_in, "cci+tcp://");
+      sprintf(client_addr_str_in, "ofi+tcp://");
       kv_context *context = kv_client_register(client_addr_str_in);
       hret = margo_addr_self(context->mid, &client_addr);
       DIE_IF(hret != HG_SUCCESS, "margo_addr_self");
@@ -97,40 +97,42 @@ int main(int argc, char *argv[])
       hret = kv_open(context, server_addr_str, (char*)db);
       DIE_IF(hret != HG_SUCCESS, "kv_open");
       
-      uint64_t key = rank;
-	
       // put
-      int put_val = rank;
-      std::vector<char> put_data;
-      put_data.resize(sizeof(put_val));
-      uint64_t data_size = put_data.size();
-      memcpy(put_data.data(), &put_val, data_size);
+      for (int i=1; i<rank*10; i++) {
+	int put_val = rank-i;
+	uint64_t key = (uint64_t)(rank+i);
+	std::vector<char> put_data;
+	put_data.resize(sizeof(put_val));
+	uint64_t data_size = put_data.size();
+	memcpy(put_data.data(), &put_val, data_size);
 
-      hret = kv_bulk_put(context, (void*)&key, (void*)put_data.data(), &data_size);
-      printf("(put) key %lu, size=%lu\n", key, data_size);
-      DIE_IF(hret != HG_SUCCESS, "kv_bulk_put");
+	hret = kv_bulk_put(context, (void*)&key, (void*)put_data.data(), &data_size);
+	printf("(rank %d: put) key %lu, value %d, size=%lu\n", rank, key, put_val, data_size);
+	DIE_IF(hret != HG_SUCCESS, "kv_bulk_put");
+      }
 
       sleep(2);
 
       // get
-      int get_val;
-      std::vector<char> get_data;
-      get_data.resize(sizeof(get_val));
-      data_size = get_data.size();
-      printf("(get) key %lu, estimated size=%lu\n", key, data_size);
-      hret = kv_bulk_get(context, (void*)&key, (void*)get_data.data(), &data_size);
-      DIE_IF(hret != HG_SUCCESS, "kv_bulk_get");
-      printf("(get) key %lu, actual size=%lu\n", key, data_size);
+      for (int i=1; i<rank*10; i++) {
+	int get_val = rank-i;
+	uint64_t key = (uint64_t)(rank+i);
+	std::vector<char> get_data;
+	get_data.resize(sizeof(get_val));
+	uint64_t data_size = get_data.size();
+	hret = kv_bulk_get(context, (void*)&key, (void*)get_data.data(), &data_size);
+	DIE_IF(hret != HG_SUCCESS, "kv_bulk_get");
 
-      get_data.resize(data_size);
-      memcpy(&get_val, get_data.data(), data_size);
-      printf("key: %lu in: %d out: %d\n", key, put_val, get_val);
+	get_data.resize(data_size);
+	memcpy(&get_val, get_data.data(), data_size);
+	printf("(rank %d: get) key %lu, value %d, actual size=%lu\n", rank, key, get_val, data_size);
+      }
 
       // close
       hret = kv_close(context);
       DIE_IF(hret != HG_SUCCESS, "kv_close");
 
-      // once all clients are done, one client can signal server
+      // once all clients are done with the close, one client can signal server
       MPI_Barrier(clientComm);
       if (rank==1) {
 	printf("rank %d: sending server a shutdown request\n", rank);

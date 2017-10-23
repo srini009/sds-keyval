@@ -1,6 +1,7 @@
 // Copyright (c) 2017, Los Alamos National Security, LLC.
 // All rights reserved.
 #include "datastore.h"
+#include <boost/filesystem.hpp>
 
 AbstractDataStore::AbstractDataStore() {
   _duplicates = Duplicates::IGNORE;
@@ -133,8 +134,8 @@ kv_key_t LevelDBDataStore::string2key(std::string &keystr) {
 };
 
 LevelDBDataStore::~LevelDBDataStore() {
-  // deleting LevelDB can cause core dump
   delete _dbm;
+  leveldb::Env::Shutdown();
 };
 
 void LevelDBDataStore::createDatabase(std::string db_name) {
@@ -142,6 +143,9 @@ void LevelDBDataStore::createDatabase(std::string db_name) {
   leveldb::Status status;
   
   // db_name assumed to include the full path (e.g. /var/data/db.dat)
+  boost::filesystem::path p(db_name);
+  boost::filesystem::create_directories(p.parent_path().string());
+
   options.create_if_missing = true;
   status = leveldb::DB::Open(options, db_name, &_dbm);
   

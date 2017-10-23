@@ -43,13 +43,13 @@ test_test_client_LDADD = -lkvclient
 test_test_server_SOURCES = test/test-server.cc
 test_test_server_CXXFLAGS = -pthread -std=c++11 -g -Wall -mcx16 -Wno-invalid-offsetof
 test_test_server_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src -I${srcdir}/src/BwTree/src
-test_test_server_LDADD = -lkvserver -lleveldb -lsnappy
+test_test_server_LDADD = -lkvserver -lleveldb -lsnappy -lboost_filesystem -lboost_system
 
 test_test_mpi_SOURCES = test/test-mpi.cc
 
 test_test_mpi_CXXFLAGS = -pthread -std=c++11 -g -Wall -mcx16 -Wno-invalid-offsetof
 test_test_mpi_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src -I${srcdir}/src/BwTree/src
-test_test_mpi_LDADD = -lkvclient -lkvserver -lleveldb -lsnappy
+test_test_mpi_LDADD = -lkvclient -lkvserver -lleveldb -lsnappy -lboost_filesystem -lboost_system
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = maint/kv-server.pc \
