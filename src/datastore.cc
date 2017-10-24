@@ -135,7 +135,7 @@ kv_key_t LevelDBDataStore::string2key(std::string &keystr) {
 
 LevelDBDataStore::~LevelDBDataStore() {
   delete _dbm;
-  leveldb::Env::Shutdown();
+  //leveldb::Env::Shutdown(); // Riak version only
 };
 
 void LevelDBDataStore::createDatabase(std::string db_name) {

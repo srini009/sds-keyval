@@ -22,32 +22,34 @@ static hg_return_t open_handler(hg_handle_t handle)
 
   ret = margo_get_input(handle, &in);
   std::string in_name(in.name);
+#ifdef KV_DEBUG
   std::cout << "SERVER: OPEN " << in_name << std::endl;
+#endif
 
   if (!datastore) {
     //datastore = new BwTreeDataStore(); // testing BwTree
-    //datastore = new LevelDBDataStore(); // testing LevelDB
-    datastore = new BerkeleyDBDataStore(); // testing BerkeleyDB
+    datastore = new LevelDBDataStore(); // testing LevelDB
+    //datastore = new BerkeleyDBDataStore(); // testing BerkeleyDB
     db_name = in_name;
     datastore->createDatabase(db_name);
+#ifdef KV_DEBUG
     std::cout << "SERVER OPEN: DataStore initialized and ready for " << db_name << std::endl;
+#endif
     out.ret = HG_SUCCESS;
   }
   else {
     if (db_name == in_name) {
+#ifdef KV_DEBUG
       std::cout << "SERVER OPEN: DataStore initialized and ready for " << db_name << std::endl;
+#endif
       out.ret = HG_SUCCESS;
     }
     else {
-	if (db_name == in_name) {
-	    std::cout << "SERVER OPEN: DataStore initialized and ready for " << db_name << std::endl;
-	    out.ret = HG_SUCCESS;
-	}
-	else {
-	    std::cout << "SERVER OPEN failed: currently managing " << db_name
+#ifdef KV_DEBUG
+      std::cout << "SERVER OPEN failed: currently managing " << db_name
 		<< " and unable to process OPEN request for " << in_name << std::endl;
-	    out.ret = HG_OTHER_ERROR;
-	}
+#endif
+      out.ret = HG_OTHER_ERROR;
     }
 
     ret = margo_respond(handle, &out);
@@ -90,13 +92,17 @@ static hg_return_t put_handler(hg_handle_t handle)
   memcpy(data.data(), &in.value, sizeof(in.value));
 
   if (datastore->put(in.key, data)) {
+#ifdef KV_DEBUG
     std::cout << "SERVER: PUT succeeded for key = " << in.key
 	      << " value = " << in.value << std::endl;
+#endif
     out.ret = HG_SUCCESS;
   }
   else {
+#ifdef KV_DEBUG
     std::cout << "SERVER: PUT failed for key = " << in.key
 	      << " value = " << in.value << std::endl;
+#endif
     out.ret = HG_OTHER_ERROR;
   }
 
@@ -137,14 +143,18 @@ static hg_return_t bulk_put_handler(hg_handle_t handle)
   assert(ret == HG_SUCCESS);
 
   if (datastore->put(bpin.key, data)) {
+#ifdef KV_DEBUG
     std::cout << "SERVER: BULK PUT succeeded for key = " << bpin.key
 	      << " size = " << bpin.size << std::endl;
+#endif
     bpout.ret = HG_SUCCESS;
   }
   else {
     // e.g. put returns false if the key-value pair already
     // exists in the DB and duplicates are not allowed or ignored
+#ifdef KV_DEBUG
     std::cout << "SERVER: BULK PUT failed for key = " << bpin.key << std::endl;
+#endif
     bpout.ret = HG_OTHER_ERROR;
   }
 
@@ -174,20 +184,26 @@ static hg_return_t get_handler(hg_handle_t handle)
     kv_value_t value;
     if (data.size() <= sizeof(value)) {
       memcpy(&value, data.data(), data.size());
+#ifdef KV_DEBUG
       std::cout << "SERVER: GET succeeded for key = " << in.key
 		<< " value = " << value << std::endl;
+#endif
       out.value = value;
       out.ret = HG_SUCCESS;
     }
     else {
+#ifdef KV_DEBUG
       std::cout << "SERVER: GET failed for key = " << in.key
 		<< " value returned too large for kv_value_t" << std::endl;
+#endif
       out.ret = HG_SIZE_ERROR; // caller should be checking return value
     }
   }
   else {
     // get on key did not succeed
+#ifdef KV_DEBUG
     std::cout << "SERVER: GET failed for key = " << in.key << std::endl;
+#endif
     out.ret = HG_OTHER_ERROR; // caller should be checking return value
   }
 
@@ -215,7 +231,9 @@ static hg_return_t bulk_get_handler(hg_handle_t handle)
 
   ds_bulk_t data;
   if (datastore->get(bgin.key, data)) {
+#ifdef KV_DEBUG
     std::cout << "SERVER: BULK GET succeeded for key = " << bgin.key << std::endl;
+#endif
     // will the transfer fit on the client side?
     bgout.size = data.size();
     if (bgout.size <= bgin.size) {
@@ -234,14 +252,18 @@ static hg_return_t bulk_get_handler(hg_handle_t handle)
       bgout.ret = HG_SUCCESS;
     }
     else {
+#ifdef KV_DEBUG
       std::cout << "SERVER: BULK GET failed for key = " << bgin.key
 		<< " value returned too large for kv_value_t" << std::endl;
+#endif
       bgout.ret = HG_SIZE_ERROR;
     }
   }
   else {
     // get on key did not find a value (return 0 for size)
+#ifdef KV_DEBUG
     std::cout << "SERVER: BULK GET failed for key = " << bgin.key << std::endl;
+#endif
     bgout.size = 0; // assuming caller will check return code
     bgout.ret = HG_OTHER_ERROR;
   }
@@ -316,7 +338,7 @@ static void RandomInsertSpeedTest(int32_t key_num, bench_result *results)
 
   std::chrono::duration<double> elapsed_seconds = end - start;
 
-  results->nkeys = (size_t)key_num;
+  results->nkeys = (hg_size_t)key_num;
   results->insert_time = elapsed_seconds.count();
 
   std::cout << "BwTree: at least " << (key_num * 2.0 / (1024 * 1024)) / elapsed_seconds.count()

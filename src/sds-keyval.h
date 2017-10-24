@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <assert.h>
 
 #include <mercury.h>
 #include <mercury_macros.h>
@@ -10,6 +11,9 @@
 
 #ifndef sds_keyval_h
 #define sds_keyval_h
+
+// uncomment to re-enable print statements
+//#define KV_DEBUG
 
 #if defined(__cplusplus)
 extern "C" {
@@ -82,16 +86,32 @@ DECLARE_MARGO_RPC_HANDLER(close_handler)
 MERCURY_GEN_PROC(bench_in_t, ((int32_t)(count)) )
 
 typedef struct {
-    size_t nkeys;
-    double insert_time;
-    double read_time;
-    double overhead;
+  hg_size_t nkeys;
+  double insert_time;
+  double read_time;
+  double overhead;
 } bench_result;
+
+static inline hg_return_t hg_proc_double(hg_proc_t proc, void *data)
+{
+  return hg_proc_memcpy(proc, data, sizeof(double));
+}
 
 static inline hg_return_t hg_proc_bench_result(hg_proc_t proc, void *data)
 {
-  /* TODO: needs a portable encoding */
-  return(hg_proc_memcpy(proc, data, sizeof(bench_result)));
+  hg_return_t ret;
+  bench_result *in = (bench_result*)data;
+
+  ret = hg_proc_hg_size_t(proc, &in->nkeys);
+  assert(ret == HG_SUCCESS);
+  ret = hg_proc_double(proc, &in->insert_time);
+  assert(ret == HG_SUCCESS);
+  ret = hg_proc_double(proc, &in->read_time);
+  assert(ret == HG_SUCCESS);
+  ret = hg_proc_double(proc, &in->overhead);
+  assert(ret == HG_SUCCESS);
+
+  return HG_SUCCESS;
 }
 
 DECLARE_MARGO_RPC_HANDLER(bench_handler)
