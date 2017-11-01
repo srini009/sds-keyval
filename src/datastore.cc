@@ -34,9 +34,9 @@ BwTreeDataStore::~BwTreeDataStore() {
 };
 
 void BwTreeDataStore::createDatabase(std::string db_name) {
-  _tree = new BwTree<kv_key_t, ds_bulk_t, std::less<kv_key_t>,
-		     std::equal_to<kv_key_t>, std::hash<kv_key_t>,
-		     my_equal_to/*ds_bulk_t*/, my_hash/*ds_bulk_t*/>();
+  _tree = new BwTree<ds_bulk_t, ds_bulk_t, 
+		     my_less, my_equal, my_hash,
+		     my_equal, my_hash>();
   if (_debug) {
     _tree->SetDebugLogging(1);
   }
@@ -47,7 +47,7 @@ void BwTreeDataStore::createDatabase(std::string db_name) {
   _tree->AssignGCID(0);
 };
 
-bool BwTreeDataStore::put(const kv_key_t &key, ds_bulk_t &data) {
+bool BwTreeDataStore::put(ds_bulk_t &key, ds_bulk_t &data) {
   std::vector<ds_bulk_t> values;
   bool success = false;
   
@@ -70,7 +70,7 @@ bool BwTreeDataStore::put(const kv_key_t &key, ds_bulk_t &data) {
   return success;
 };
 
-bool BwTreeDataStore::get(const kv_key_t &key, ds_bulk_t &data) {
+bool BwTreeDataStore::get(ds_bulk_t &key, ds_bulk_t &data) {
   std::vector<ds_bulk_t> values;
   bool success = false;
 
@@ -90,7 +90,7 @@ bool BwTreeDataStore::get(const kv_key_t &key, ds_bulk_t &data) {
   return success;
 };
 
-bool BwTreeDataStore::get(const kv_key_t &key, std::vector<ds_bulk_t> &data) {
+bool BwTreeDataStore::get(ds_bulk_t &key, std::vector<ds_bulk_t> &data) {
   std::vector<ds_bulk_t> values;
   bool success = false;
 
@@ -121,16 +121,14 @@ LevelDBDataStore::LevelDBDataStore(Duplicates duplicates, bool eraseOnGet, bool 
   _dbm = NULL;
 };
   
-std::string LevelDBDataStore::key2string(const kv_key_t &key) {
-  kv_key_t k = key; // grab a copy to work with
-  char *c = reinterpret_cast<char *>(&k);
-  std::string keystr(c, sizeof(k));
-  return keystr;
+std::string LevelDBDataStore::toString(ds_bulk_t &bulk_val) {
+  std::string str_val(bulk_val.begin(), bulk_val.end());
+  return str_val;
 };
 
-kv_key_t LevelDBDataStore::string2key(std::string &keystr) {
-  kv_key_t *key = reinterpret_cast<kv_key_t*>(&(keystr[0]));
-  return *key;
+ds_bulk_t LevelDBDataStore::fromString(std::string &str_val) {
+  ds_bulk_t bulk_val(str_val.begin(), str_val.end());
+  return bulk_val;
 };
 
 LevelDBDataStore::~LevelDBDataStore() {
@@ -161,12 +159,12 @@ void LevelDBDataStore::createDatabase(std::string db_name) {
   // debugging support?
 };
 
-bool LevelDBDataStore::put(const kv_key_t &key, ds_bulk_t &data) {
+bool LevelDBDataStore::put(ds_bulk_t &key, ds_bulk_t &data) {
   leveldb::Status status;
   bool success = false;
   
   std::string value;
-  status = _dbm->Get(leveldb::ReadOptions(), key2string(key), &value);
+  status = _dbm->Get(leveldb::ReadOptions(), toString(key), &value);
   bool duplicate_key = false;
   if (status.ok()) {
     duplicate_key = true;
@@ -184,14 +182,13 @@ bool LevelDBDataStore::put(const kv_key_t &key, ds_bulk_t &data) {
       success = true;
     }
     else {
-      std::cerr << "LevelDBDataStore::put: duplicate key " <<  key
+      std::cerr << "LevelDBDataStore::put: duplicate key detected "
 		<< ", duplicates not supported" << std::endl;
     }
   }
   
   if (insert_key) {
-    std::string datastr(data.begin(), data.end());
-    status = _dbm->Put(leveldb::WriteOptions(), key2string(key), datastr);
+    status = _dbm->Put(leveldb::WriteOptions(), toString(key), toString(data));
     if (status.ok()) {
       success = true;
     }
@@ -203,15 +200,15 @@ bool LevelDBDataStore::put(const kv_key_t &key, ds_bulk_t &data) {
   return success;
 };
 
-bool LevelDBDataStore::get(const kv_key_t &key, ds_bulk_t &data) {
+bool LevelDBDataStore::get(ds_bulk_t &key, ds_bulk_t &data) {
   leveldb::Status status;
   bool success = false;
 
   data.clear();
   std::string value;
-  status = _dbm->Get(leveldb::ReadOptions(), key2string(key), &value);
+  status = _dbm->Get(leveldb::ReadOptions(), toString(key), &value);
   if (status.ok()) {
-    data = ds_bulk_t(value.begin(), value.end());
+    data = fromString(value);
     success = true;
   }
   else if (!status.IsNotFound()) {
@@ -221,7 +218,7 @@ bool LevelDBDataStore::get(const kv_key_t &key, ds_bulk_t &data) {
   return success;
 };
 
-bool LevelDBDataStore::get(const kv_key_t &key, std::vector<ds_bulk_t> &data) {
+bool LevelDBDataStore::get(ds_bulk_t &key, std::vector<ds_bulk_t> &data) {
   bool success = false;
 
   data.clear();
@@ -246,18 +243,6 @@ BerkeleyDBDataStore::BerkeleyDBDataStore(Duplicates duplicates, bool eraseOnGet,
   _dbenv = NULL;
 };
   
-ds_bulk_t BerkeleyDBDataStore::key2ds_bulk(const kv_key_t &key) {
-  ds_bulk_t keydata(sizeof(kv_key_t), 0);
-  uint64_t *p = reinterpret_cast<uint64_t*>(&(keydata[0]));
-  *p = key;
-  return keydata;
-};
-
-kv_key_t BerkeleyDBDataStore::ds_bulk2key(ds_bulk_t &keydata) {
-  kv_key_t *key = reinterpret_cast<kv_key_t*>(&(keydata[0]));
-  return *key;
-};
-
 BerkeleyDBDataStore::~BerkeleyDBDataStore() {
   delete _dbm;
   delete _dbenv;
@@ -317,11 +302,11 @@ void BerkeleyDBDataStore::createDatabase(std::string db_name) {
   // debugging support?
 };
 
-bool BerkeleyDBDataStore::put(const kv_key_t &key, ds_bulk_t &data) {
+bool BerkeleyDBDataStore::put(ds_bulk_t &key, ds_bulk_t &data) {
   int status = 0;
   bool success = false;
   
-  ds_bulk_t keydata = key2ds_bulk(key);
+  ds_bulk_t keydata;
   Dbt db_key(&(keydata[0]), uint32_t(keydata.size()));
   Dbt get_data;
   status = _dbm->get(NULL, &db_key, &get_data, 0);
@@ -338,7 +323,7 @@ bool BerkeleyDBDataStore::put(const kv_key_t &key, ds_bulk_t &data) {
       success = true;
     }
     else {
-      std::cerr << "BerkeleyDBDataStore::put: duplicate key " <<  key
+      std::cerr << "BerkeleyDBDataStore::put: duplicate key detected "
 		<< ", duplicates not supported" << std::endl;
     }
   }
@@ -358,13 +343,13 @@ bool BerkeleyDBDataStore::put(const kv_key_t &key, ds_bulk_t &data) {
   return success;
 };
 
-bool BerkeleyDBDataStore::get(const kv_key_t &key, ds_bulk_t &data) {
+bool BerkeleyDBDataStore::get(ds_bulk_t &key, ds_bulk_t &data) {
   int status = 0;
   bool success = false;
 
   data.clear();
 
-  ds_bulk_t keydata = key2ds_bulk(key);
+  ds_bulk_t keydata;
   Dbt db_key(&(keydata[0]), uint32_t(keydata.size()));
   Dbt db_data;
   status = _dbm->get(NULL, &db_key, &db_data, 0);
@@ -381,7 +366,7 @@ bool BerkeleyDBDataStore::get(const kv_key_t &key, ds_bulk_t &data) {
   return success;
 };
 
-bool BerkeleyDBDataStore::get(const kv_key_t &key, std::vector<ds_bulk_t> &data) {
+bool BerkeleyDBDataStore::get(ds_bulk_t &key, std::vector<ds_bulk_t> &data) {
   bool success = false;
 
   data.clear();

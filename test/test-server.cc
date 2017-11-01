@@ -2,7 +2,7 @@
 #include <assert.h>
 
 int main(int argc, char **argv) {
-  kv_context *context = kv_server_register(argv[1]);
+  kv_context_t *context = kv_server_register(argv[1]);
 
   hg_return_t ret;
   ret = kv_server_wait_for_shutdown(context);

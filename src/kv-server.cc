@@ -7,7 +7,9 @@
 #include <abt.h>
 #include <assert.h>
 
-#include <random>
+//#include <random>
+#include <stdlib.h>
+#include <time.h>
 #include <iostream>
 
 // since this is global, we're assuming this server instance will manage a single DB
@@ -81,37 +83,41 @@ DEFINE_MARGO_RPC_HANDLER(close_handler)
 static hg_return_t put_handler(hg_handle_t handle)
 {
   hg_return_t ret;
-  put_in_t in;
-  put_out_t out;
+  put_in_t pin;
+  put_out_t pout;
 
-  ret = margo_get_input(handle, &in);
+  ret = margo_get_input(handle, &pin);
   assert(ret == HG_SUCCESS);
 	
-  ds_bulk_t data;
-  data.resize(sizeof(in.value));
-  memcpy(data.data(), &in.value, sizeof(in.value));
-
-  if (datastore->put(in.key, data)) {
 #ifdef KV_DEBUG
-    std::cout << "SERVER: PUT succeeded for key = " << in.key
-	      << " value = " << in.value << std::endl;
+  std::cout << "put_handler processing key with key size " << pin.pi.ksize << std::endl;
 #endif
-    out.ret = HG_SUCCESS;
+  ds_bulk_t kdata;
+  kdata.resize(pin.pi.ksize);
+  memcpy(kdata.data(), pin.pi.key, pin.pi.ksize);
+#ifdef KV_DEBUG
+  std::cout << "put_handler processing value with value size " << pin.pi.vsize << std::endl;
+#endif
+  ds_bulk_t vdata;
+  vdata.resize(pin.pi.vsize);
+  memcpy(vdata.data(), pin.pi.value, pin.pi.vsize);
+
+#ifdef KV_DEBUG
+  std::cout << "put_handler calling datastore->put()" << std::endl;
+#endif
+  if (datastore->put(kdata, vdata)) {
+    pout.ret = HG_SUCCESS;
   }
   else {
-#ifdef KV_DEBUG
-    std::cout << "SERVER: PUT failed for key = " << in.key
-	      << " value = " << in.value << std::endl;
-#endif
-    out.ret = HG_OTHER_ERROR;
+    pout.ret = HG_OTHER_ERROR;
   }
 
-  ret = margo_respond(handle, &out);
+  ret = margo_respond(handle, &pout);
   assert(ret == HG_SUCCESS);
 
-  margo_free_input(handle, &in);
+  margo_free_input(handle, &pin);
   margo_destroy(handle);
-	
+
   return HG_SUCCESS;
 }
 DEFINE_MARGO_RPC_HANDLER(put_handler)
@@ -134,34 +140,46 @@ static hg_return_t bulk_put_handler(hg_handle_t handle)
   mid = margo_hg_info_get_instance(hgi);
   assert(mid != MARGO_INSTANCE_NULL);
 
-  ds_bulk_t data;
-  data.resize(bpin.size);
-  void *buffer = (void*)data.data();
-  ret = margo_bulk_create(mid, 1, (void**)&buffer, &bpin.size, HG_BULK_WRITE_ONLY, &bulk_handle);
+#ifdef KV_DEBUG
+  std::cout << "bulk_put_handler processing key with key size " << bpin.bulk.ksize << std::endl;
+#endif
+  ds_bulk_t kdata;
+  kdata.resize(bpin.bulk.ksize);
+  memcpy(kdata.data(), bpin.bulk.key, bpin.bulk.ksize);
+#ifdef KV_DEBUG
+  std::cout << "bulk_put_handler processing value with value size " << bpin.bulk.vsize << std::endl;
+#endif
+  ds_bulk_t vdata;
+  vdata.resize(bpin.bulk.vsize);
+  void *buffer = (void*)vdata.data();
+  ret = margo_bulk_create(mid, 1, (void**)&buffer, &bpin.bulk.vsize, 
+			  HG_BULK_WRITE_ONLY, &bulk_handle);
   assert(ret == HG_SUCCESS);
-  ret = margo_bulk_transfer(mid, HG_BULK_PULL, hgi->addr, bpin.bulk_handle, 0, bulk_handle, 0, bpin.size);
+  ret = margo_bulk_transfer(mid, HG_BULK_PULL, hgi->addr, bpin.bulk.handle, 0,
+			    bulk_handle, 0, bpin.bulk.vsize);
   assert(ret == HG_SUCCESS);
 
-  if (datastore->put(bpin.key, data)) {
 #ifdef KV_DEBUG
-    std::cout << "SERVER: BULK PUT succeeded for key = " << bpin.key
-	      << " size = " << bpin.size << std::endl;
+  std::cout << "bulk_put_handler calling datastore->put()" << std::endl;
 #endif
+  if (datastore->put(kdata, vdata)) {
     bpout.ret = HG_SUCCESS;
   }
   else {
     // e.g. put returns false if the key-value pair already
     // exists in the DB and duplicates are not allowed or ignored
-#ifdef KV_DEBUG
-    std::cout << "SERVER: BULK PUT failed for key = " << bpin.key << std::endl;
-#endif
     bpout.ret = HG_OTHER_ERROR;
   }
 
-  bpout.ret = ret;
+#ifdef KV_DEBUG
+  std::cout << "bulk_put_handler sending response back with ret=" << bpout.ret << std::endl;
+#endif
   ret = margo_respond(handle, &bpout);
   assert(ret == HG_SUCCESS);
 
+#ifdef KV_DEBUG
+  std::cout << "bulk_put_handler performing cleanup" << std::endl;
+#endif
   margo_free_input(handle, &bpin);
   margo_bulk_free(bulk_handle);
   margo_destroy(handle);
@@ -173,44 +191,49 @@ DEFINE_MARGO_RPC_HANDLER(bulk_put_handler)
 static hg_return_t get_handler(hg_handle_t handle)
 {
   hg_return_t ret;
-  get_in_t in;
-  get_out_t out;
+  get_in_t gin;
+  get_out_t gout;
 
-  ret = margo_get_input(handle, &in);
+  ret = margo_get_input(handle, &gin);
   assert(ret == HG_SUCCESS);
 
-  ds_bulk_t data;
-  if (datastore->get(in.key, data)) {
-    kv_value_t value;
-    if (data.size() <= sizeof(value)) {
-      memcpy(&value, data.data(), data.size());
 #ifdef KV_DEBUG
-      std::cout << "SERVER: GET succeeded for key = " << in.key
-		<< " value = " << value << std::endl;
+  std::cout << "get_handler processing key with key size " << gin.gi.ksize << std::endl;
+  std::cout << "get_handler receive buffer size " << gin.gi.vsize << std::endl;
 #endif
-      out.value = value;
-      out.ret = HG_SUCCESS;
+  ds_bulk_t kdata;
+  kdata.resize(gin.gi.ksize);
+  memcpy(kdata.data(), gin.gi.key, gin.gi.ksize);
+  ds_bulk_t vdata;
+  if (datastore->get(kdata, vdata)) {
+    gout.go.vsize = vdata.size();
+#ifdef KV_DEBUG
+    std::cout << "get_handler datastore returned value with size " << gout.go.vsize << std::endl;
+#endif
+    if (gout.go.vsize <= gin.gi.vsize) {
+      gout.go.value = (kv_data_t)malloc(gout.go.vsize);
+      memcpy(gout.go.value, vdata.data(), gout.go.vsize);
+      gout.go.ret = HG_SUCCESS;
     }
     else {
-#ifdef KV_DEBUG
-      std::cout << "SERVER: GET failed for key = " << in.key
-		<< " value returned too large for kv_value_t" << std::endl;
-#endif
-      out.ret = HG_SIZE_ERROR; // caller should be checking return value
+      gout.go.ret = HG_SIZE_ERROR; // caller should be checking return value
     }
   }
   else {
     // get on key did not succeed
+    // rethink the use of HG_OTHER_ERROR here
+    // maybe define a kv_return_t that is a superset of hg_return_t?
 #ifdef KV_DEBUG
-    std::cout << "SERVER: GET failed for key = " << in.key << std::endl;
+    std::cout << "get_handler datastore did not return a value" << std::endl;
 #endif
-    out.ret = HG_OTHER_ERROR; // caller should be checking return value
+    gout.go.vsize = 0;
+    gout.go.ret = HG_OTHER_ERROR; // caller should be checking return value
   }
 
-  ret = margo_respond(handle, &out);
+  ret = margo_respond(handle, &gout);
   assert(ret == HG_SUCCESS);
 
-  margo_free_input(handle, &in);
+  margo_free_input(handle, &gin);
   margo_destroy(handle);
 
   return HG_SUCCESS;
@@ -229,45 +252,54 @@ static hg_return_t bulk_get_handler(hg_handle_t handle)
   ret = margo_get_input(handle, &bgin);
   assert(ret == HG_SUCCESS);
 
-  ds_bulk_t data;
-  if (datastore->get(bgin.key, data)) {
 #ifdef KV_DEBUG
-    std::cout << "SERVER: BULK GET succeeded for key = " << bgin.key << std::endl;
+  std::cout << "bulk_get_handler processing key with key size " << bgin.bulk.ksize << std::endl;
+  std::cout << "bulk_get_handler receive buffer size " << bgin.bulk.vsize << std::endl;
 #endif
+  ds_bulk_t kdata;
+  kdata.resize(bgin.bulk.ksize);
+  memcpy(kdata.data(), bgin.bulk.key, bgin.bulk.ksize);
+  ds_bulk_t vdata;
+  if (datastore->get(kdata, vdata)) {
     // will the transfer fit on the client side?
-    bgout.size = data.size();
-    if (bgout.size <= bgin.size) {
+    bgout.size = vdata.size();
+#ifdef KV_DEBUG
+    std::cout << "bulk_get_handler datastore returned value with size " << bgout.size << std::endl;
+#endif
+    if (bgout.size <= bgin.bulk.vsize) {
       /* get handle info and margo instance */
       hgi = margo_get_info(handle);
       assert(hgi);
       mid = margo_hg_info_get_instance(hgi);
       assert(mid != MARGO_INSTANCE_NULL);
 
-      void *buffer = (void*)data.data();
-      ret = margo_bulk_create(mid, 1, (void**)&buffer, &bgout.size, HG_BULK_READ_ONLY, &bulk_handle);
+#ifdef KV_DEBUG
+      std::cout << "bulk_get_handler tranferring data with size " << bgout.size << std::endl;
+#endif
+      void *buffer = (void*)vdata.data();
+      ret = margo_bulk_create(mid, 1, (void**)&buffer, &bgout.size, 
+			      HG_BULK_READ_ONLY, &bulk_handle);
       assert(ret == HG_SUCCESS);
-      ret = margo_bulk_transfer(mid, HG_BULK_PUSH, hgi->addr, bgin.bulk_handle, 0, bulk_handle, 0, bgout.size);
+      ret = margo_bulk_transfer(mid, HG_BULK_PUSH, hgi->addr, bgin.bulk.handle, 0,
+				bulk_handle, 0, bgout.size);
       assert(ret == HG_SUCCESS);
 
       bgout.ret = HG_SUCCESS;
     }
     else {
-#ifdef KV_DEBUG
-      std::cout << "SERVER: BULK GET failed for key = " << bgin.key
-		<< " value returned too large for kv_value_t" << std::endl;
-#endif
       bgout.ret = HG_SIZE_ERROR;
     }
   }
   else {
     // get on key did not find a value (return 0 for size)
-#ifdef KV_DEBUG
-    std::cout << "SERVER: BULK GET failed for key = " << bgin.key << std::endl;
-#endif
     bgout.size = 0; // assuming caller will check return code
     bgout.ret = HG_OTHER_ERROR;
   }
 	
+#ifdef KV_DEBUG
+  std::cout << "bulk_get_handler returning ret = " << bgout.ret
+	    << ", anad size = " << bgout.size << std::endl;
+#endif
   ret = margo_respond(handle, &bgout);
   assert(ret == HG_SUCCESS);
 
@@ -311,11 +343,13 @@ DEFINE_MARGO_RPC_HANDLER(shutdown_handler)
  * RandomInsertSpeedTest() - Tests how fast it is to insert keys randomly
  */
 
-static void RandomInsertSpeedTest(int32_t key_num, bench_result *results)
+static void RandomInsertSpeedTest(int32_t key_num, bench_result_t *results)
 {
-  std::random_device r{};
-  std::default_random_engine e1(r());
-  std::uniform_int_distribution<int32_t> uniform_dist(0, key_num - 1);
+  //std::random_device r{};
+  //std::default_random_engine e1(r());
+  //std::uniform_int_distribution<int32_t> uniform_dist(0, key_num - 1);
+
+  srand(time(NULL)); // initialize random seed
 
   BwTree<int32_t, int32_t> *t = new BwTree<int32_t, int32_t>();
   t->SetDebugLogging(0);
@@ -324,16 +358,15 @@ static void RandomInsertSpeedTest(int32_t key_num, bench_result *results)
 
   std::chrono::time_point<std::chrono::system_clock> start, end;
 
-  start = std::chrono::system_clock::now();
-
   // We loop for keynum * 2 because in average half of the insertion
   // will hit an empty slot
+  start = std::chrono::system_clock::now();
   for(int32_t i = 0;i < key_num * 2;i++) {
-    int32_t key = uniform_dist(e1);
+    //int32_t key = uniform_dist(e1);
+    int32_t key = rand() % key_num;
 
     t->Insert(key, key);
   }
-
   end = std::chrono::system_clock::now();
 
   std::chrono::duration<double> elapsed_seconds = end - start;
@@ -341,39 +374,39 @@ static void RandomInsertSpeedTest(int32_t key_num, bench_result *results)
   results->nkeys = (hg_size_t)key_num;
   results->insert_time = elapsed_seconds.count();
 
-  std::cout << "BwTree: at least " << (key_num * 2.0 / (1024 * 1024)) / elapsed_seconds.count()
-           << " million random insertion/sec" << "\n";
+  std::cout << "BwTree: at least " << (key_num * 2.0 / (1000 * 1000)) / elapsed_seconds.count()
+	    << " million random insertion/sec" << "\n";
 
   // Then test random read after random insert
   std::vector<int32_t> v{};
-  v.reserve(100);
+  v.reserve(1);
 
   start = std::chrono::system_clock::now();
   for(int32_t i = 0;i < key_num * 2;i++) {
-    int32_t key = uniform_dist(e1);
+    //int32_t key = uniform_dist(e1);
+    int32_t key = rand() % key_num;
 
     t->GetValue(key, v);
     v.clear();
   }
-  
   end = std::chrono::system_clock::now();
 
   elapsed_seconds = end - start;
-  std::cout << "BwTree: at least " << (key_num * 2.0 / (1024 * 1024)) / elapsed_seconds.count()
-            << " million random read after random insert/sec" << "\n";
   results->read_time = elapsed_seconds.count();
+
+  std::cout << "BwTree: at least " << (key_num * 2.0 / (1000 * 1000)) / elapsed_seconds.count()
+            << " million random read after random insert/sec" << "\n";
 
   // Measure the overhead
 
   start = std::chrono::system_clock::now();
-
   for(int32_t i = 0;i < key_num * 2;i++) {
-    int32_t key = uniform_dist(e1);
+    //int32_t key = uniform_dist(e1);
+    int32_t key = rand() % key_num;
 
     v.push_back(key);
     v.clear();
   }
-
   end = std::chrono::system_clock::now();
 
   std::chrono::duration<double> overhead = end - start;
@@ -382,6 +415,8 @@ static void RandomInsertSpeedTest(int32_t key_num, bench_result *results)
   results->overhead = overhead.count();
 
   delete t;
+
+  return;
 }
 
 static hg_return_t bench_handler(hg_handle_t handle)
@@ -389,7 +424,7 @@ static hg_return_t bench_handler(hg_handle_t handle)
   hg_return_t ret = HG_SUCCESS;
   bench_in_t bench_in;
   bench_out_t bench_out;
-  bench_result random_insert;
+  bench_result_t random_insert;
 
   ret = margo_get_input(handle, &bench_in);
   assert(ret == HG_SUCCESS);
@@ -419,10 +454,11 @@ kv_context *kv_server_register(margo_instance_id mid);
   hg_addr_t addr_self;
   char addr_self_string[128];
   hg_size_t addr_self_string_sz = 128;
-  kv_context *context;
+  kv_context_t *context;
 	
   /* sds keyval server init */
-  context = (kv_context *)malloc(sizeof(*context));
+  context = (kv_context_t*)malloc(sizeof(kv_context_t));
+  memset(context, 0, sizeof(kv_context_t));
   if (!addr_str) {
     context->mid = margo_init("ofi+tcp://",
 			      MARGO_SERVER_MODE, 0, -1);
@@ -478,13 +514,13 @@ kv_context *kv_server_register(margo_instance_id mid);
 
 }
 
-hg_return_t kv_server_wait_for_shutdown(kv_context *context) {
+hg_return_t kv_server_wait_for_shutdown(kv_context_t *context) {
   margo_wait_for_finalize(context->mid);
   return HG_SUCCESS;
 }
 
 /* this is the same as client. should be moved to common utility library */
-hg_return_t kv_server_deregister(kv_context *context) {
+hg_return_t kv_server_deregister(kv_context_t *context) {
   free(context);
   delete datastore;
   std::cout << "SERVER: cleanup complete, deregistered" << std::endl;

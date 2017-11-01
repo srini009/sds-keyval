@@ -2,6 +2,7 @@ ACLOCAL_AMFLAGS="-Im4"
 
 bin_PROGRAMS = test/bench-client
 test_bench_client_SOURCES = test/bench-client.cc
+test_bench_client_CXXFLAGS = -pthread -std=c++11 -g -Wall -mcx16 -Wno-invalid-offsetof
 test_bench_client_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src
 test_bench_client_LDADD = -lkvclient
 
@@ -37,18 +38,20 @@ TESTS = test/test-client \
 	test/bench-client \
 	test/test-mpi
 
+test_test_client_SOURCES = test/test-client.cc
+test_test_client_CXXFLAGS = -pthread -std=c++11 -g -Wall -mcx16 -Wno-invalid-offsetof
 test_test_client_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src
 test_test_client_LDADD = -lkvclient
 
 test_test_server_SOURCES = test/test-server.cc
 test_test_server_CXXFLAGS = -pthread -std=c++11 -g -Wall -mcx16 -Wno-invalid-offsetof
-test_test_server_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src -I${srcdir}/src/BwTree/src
+test_test_server_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src
 test_test_server_LDADD = -lkvserver -ldb -ldb_cxx -ldb_stl -lleveldb -lsnappy -lboost_filesystem -lboost_system
 
 test_test_mpi_SOURCES = test/test-mpi.cc
 
 test_test_mpi_CXXFLAGS = -pthread -std=c++11 -g -Wall -mcx16 -Wno-invalid-offsetof
-test_test_mpi_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src -I${srcdir}/src/BwTree/src
+test_test_mpi_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src
 test_test_mpi_LDADD = -lkvclient -lkvserver -ldb -ldb_cxx -ldb_stl -lleveldb -lsnappy -lboost_filesystem -lboost_system
 
 pkgconfigdir = $(libdir)/pkgconfig

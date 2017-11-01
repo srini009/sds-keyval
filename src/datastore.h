@@ -29,9 +29,15 @@ struct my_hash {
   }
 };
 
-struct my_equal_to {
+struct my_equal {
   bool operator()(const ds_bulk_t &v1, const ds_bulk_t &v2) const {
     return (v1 == v2);
+  }
+};
+
+struct my_less {
+  bool operator()(const ds_bulk_t &v1, const ds_bulk_t &v2) const {
+    return (v1 < v2);
   }
 };
 
@@ -41,9 +47,9 @@ public:
   AbstractDataStore(Duplicates duplicates, bool eraseOnGet, bool debug);
   virtual ~AbstractDataStore();
   virtual void createDatabase(std::string db_name)=0;
-  virtual bool put(const kv_key_t &key, ds_bulk_t &data)=0;
-  virtual bool get(const kv_key_t &key, ds_bulk_t &data)=0;
-  virtual bool get(const kv_key_t &key, std::vector<ds_bulk_t> &data)=0;
+  virtual bool put(ds_bulk_t &key, ds_bulk_t &data)=0;
+  virtual bool get(ds_bulk_t &key, ds_bulk_t &data)=0;
+  virtual bool get(ds_bulk_t &key, std::vector<ds_bulk_t> &data)=0;
 protected:
   Duplicates _duplicates;
   bool _eraseOnGet;
@@ -56,13 +62,13 @@ public:
   BwTreeDataStore(Duplicates duplicates, bool eraseOnGet, bool debug);
   virtual ~BwTreeDataStore();
   virtual void createDatabase(std::string db_name);
-  virtual bool put(const kv_key_t &key, ds_bulk_t &data);
-  virtual bool get(const kv_key_t &key, ds_bulk_t &data);
-  virtual bool get(const kv_key_t &key, std::vector<ds_bulk_t> &data);
+  virtual bool put(ds_bulk_t &key, ds_bulk_t &data);
+  virtual bool get(ds_bulk_t &key, ds_bulk_t &data);
+  virtual bool get(ds_bulk_t &key, std::vector<ds_bulk_t> &data);
 protected:
-  BwTree<kv_key_t, ds_bulk_t, std::less<kv_key_t>,
-	 std::equal_to<kv_key_t>, std::hash<kv_key_t>,
-	 my_equal_to/*ds_bulk_t*/, my_hash/*ds_bulk_t*/> *_tree = NULL;
+  BwTree<ds_bulk_t, ds_bulk_t, 
+	 my_less, my_equal, my_hash,
+	 my_equal, my_hash> *_tree = NULL;
 };
 
 // may want to implement some caching for persistent stores like LevelDB
@@ -72,14 +78,14 @@ public:
   LevelDBDataStore(Duplicates duplicates, bool eraseOnGet, bool debug);
   virtual ~LevelDBDataStore();
   virtual void createDatabase(std::string db_name);
-  virtual bool put(const kv_key_t &key, ds_bulk_t &data);
-  virtual bool get(const kv_key_t &key, ds_bulk_t &data);
-  virtual bool get(const kv_key_t &key, std::vector<ds_bulk_t> &data);
+  virtual bool put(ds_bulk_t &key, ds_bulk_t &data);
+  virtual bool get(ds_bulk_t &key, ds_bulk_t &data);
+  virtual bool get(ds_bulk_t &key, std::vector<ds_bulk_t> &data);
 protected:
   leveldb::DB *_dbm = NULL;
 private:
-  std::string key2string(const kv_key_t &key);
-  kv_key_t string2key(std::string &keystr);
+  std::string toString(ds_bulk_t &key);
+  ds_bulk_t fromString(std::string &keystr);
 };
 
 // may want to implement some caching for persistent stores like BerkeleyDB
@@ -89,15 +95,12 @@ public:
   BerkeleyDBDataStore(Duplicates duplicates, bool eraseOnGet, bool debug);
   virtual ~BerkeleyDBDataStore();
   virtual void createDatabase(std::string db_name);
-  virtual bool put(const kv_key_t &key, ds_bulk_t &data);
-  virtual bool get(const kv_key_t &key, ds_bulk_t &data);
-  virtual bool get(const kv_key_t &key, std::vector<ds_bulk_t> &data);
+  virtual bool put(ds_bulk_t &key, ds_bulk_t &data);
+  virtual bool get(ds_bulk_t &key, ds_bulk_t &data);
+  virtual bool get(ds_bulk_t &key, std::vector<ds_bulk_t> &data);
 protected:
   DbEnv *_dbenv = NULL;
   Db *_dbm = NULL;
-private:
-  ds_bulk_t key2ds_bulk(const kv_key_t &key);
-  kv_key_t ds_bulk2key(ds_bulk_t &keydata);
 };
 
 #endif // datastore_h

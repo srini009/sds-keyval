@@ -21,24 +21,6 @@ extern "C" {
 
 typedef int kv_id;
 
-// define client/server key/value types here (before mercury includes)
-
-// kv-client POD types supported:
-//   integer (e.g. int, long, long long)
-//   unsigned integer (e.g. unsigned int, long, and long long)
-//   floating point single precision (e.g. float)
-//   floating point double precision (e.g. double)
-//   string (use hg_string_t)
-
-// key type
-typedef uint64_t kv_key_t;
-// value type for POD put/get interface (e.g. long)
-typedef int kv_value_t;
-
-// kv-client bulk data:
-//   bulk (pack/unpack values in/out of memory buffer)
-//   see datastore.h/cc for implementation (ds_bulk_t)
-
 /* do we need one for server, one for client? */
 typedef struct kv_context_s {
 	margo_instance_id mid;
@@ -52,55 +34,245 @@ typedef struct kv_context_s {
 	hg_id_t bench_id;
 	hg_id_t shutdown_id;
 	hg_handle_t put_handle;
-        hg_handle_t bulk_put_handle; // necessary?
+        hg_handle_t bulk_put_handle;
 	hg_handle_t get_handle;
-	hg_handle_t bulk_get_handle; // necessary?
+	hg_handle_t bulk_get_handle;
 	hg_handle_t shutdown_handle;
-	/* some keyval dodad goes here so the server can discriminate
-	 * seems like it should be some universal identifier we can
-	 * share with other clients */
 	kv_id kv;
-} kv_context;
+} kv_context_t;
 
-/* struggling a bit with types */
 
-MERCURY_GEN_PROC(put_in_t,
-		 ((uint64_t)(key)) ((int32_t)(value)))
-MERCURY_GEN_PROC(put_out_t, ((int32_t)(ret)))
+#define MAX_RPC_MESSAGE_SIZE 2048 // in bytes
+
+// setup to support opaque type handling
+typedef char* kv_data_t;
+
+typedef struct {
+  kv_data_t key;
+  hg_size_t ksize;
+  kv_data_t value;
+  hg_size_t vsize;
+} kv_put_in_t;
+
+typedef struct {
+  kv_data_t key;
+  hg_size_t ksize;
+  hg_size_t vsize;
+} kv_get_in_t;
+
+typedef struct {
+  kv_data_t value;
+  hg_size_t vsize;
+  hg_return_t ret;
+} kv_get_out_t;
+
+static inline hg_return_t hg_proc_hg_return_t(hg_proc_t proc, void *data)
+{
+  return hg_proc_hg_int32_t(proc, data);
+}
+
+static inline hg_return_t hg_proc_kv_put_in_t(hg_proc_t proc, void *data)
+{
+  hg_return_t ret;
+  kv_put_in_t *in = (kv_put_in_t*)data;
+
+  ret = hg_proc_hg_size_t(proc, &in->ksize);
+  assert(ret == HG_SUCCESS);
+  if (in->ksize) {
+    switch (hg_proc_get_op(proc)) {
+    case HG_ENCODE:
+      ret = hg_proc_raw(proc, in->key, in->ksize);
+      assert(ret == HG_SUCCESS);
+      break;
+    case HG_DECODE:
+      in->key = (kv_data_t)malloc(in->ksize);
+      ret = hg_proc_raw(proc, in->key, in->ksize);
+      assert(ret == HG_SUCCESS);
+      break;
+    case HG_FREE:
+      free(in->key);
+      break;
+    default:
+      break;
+    }
+  }
+  ret = hg_proc_hg_size_t(proc, &in->vsize);
+  assert(ret == HG_SUCCESS);
+  if (in->vsize) {
+    switch (hg_proc_get_op(proc)) {
+    case HG_ENCODE:
+      ret = hg_proc_raw(proc, in->value, in->vsize);
+      assert(ret == HG_SUCCESS);
+      break;
+    case HG_DECODE:
+      in->value = (kv_data_t)malloc(in->vsize);
+      ret = hg_proc_raw(proc, in->value, in->vsize);
+      assert(ret == HG_SUCCESS);
+      break;
+    case HG_FREE:
+      free(in->value);
+      break;
+    default:
+      break;
+    }
+  }
+
+  return HG_SUCCESS;
+}
+
+static inline hg_return_t hg_proc_kv_get_in_t(hg_proc_t proc, void *data)
+{
+  hg_return_t ret;
+  kv_get_in_t *in = (kv_get_in_t*)data;
+
+  ret = hg_proc_hg_size_t(proc, &in->ksize);
+  assert(ret == HG_SUCCESS);
+  if (in->ksize) {
+    switch (hg_proc_get_op(proc)) {
+    case HG_ENCODE:
+      ret = hg_proc_raw(proc, in->key, in->ksize);
+      assert(ret == HG_SUCCESS);
+      break;
+    case HG_DECODE:
+      in->key = (kv_data_t)malloc(in->ksize);
+      ret = hg_proc_raw(proc, in->key, in->ksize);
+      assert(ret == HG_SUCCESS);
+      break;
+    case HG_FREE:
+      free(in->key);
+      break;
+    default:
+      break;
+    }
+  }
+  ret = hg_proc_hg_size_t(proc, &in->vsize);
+  assert(ret == HG_SUCCESS);
+
+  return HG_SUCCESS;
+}
+
+static inline hg_return_t hg_proc_kv_get_out_t(hg_proc_t proc, void *data)
+{
+  hg_return_t ret;
+  kv_get_out_t *out = (kv_get_out_t*)data;
+
+  ret = hg_proc_hg_size_t(proc, &out->vsize);
+  assert(ret == HG_SUCCESS);
+  if (out->vsize) {
+    switch (hg_proc_get_op(proc)) {
+    case HG_ENCODE:
+      ret = hg_proc_raw(proc, out->value, out->vsize);
+      assert(ret == HG_SUCCESS);
+      break;
+    case HG_DECODE:
+      out->value = (kv_data_t)malloc(out->vsize);
+      ret = hg_proc_raw(proc, out->value, out->vsize);
+      assert(ret == HG_SUCCESS);
+      break;
+    case HG_FREE:
+      free(out->value);
+      break;
+    default:
+      break;
+    }
+  }
+  ret = hg_proc_hg_return_t(proc, &out->ret);
+  assert(ret == HG_SUCCESS);
+
+  return HG_SUCCESS;
+}
+
+MERCURY_GEN_PROC(put_in_t, ((kv_put_in_t)(pi)))
+MERCURY_GEN_PROC(put_out_t, ((hg_return_t)(ret)))
 DECLARE_MARGO_RPC_HANDLER(put_handler)
 
-MERCURY_GEN_PROC(get_in_t,
-		 ((uint64_t)(key)))
-MERCURY_GEN_PROC(get_out_t,
-		 ((int32_t)(value)) ((int32_t)(ret)))
+MERCURY_GEN_PROC(get_in_t, ((kv_get_in_t)(gi)))
+MERCURY_GEN_PROC(get_out_t, ((kv_get_out_t)(go)))
 DECLARE_MARGO_RPC_HANDLER(get_handler)
 
-MERCURY_GEN_PROC(open_in_t,
-		 ((hg_string_t)(name)))
-MERCURY_GEN_PROC(open_out_t, ((int32_t)(ret)))
+MERCURY_GEN_PROC(open_in_t, ((hg_string_t)(name)))
+MERCURY_GEN_PROC(open_out_t, ((hg_return_t)(ret)))
 DECLARE_MARGO_RPC_HANDLER(open_handler)
 
-MERCURY_GEN_PROC(close_out_t, ((int32_t)(ret)))
+MERCURY_GEN_PROC(close_out_t, ((hg_return_t)(ret)))
 DECLARE_MARGO_RPC_HANDLER(close_handler)
 
-MERCURY_GEN_PROC(bench_in_t, ((int32_t)(count)) )
 
+// for handling bulk puts/gets (e.g. for ParSplice use case)
+typedef struct {
+  kv_data_t key;
+  hg_size_t ksize;
+  hg_size_t vsize;
+  hg_bulk_t handle;
+} kv_bulk_t;
+
+static inline hg_return_t hg_proc_kv_bulk_t(hg_proc_t proc, void *data)
+{
+  hg_return_t ret;
+  kv_bulk_t *bulk = (kv_bulk_t*)data;
+
+  ret = hg_proc_hg_size_t(proc, &bulk->ksize);
+  assert(ret == HG_SUCCESS);
+  if (bulk->ksize) {
+    switch (hg_proc_get_op(proc)) {
+    case HG_ENCODE:
+      ret = hg_proc_raw(proc, bulk->key, bulk->ksize);
+      assert(ret == HG_SUCCESS);
+      break;
+    case HG_DECODE:
+      bulk->key = (kv_data_t)malloc(bulk->ksize);
+      ret = hg_proc_raw(proc, bulk->key, bulk->ksize);
+      assert(ret == HG_SUCCESS);
+      break;
+    case HG_FREE:
+      free(bulk->key);
+      break;
+    default:
+      break;
+    }
+  }
+  ret = hg_proc_hg_size_t(proc, &bulk->vsize);
+  assert(ret == HG_SUCCESS);
+  ret = hg_proc_hg_bulk_t(proc, &bulk->handle);
+  assert(ret == HG_SUCCESS);
+
+  return HG_SUCCESS;
+}
+
+MERCURY_GEN_PROC(bulk_put_in_t, ((kv_bulk_t)(bulk)))
+MERCURY_GEN_PROC(bulk_put_out_t, ((hg_return_t)(ret)))
+DECLARE_MARGO_RPC_HANDLER(bulk_put_handler)
+
+MERCURY_GEN_PROC(bulk_get_in_t, ((kv_bulk_t)(bulk)))
+MERCURY_GEN_PROC(bulk_get_out_t, ((hg_size_t)(size)) ((hg_return_t)(ret)))
+DECLARE_MARGO_RPC_HANDLER(bulk_get_handler)
+
+DECLARE_MARGO_RPC_HANDLER(shutdown_handler)
+
+
+// some setup to support simple benchmarking
 typedef struct {
   hg_size_t nkeys;
   double insert_time;
   double read_time;
   double overhead;
-} bench_result;
+} bench_result_t;
 
 static inline hg_return_t hg_proc_double(hg_proc_t proc, void *data)
 {
-  return hg_proc_memcpy(proc, data, sizeof(double));
+  hg_return_t ret;
+  hg_size_t size = sizeof(double);
+
+  ret = hg_proc_raw(proc, data, size);
+  assert(ret == HG_SUCCESS);
+
+  return HG_SUCCESS;
 }
 
-static inline hg_return_t hg_proc_bench_result(hg_proc_t proc, void *data)
+static inline hg_return_t hg_proc_bench_result_t(hg_proc_t proc, void *data)
 {
   hg_return_t ret;
-  bench_result *in = (bench_result*)data;
+  bench_result_t *in = (bench_result_t*)data;
 
   ret = hg_proc_hg_size_t(proc, &in->nkeys);
   assert(ret == HG_SUCCESS);
@@ -114,47 +286,32 @@ static inline hg_return_t hg_proc_bench_result(hg_proc_t proc, void *data)
   return HG_SUCCESS;
 }
 
+MERCURY_GEN_PROC(bench_in_t, ((int32_t)(count)))
+MERCURY_GEN_PROC(bench_out_t, ((bench_result_t)(result)))
 DECLARE_MARGO_RPC_HANDLER(bench_handler)
 MERCURY_GEN_PROC(bench_out_t, ((bench_result)(result)) )
 
-// for handling bulk puts/gets (e.g. for ParSplice use case)
-MERCURY_GEN_PROC(bulk_put_in_t,
-		 ((uint64_t)(key))		\
-		 ((uint64_t)(size))		\
-		 ((hg_bulk_t)(bulk_handle)) )
-MERCURY_GEN_PROC(bulk_put_out_t, ((int32_t)(ret)))
-DECLARE_MARGO_RPC_HANDLER(bulk_put_handler)
 
-MERCURY_GEN_PROC(bulk_get_in_t,
-		 ((uint64_t)(key))		\
-		 ((uint64_t)(size))		\
-		 ((hg_bulk_t)(bulk_handle)) )
-MERCURY_GEN_PROC(bulk_get_out_t,
-		 ((uint64_t)(size)) ((int32_t)(ret)))
-DECLARE_MARGO_RPC_HANDLER(bulk_get_handler)
+// kv-client API
+kv_context_t *kv_client_register(const char *addr_str);
+kv_context_t *kv_server_register(const char *addr_str);
 
+// both the same: should probably move to common?
+hg_return_t kv_client_deregister(kv_context_t *context);
+hg_return_t kv_server_deregister(kv_context_t *context);
 
-kv_context *kv_client_register(const char *addr_str=0);
-kv_context * kv_server_register(margo_instance_id mid);
+// server-side routine
+hg_return_t kv_server_wait_for_shutdown(kv_context_t *context);
 
-DECLARE_MARGO_RPC_HANDLER(shutdown_handler)
+// client-side routines wrapping up all the RPC stuff
+hg_return_t kv_client_signal_shutdown(kv_context_t *context);
+hg_return_t kv_open(kv_context_t *context, const char *server, const char *db_name);
+hg_return_t kv_put(kv_context_t *context, void *key, hg_size_t ksize, void *value, hg_size_t vsize);
+hg_return_t kv_get(kv_context_t *context, void *key, hg_size_t ksize, void *value, hg_size_t *vsize);
+hg_return_t kv_close(kv_context_t *context);
 
-/* both the same: should probably move to common */
-hg_return_t kv_client_deregister(kv_context *context);
-hg_return_t kv_server_deregister(kv_context *context);
-
-/* server-side routine */
-hg_return_t kv_server_wait_for_shutdown(kv_context *context);
-
-/* client-side routines wrapping up all the RPC stuff  */
-hg_return_t kv_client_signal_shutdown(kv_context *context);
-hg_return_t kv_open(kv_context *context, const char *server, const char *db_name);
-hg_return_t kv_put(kv_context *context, void *key, void *value);
-hg_return_t kv_bulk_put(kv_context *context, void *key, void *data, size_t *data_size);
-hg_return_t kv_get(kv_context *context, void *key, void *value);
-hg_return_t kv_bulk_get(kv_context *context, void *key, void *data, size_t *data_size);
-hg_return_t kv_close(kv_context *context);
-bench_result *kv_benchmark(kv_context *context, int count);
+// benchmark routine
+bench_result_t *kv_benchmark(kv_context_t *context, int32_t count);
 
 #if defined(__cplusplus)
 }

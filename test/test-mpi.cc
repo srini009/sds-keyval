@@ -17,6 +17,8 @@
 #include "sds-keyval.h"
 
 #include <vector>
+#include <stdlib.h>
+#include <time.h>
 
 #define DIE_IF(cond_expr, err_fmt, ...) \
     do { \
@@ -45,7 +47,7 @@ int main(int argc, char *argv[])
       MPI_Comm_split(MPI_COMM_WORLD, MPI_UNDEFINED, rank, &clientComm);
       
       // kv-server
-      kv_context *context = kv_server_register(argv[1]);
+      kv_context_t *context = kv_server_register(argv[1]);
       hret = margo_addr_self(context->mid, &server_addr);
       DIE_IF(hret != HG_SUCCESS, "margo_addr_self");
 
@@ -82,7 +84,7 @@ int main(int argc, char *argv[])
       // kv-client
       //sprintf(client_addr_str_in, "cci+tcp://534%02d", rank);
       sprintf(client_addr_str_in, "ofi+tcp://");
-      kv_context *context = kv_client_register(client_addr_str_in);
+      kv_context_t *context = kv_client_register(client_addr_str_in);
       hret = margo_addr_self(context->mid, &client_addr);
       DIE_IF(hret != HG_SUCCESS, "margo_addr_self");
 
@@ -99,33 +101,41 @@ int main(int argc, char *argv[])
       
       // put
       for (int i=1; i<rank*10; i++) {
-	int put_val = rank-i;
-	uint64_t key = (uint64_t)(rank+i);
+	int32_t key = 10*rank + i;
+	int32_t put_val = key;
 	std::vector<char> put_data;
 	put_data.resize(sizeof(put_val));
-	uint64_t data_size = put_data.size();
+	hg_size_t data_size = put_data.size();
 	memcpy(put_data.data(), &put_val, data_size);
 
-	hret = kv_bulk_put(context, (void*)&key, (void*)put_data.data(), &data_size);
-	printf("(rank %d: put) key %lu, value %d, size=%lu\n", rank, key, put_val, data_size);
-	DIE_IF(hret != HG_SUCCESS, "kv_bulk_put");
+	hret = kv_put(context, (void*)&key, sizeof(key),
+		      (void*)put_data.data(), data_size);
+	printf("(rank %d: put) key %d, value %d, size=%lu\n", rank, key, put_val, data_size);
+	DIE_IF(hret != HG_SUCCESS, "kv_put");
       }
 
       sleep(2);
 
       // get
       for (int i=1; i<rank*10; i++) {
-	int get_val = rank-i;
-	uint64_t key = (uint64_t)(rank+i);
+	int get_val;
+	int32_t key = 10*rank + i;
+	int32_t expected_get_val = key;
 	std::vector<char> get_data;
 	get_data.resize(sizeof(get_val));
-	uint64_t data_size = get_data.size();
-	hret = kv_bulk_get(context, (void*)&key, (void*)get_data.data(), &data_size);
-	DIE_IF(hret != HG_SUCCESS, "kv_bulk_get");
+	hg_size_t data_size = get_data.size();
+	hret = kv_get(context, (void*)&key, sizeof(key),
+		      (void*)get_data.data(), &data_size);
+	DIE_IF(hret != HG_SUCCESS, "kv_get");
 
 	get_data.resize(data_size);
 	memcpy(&get_val, get_data.data(), data_size);
-	printf("(rank %d: get) key %lu, value %d, actual size=%lu\n", rank, key, get_val, data_size);
+	if (expected_get_val == get_val) {
+	  printf("(rank %d: put/get succeeded) key %d, value %d, actual size=%lu\n", rank, key, get_val, data_size);
+	}
+	else {
+	  printf("(rank %d: put/get failed) key %d, value %d, actual size=%lu\n", rank, key, get_val, data_size);
+	}
       }
 
       // close
