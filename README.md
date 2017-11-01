@@ -38,19 +38,26 @@ Client side, all of the remote functionality is abstracted under the client API,
 
 int main(int argc, char **argv) {
 	int ret;
-	kv_context * context = kv_client_register(argc, argv);
+	// pass client address string (e.g. "ofi+tcp://") or NULL to use default
+	// default is currently "ofi+tcp://"
+	kv_context * context = kv_client_register(NULL);
 
 	/* open */
-	ret = kv_open(context, argv[1], "booger", KV_INT, KV_INT);
+	ret = kv_open(context, argv[1], "booger");
 
 	/* put */
 	int key = 10;
 	int val = 10;
-	ret = kv_put(context, &key, &val);
+	ret = kv_put(context, &key, sizeof(key), &val, sizeof(val));
 
 	/* get */
 	int remote_val;
-	ret = kv_get(context, &key, &remote_val);
+	int vsize = sizeof(remote_val);
+	// vsize is an in/out argument
+	// in value is size of receive buffer (e.g. &remote_val)
+	// out is actual size transferred
+	// this all makes more sense with complex values of arbitrary size
+	ret = kv_get(context, &key, sizeof(key), &remote_val, &vsize);
 	printf("key: %d in: %d out: %d\n", key, val, remote_val);
 
 	/* close */
@@ -61,9 +68,6 @@ int main(int argc, char **argv) {
 ```
 
 To compile this code, you'll need to link against `libkvclient` in addition to the "mercury suite" dependencies.
-
-The key and value type information passed to `kv_open` might not end up being
-so useful in the end.  We're still working on that one.
 
 
 ## Issues

@@ -99,6 +99,9 @@ int main(int argc, char *argv[])
       hret = kv_open(context, server_addr_str, (char*)db);
       DIE_IF(hret != HG_SUCCESS, "kv_open");
       
+      // these puts/gets do explicit marshalling/unmarshalling as an example
+      // it's not necessary when dealing with simple types
+
       // put
       for (int i=1; i<rank*10; i++) {
 	int32_t key = 10*rank + i;
