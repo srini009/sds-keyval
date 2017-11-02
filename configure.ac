@@ -40,11 +40,20 @@ LIBS="$LEVELDB_LIBS $LIBS"
 CPPFLAGS="$LEVELDB_CFLAGS $CPPFLAGS"
 CFLAGS="$LEVELDB_CFLAGS $CFLAGS"
 
+PKG_CHECK_MODULES([BERKELEYDB],[berkeley-db],[],
+      AC_MSG_ERROR([Could not find working berkeleydb installation!]) )
+LIBS="$BERKELEYDB_LIBS $LIBS"
+CPPFLAGS="$BERKELEYDB_CFLAGS $CPPFLAGS"
+CFLAGS="$BERKELEYDB_CFLAGS $CFLAGS"
+
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_INLINE
 AC_TYPE_INT64_T
 AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
+
+AC_CHECK_HEADER([iostream],
+  [AC_DEFINE([HAVE_CXX_STDHEADERS], [1], [Standard C++ Headers])])
 
 # Checks for library functions.
 AC_FUNC_MALLOC
