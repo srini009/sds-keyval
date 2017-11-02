@@ -46,8 +46,8 @@ AC_TYPE_INT64_T
 AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
 
-AC_CHECK_HEADER([iostream],
-  [AC_DEFINE([HAVE_CXX_STDHEADERS], [1], [Standard C++ Headers])])
+# Needed because of BerkeleyDB include files
+AC_DEFINE([HAVE_CXX_STDHEADERS], [1], [Standard C++ Headers])
 
 # Checks for library functions.
 AC_FUNC_MALLOC
