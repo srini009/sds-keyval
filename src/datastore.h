@@ -50,10 +50,12 @@ public:
   virtual bool put(ds_bulk_t &key, ds_bulk_t &data)=0;
   virtual bool get(ds_bulk_t &key, ds_bulk_t &data)=0;
   virtual bool get(ds_bulk_t &key, std::vector<ds_bulk_t> &data)=0;
+  virtual void set_in_memory(bool enable)=0; // enable/disable in-memory mode (where supported)
 protected:
   Duplicates _duplicates;
   bool _eraseOnGet;
   bool _debug;
+  bool _in_memory;
 };
 
 class BwTreeDataStore : public AbstractDataStore {
@@ -65,6 +67,7 @@ public:
   virtual bool put(ds_bulk_t &key, ds_bulk_t &data);
   virtual bool get(ds_bulk_t &key, ds_bulk_t &data);
   virtual bool get(ds_bulk_t &key, std::vector<ds_bulk_t> &data);
+  virtual void set_in_memory(bool enable); // a no-op
 protected:
   BwTree<ds_bulk_t, ds_bulk_t, 
 	 my_less, my_equal, my_hash,
@@ -81,6 +84,7 @@ public:
   virtual bool put(ds_bulk_t &key, ds_bulk_t &data);
   virtual bool get(ds_bulk_t &key, ds_bulk_t &data);
   virtual bool get(ds_bulk_t &key, std::vector<ds_bulk_t> &data);
+  virtual void set_in_memory(bool enable); // not supported, a no-op
 protected:
   leveldb::DB *_dbm = NULL;
 private:
@@ -98,6 +102,7 @@ public:
   virtual bool put(ds_bulk_t &key, ds_bulk_t &data);
   virtual bool get(ds_bulk_t &key, ds_bulk_t &data);
   virtual bool get(ds_bulk_t &key, std::vector<ds_bulk_t> &data);
+  virtual void set_in_memory(bool enable); // enable/disable in-memory mode
 protected:
   DbEnv *_dbenv = NULL;
   Db *_dbm = NULL;

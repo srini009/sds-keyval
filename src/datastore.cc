@@ -7,12 +7,14 @@ AbstractDataStore::AbstractDataStore() {
   _duplicates = Duplicates::IGNORE;
   _eraseOnGet = false;
   _debug = false;
+  _in_memory = false;
 };
 
 AbstractDataStore::AbstractDataStore(Duplicates duplicates, bool eraseOnGet, bool debug) {
   _duplicates = duplicates;
   _eraseOnGet = eraseOnGet;
   _debug = debug;
+  _in_memory = false;
 };
 
 AbstractDataStore::~AbstractDataStore()
@@ -51,20 +53,22 @@ bool BwTreeDataStore::put(ds_bulk_t &key, ds_bulk_t &data) {
   std::vector<ds_bulk_t> values;
   bool success = false;
   
-  _tree->GetValue(key, values);
-  bool duplicate_key = (values.size() != 0);
-
-  if (duplicate_key) {
-    if (_duplicates == Duplicates::IGNORE) {
+  if (_duplicates == Dupliates::ALLOW) {
+    success = _tree->Insert(key, data);
+  }
+  else if (_duplicates == Duplicates::IGNORE) {
+    _tree->GetValue(key, values);
+    bool duplicate_key = (values.size() != 0);
+    if (duplicate_key) {
       // silently ignore
       success = true;
     }
-    else { // Duplicates::ALLOW (default)
+    else {
       success = _tree->Insert(key, data);
     }
   }
   else {
-    success = _tree->Insert(key, data);
+    std::cerr << "BwTreeDataStore::put: Unexpected Duplicates option = " << _duplicates << std::endl;
   }
   
   return success;
@@ -84,6 +88,14 @@ bool BwTreeDataStore::get(ds_bulk_t &key, ds_bulk_t &data) {
     if (_duplicates == Duplicates::ALLOW) {
       data = values.front(); // caller is asking for just 1
       success = true;
+    }
+  }
+
+  if (success && _eraseOnGet) {
+    status = _tree->Delete(key, data);
+    if (status != 0) {
+      success = false;
+      std::cerr << "BwTreeDataStore::get: BwTree error on delete (eraseOnGet) = " << status << std::endl;
     }
   }
 
@@ -109,6 +121,9 @@ bool BwTreeDataStore::get(ds_bulk_t &key, std::vector<ds_bulk_t> &data) {
   
   return success;
 };
+
+BwTreeDataStore::BwTreeDataStore::set_in_memory(bool enable)
+{};
 
 
 LevelDBDataStore::LevelDBDataStore() :
@@ -163,31 +178,9 @@ bool LevelDBDataStore::put(ds_bulk_t &key, ds_bulk_t &data) {
   leveldb::Status status;
   bool success = false;
   
-  std::string value;
-  status = _dbm->Get(leveldb::ReadOptions(), toString(key), &value);
-  bool duplicate_key = false;
-  if (status.ok()) {
-    duplicate_key = true;
-  }
-  else if (!status.IsNotFound()) {
-    std::cerr << "LevelDBDataStore::put: LevelDB error on Get = " << status.ToString() << std::endl;
-    return false; // give up and return
-  }
-
-  bool insert_key = true;
-  if (duplicate_key) {
-    insert_key = false;
-    if (_duplicates == Duplicates::IGNORE) {
-      // silently ignore
-      success = true;
-    }
-    else {
-      std::cerr << "LevelDBDataStore::put: duplicate key detected "
-		<< ", duplicates not supported" << std::endl;
-    }
-  }
-  
-  if (insert_key) {
+  // IGNORE case deals with redundant puts (where key/value is the same). In LevelDB a
+  // redundant put simply overwrites previous value which is fine when key/value is the same.
+  if (_duplicates == Duplicates::IGNORE) {
     status = _dbm->Put(leveldb::WriteOptions(), toString(key), toString(data));
     if (status.ok()) {
       success = true;
@@ -195,6 +188,12 @@ bool LevelDBDataStore::put(ds_bulk_t &key, ds_bulk_t &data) {
     else {
       std::cerr << "LevelDBDataStore::put: LevelDB error on Put = " << status.ToString() << std::endl;
     }
+  }
+  else if (_duplicates == Duplicates::ALLOW) {
+    std::cerr << "LevelDBDataStore::put: Duplicates::ALLOW set, LevelDB does not support duplicates" << std::endl;
+  }
+  else {
+    std::cerr << "LevelDBDataStore::put: Unexpected Duplicates option = " << _duplicates << std::endl;
   }
 
   return success;
@@ -231,6 +230,10 @@ bool LevelDBDataStore::get(ds_bulk_t &key, std::vector<ds_bulk_t> &data) {
   return success;
 };
 
+LevelDBDataStore::LevelDBDataStore::set_in_memory(bool enable)
+{};
+
+
 BerkeleyDBDataStore::BerkeleyDBDataStore() :
   AbstractDataStore(Duplicates::IGNORE, false, false) {
   _dbm = NULL;
@@ -260,27 +263,46 @@ void BerkeleyDBDataStore::createDatabase(std::string db_name) {
   }
 
   // initialize the environment
-  uint32_t flags=
-    DB_CREATE      | // Create the environment if it does not exist
-    DB_PRIVATE     |
-    DB_RECOVER     | // Run normal recovery.
-    //DB_INIT_LOCK | // Initialize the locking subsystem
-    DB_INIT_LOG    | // Initialize the logging subsystem
-    DB_INIT_TXN    | // Initialize the transactional subsystem. This
-    DB_AUTO_COMMIT |
-    //DB_THREAD    | // Cause the environment to be free-threaded
-    DB_INIT_MPOOL;   // Initialize the memory pool (in-memory cache)
+  uint32_t flags = 0;
+  if (_in_memory) {
+    flags =
+      DB_CREATE      | // Create the environment if it does not exist
+      DB_PRIVATE     |
+      //DB_RECOVER   | // Run normal recovery.
+      //DB_INIT_LOCK | // Initialize the locking subsystem
+      DB_INIT_LOG    | // Initialize the logging subsystem
+      DB_INIT_TXN    | // Initialize the transactional subsystem. This
+      //DB_THREAD    | // Cause the environment to be free-threaded
+      DB_INIT_MPOOL;   // Initialize the memory pool (in-memory cache)
+  }
+  else {
+    flags =
+      DB_CREATE      | // Create the environment if it does not exist
+      DB_PRIVATE     |
+      DB_RECOVER     | // Run normal recovery.
+      //DB_INIT_LOCK | // Initialize the locking subsystem
+      DB_INIT_LOG    | // Initialize the logging subsystem
+      DB_INIT_TXN    | // Initialize the transactional subsystem. This
+      //DB_THREAD    | // Cause the environment to be free-threaded
+      DB_INIT_MPOOL;   // Initialize the memory pool (in-memory cache)
+  }
 
   try {
     // create and open the environment
     uint32_t flag = DB_CXX_NO_EXCEPTIONS;
-    int scratch_size = 1; // what's this?
+    int scratch_size = 1; // 1GB cache
     _dbenv = new DbEnv(flag);
-    _dbenv->set_lk_detect(DB_LOCK_MINWRITE);
-
     _dbenv->set_error_stream(&std::cerr);
     _dbenv->set_cachesize(scratch_size, 0, 0);
-    _dbenv->open(basepath.c_str(), flags, 0644);
+    if (_in_memory) {
+      _dbenv->log_set_config(DB_LOG_IN_MEMORY, 1);
+      _dbenv->set_lg_bsize(scratch_size * 1024 * 1024 * 1024); // in GB
+      _dbenv->open(NULL, flags, 0);
+    }
+    else {
+      _dbenv->set_lk_detect(DB_LOCK_MINWRITE);
+      _dbenv->open(basepath.c_str(), flags, 0644);
+    }
   }
   catch (DbException &e) {
     std::cerr << "BerkeleyDBDataStore::createDatabase: BerkeleyDB error on environment open = " 
@@ -291,13 +313,36 @@ void BerkeleyDBDataStore::createDatabase(std::string db_name) {
   if (status == 0) {
     _dbm = new Db(_dbenv, DB_CXX_NO_EXCEPTIONS);
 
-    uint32_t flags = DB_CREATE; // Allow database creation
-    status = _dbm->open(NULL, dbname.c_str(), NULL, DB_HASH, flags, 0);
+    uint32_t flags = DB_CREATE | DB_AUTO_COMMIT; // Allow database creation
+    if (_in_memory) {
+      DB_MPOOLFILE *mpf = NULL;      
+      status = _dbm->open(NULL, // txn pointer
+			  NULL, // NULL for in-memory DB
+			  dbname.c_str(), // logical DB name
+			  DB_BTREE, // DB type (e.g. BTREE, HASH)
+			  flags,
+			  0);
+      mpf = _dbm->get_mpf();
+      mpf->set_flags(DB_MPOOL_NOFILE, 1);
+    }
+    else {
+      status = _dbm->open(NULL, // txn pointer
+			  dbname.c_str(), // file name
+			  dbname.c_str(), // logical DB name
+			  DB_BTREE, // DB type (e.g. BTREE, HASH)
+			  flags,
+			  0);
+    }
     if (status != 0) { // is this the right test for error?
       std::cerr << "BerkeleyDBDataStore::createDatabase: BerkeleyDB error on DB open" << std::endl;
     }
   }
   assert(status == 0); // fall over
+
+  if (_duplicates = Duplicates::ALLOW) {
+    uint32_t flags = DB_DUP; // Allow duplicate keys
+    _dbm->set_flags(flags);
+  }
   
   // debugging support?
 };
@@ -306,29 +351,11 @@ bool BerkeleyDBDataStore::put(ds_bulk_t &key, ds_bulk_t &data) {
   int status = 0;
   bool success = false;
   
-  ds_bulk_t keydata;
-  Dbt db_key(&(keydata[0]), uint32_t(keydata.size()));
-  Dbt get_data;
-  status = _dbm->get(NULL, &db_key, &get_data, 0);
-
-  bool duplicate_key = false;
-  if (status != DB_NOTFOUND && status != DB_KEYEMPTY) {
-    duplicate_key = true;
-  }
-  bool insert_key = true;
-  if (duplicate_key) {
-    insert_key = false;
-    if (_duplicates == Duplicates::IGNORE) {
-      // silently ignore
-      success = true;
-    }
-    else {
-      std::cerr << "BerkeleyDBDataStore::put: duplicate key detected "
-		<< ", duplicates not supported" << std::endl;
-    }
-  }
-  
-  if (insert_key) {
+  // IGNORE case deals with redundant puts (where key/value is the same). In BerkeleyDB a
+  // redundant put simply overwrites previous value which is fine when key/value is the same.
+  // ALLOW case deals with actual duplicates (where key is the same but value is different).
+  // This option might be used when eraseOnGet is set (e.g. ParSplice hotpoint use case).
+  if (_duplicates == Duplicates::IGNORE || _duplicates == Duplicates::ALLOW) {
     Dbt put_data(&(data[0]), uint32_t(data.size()));
     uint32_t flags = DB_NOOVERWRITE;
     status = _dbm->put(NULL, &db_key, &put_data, flags);
@@ -339,10 +366,15 @@ bool BerkeleyDBDataStore::put(ds_bulk_t &key, ds_bulk_t &data) {
       std::cerr << "BerkeleyDBDataStore::put: BerkeleyDB error on put = " << status << std::endl;
     }
   }
+  else {
+    std::cerr << "BerkeleyDBDataStore::put: Unexpected Duplicates option = " << _duplicates << std::endl;
+  }
 
   return success;
 };
 
+// In the case where Duplicates::ALLOW, this will return the first
+// value found using key.
 bool BerkeleyDBDataStore::get(ds_bulk_t &key, ds_bulk_t &data) {
   int status = 0;
   bool success = false;
@@ -362,10 +394,20 @@ bool BerkeleyDBDataStore::get(ds_bulk_t &key, ds_bulk_t &data) {
   else {
     std::cerr << "BerkeleyDBDataStore::get: BerkeleyDB error on Get = " << status << std::endl;
   }
+  
+  if (success && _eraseOnGet) {
+    status = _dbm->del(NULL, &db_key, 0);
+    if (status != 0) {
+      success = false;
+      std::cerr << "BerkeleyDBDataStore::get: BerkeleyDB error on delete (eraseOnGet) = " << status << std::endl;
+    }
+  }
 
   return success;
 };
 
+// TODO: To return more than 1 value (when Duplicates::ALLOW), this code should
+// use the c_get interface.
 bool BerkeleyDBDataStore::get(ds_bulk_t &key, std::vector<ds_bulk_t> &data) {
   bool success = false;
 
@@ -377,4 +419,8 @@ bool BerkeleyDBDataStore::get(ds_bulk_t &key, std::vector<ds_bulk_t> &data) {
   }
   
   return success;
+};
+
+BerkeleyDBDataStore::BerkeleyDBDataStore::set_in_memory(bool enable) {
+  _in_memory = enable;
 };
