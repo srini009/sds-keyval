@@ -53,7 +53,7 @@ bool BwTreeDataStore::put(ds_bulk_t &key, ds_bulk_t &data) {
   std::vector<ds_bulk_t> values;
   bool success = false;
   
-  if (_duplicates == Dupliates::ALLOW) {
+  if (_duplicates == Duplicates::ALLOW) {
     success = _tree->Insert(key, data);
   }
   else if (_duplicates == Duplicates::IGNORE) {
@@ -68,7 +68,7 @@ bool BwTreeDataStore::put(ds_bulk_t &key, ds_bulk_t &data) {
     }
   }
   else {
-    std::cerr << "BwTreeDataStore::put: Unexpected Duplicates option = " << _duplicates << std::endl;
+    std::cerr << "BwTreeDataStore::put: Unexpected Duplicates option = " << int32_t(_duplicates) << std::endl;
   }
   
   return success;
@@ -92,8 +92,8 @@ bool BwTreeDataStore::get(ds_bulk_t &key, ds_bulk_t &data) {
   }
 
   if (success && _eraseOnGet) {
-    status = _tree->Delete(key, data);
-    if (status != 0) {
+    bool status = _tree->Delete(key, data);
+    if (!status) {
       success = false;
       std::cerr << "BwTreeDataStore::get: BwTree error on delete (eraseOnGet) = " << status << std::endl;
     }
@@ -122,7 +122,7 @@ bool BwTreeDataStore::get(ds_bulk_t &key, std::vector<ds_bulk_t> &data) {
   return success;
 };
 
-BwTreeDataStore::BwTreeDataStore::set_in_memory(bool enable)
+void BwTreeDataStore::BwTreeDataStore::set_in_memory(bool enable)
 {};
 
 
@@ -193,7 +193,7 @@ bool LevelDBDataStore::put(ds_bulk_t &key, ds_bulk_t &data) {
     std::cerr << "LevelDBDataStore::put: Duplicates::ALLOW set, LevelDB does not support duplicates" << std::endl;
   }
   else {
-    std::cerr << "LevelDBDataStore::put: Unexpected Duplicates option = " << _duplicates << std::endl;
+    std::cerr << "LevelDBDataStore::put: Unexpected Duplicates option = " << int32_t(_duplicates) << std::endl;
   }
 
   return success;
@@ -230,7 +230,7 @@ bool LevelDBDataStore::get(ds_bulk_t &key, std::vector<ds_bulk_t> &data) {
   return success;
 };
 
-LevelDBDataStore::LevelDBDataStore::set_in_memory(bool enable)
+void LevelDBDataStore::LevelDBDataStore::set_in_memory(bool enable)
 {};
 
 
@@ -315,15 +315,17 @@ void BerkeleyDBDataStore::createDatabase(std::string db_name) {
 
     uint32_t flags = DB_CREATE | DB_AUTO_COMMIT; // Allow database creation
     if (_in_memory) {
-      DB_MPOOLFILE *mpf = NULL;      
+      DbMpoolFile *mpf = NULL;      
       status = _dbm->open(NULL, // txn pointer
 			  NULL, // NULL for in-memory DB
 			  dbname.c_str(), // logical DB name
 			  DB_BTREE, // DB type (e.g. BTREE, HASH)
 			  flags,
 			  0);
-      mpf = _dbm->get_mpf();
-      mpf->set_flags(DB_MPOOL_NOFILE, 1);
+      if (status == 0) {
+	mpf = _dbm->get_mpf();
+	mpf->set_flags(DB_MPOOL_NOFILE, 1);
+      }
     }
     else {
       status = _dbm->open(NULL, // txn pointer
@@ -339,7 +341,7 @@ void BerkeleyDBDataStore::createDatabase(std::string db_name) {
   }
   assert(status == 0); // fall over
 
-  if (_duplicates = Duplicates::ALLOW) {
+  if (_duplicates == Duplicates::ALLOW) {
     uint32_t flags = DB_DUP; // Allow duplicate keys
     _dbm->set_flags(flags);
   }
@@ -356,6 +358,8 @@ bool BerkeleyDBDataStore::put(ds_bulk_t &key, ds_bulk_t &data) {
   // ALLOW case deals with actual duplicates (where key is the same but value is different).
   // This option might be used when eraseOnGet is set (e.g. ParSplice hotpoint use case).
   if (_duplicates == Duplicates::IGNORE || _duplicates == Duplicates::ALLOW) {
+    ds_bulk_t keydata;
+    Dbt db_key(&(keydata[0]), uint32_t(keydata.size()));
     Dbt put_data(&(data[0]), uint32_t(data.size()));
     uint32_t flags = DB_NOOVERWRITE;
     status = _dbm->put(NULL, &db_key, &put_data, flags);
@@ -367,7 +371,7 @@ bool BerkeleyDBDataStore::put(ds_bulk_t &key, ds_bulk_t &data) {
     }
   }
   else {
-    std::cerr << "BerkeleyDBDataStore::put: Unexpected Duplicates option = " << _duplicates << std::endl;
+    std::cerr << "BerkeleyDBDataStore::put: Unexpected Duplicates option = " << int32_t(_duplicates) << std::endl;
   }
 
   return success;
@@ -421,6 +425,6 @@ bool BerkeleyDBDataStore::get(ds_bulk_t &key, std::vector<ds_bulk_t> &data) {
   return success;
 };
 
-BerkeleyDBDataStore::BerkeleyDBDataStore::set_in_memory(bool enable) {
+void BerkeleyDBDataStore::BerkeleyDBDataStore::set_in_memory(bool enable) {
   _in_memory = enable;
 };
