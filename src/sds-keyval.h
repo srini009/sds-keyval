@@ -42,7 +42,7 @@ typedef struct kv_context_s {
 } kv_context_t;
 
 
-#define MAX_RPC_MESSAGE_SIZE 2048 // in bytes
+#define MAX_RPC_MESSAGE_SIZE 4096 // in bytes
 
 // setup to support opaque type handling
 typedef char* kv_data_t;

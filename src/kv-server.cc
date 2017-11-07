@@ -32,6 +32,7 @@ static hg_return_t open_handler(hg_handle_t handle)
     //datastore = new BwTreeDataStore(); // testing BwTree
     datastore = new LevelDBDataStore(); // testing LevelDB
     //datastore = new BerkeleyDBDataStore(); // testing BerkeleyDB
+    //datastore->set_in_memory(true); // testing in-memory BerkeleyDB
     db_name = in_name;
     datastore->createDatabase(db_name);
 #ifdef KV_DEBUG
@@ -85,7 +86,9 @@ static hg_return_t put_handler(hg_handle_t handle)
   hg_return_t ret;
   put_in_t pin;
   put_out_t pout;
+  double st1, et1, st2, et2;
 
+  st1 = ABT_get_wtime();
   ret = margo_get_input(handle, &pin);
   assert(ret == HG_SUCCESS);
 	
@@ -112,6 +115,9 @@ static hg_return_t put_handler(hg_handle_t handle)
     pout.ret = HG_OTHER_ERROR;
   }
 
+  et1 = ABT_get_wtime();
+  std::cout << "put_handler time: " <<  (et1-st1)*1000000 << " microseconds" << std::endl;
+
   ret = margo_respond(handle, &pout);
   assert(ret == HG_SUCCESS);
 
@@ -130,7 +136,9 @@ static hg_return_t bulk_put_handler(hg_handle_t handle)
   hg_bulk_t bulk_handle;
   const struct hg_info *hgi;
   margo_instance_id mid;
+  double st1, et1, st2, et2;
 
+  st1 = ABT_get_wtime();
   ret = margo_get_input(handle, &bpin);
   assert(ret == HG_SUCCESS);
 
@@ -174,6 +182,9 @@ static hg_return_t bulk_put_handler(hg_handle_t handle)
 #ifdef KV_DEBUG
   std::cout << "bulk_put_handler sending response back with ret=" << bpout.ret << std::endl;
 #endif
+  et1 = ABT_get_wtime();
+  std::cout << "bulk_put_handler time: " <<  (et1-st1)*1000000 << " microseconds" << std::endl;
+
   ret = margo_respond(handle, &bpout);
   assert(ret == HG_SUCCESS);
 
@@ -193,7 +204,9 @@ static hg_return_t get_handler(hg_handle_t handle)
   hg_return_t ret;
   get_in_t gin;
   get_out_t gout;
+  double st1, et1, st2, et2;
 
+  st1 = ABT_get_wtime();
   ret = margo_get_input(handle, &gin);
   assert(ret == HG_SUCCESS);
 
@@ -230,6 +243,9 @@ static hg_return_t get_handler(hg_handle_t handle)
     gout.go.ret = HG_OTHER_ERROR; // caller should be checking return value
   }
 
+  et1 = ABT_get_wtime();
+  std::cout << "get_handler time: " <<  (et1-st1)*1000000 << " microseconds" << std::endl;
+
   ret = margo_respond(handle, &gout);
   assert(ret == HG_SUCCESS);
 
@@ -248,7 +264,9 @@ static hg_return_t bulk_get_handler(hg_handle_t handle)
   hg_bulk_t bulk_handle;
   const struct hg_info *hgi;
   margo_instance_id mid;
+  double st1, et1, st2, et2;
 
+  st1 = ABT_get_wtime();
   ret = margo_get_input(handle, &bgin);
   assert(ret == HG_SUCCESS);
 
@@ -300,6 +318,9 @@ static hg_return_t bulk_get_handler(hg_handle_t handle)
   std::cout << "bulk_get_handler returning ret = " << bgout.ret
 	    << ", anad size = " << bgout.size << std::endl;
 #endif
+  et1 = ABT_get_wtime();
+  std::cout << "bulk_get_handler time: " <<  (et1-st1)*1000000 << " microseconds" << std::endl;
+
   ret = margo_respond(handle, &bgout);
   assert(ret == HG_SUCCESS);
 

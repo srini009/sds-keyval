@@ -2,6 +2,9 @@
 // All rights reserved.
 #include "datastore.h"
 #include <boost/filesystem.hpp>
+#include <chrono>
+
+using namespace std::chrono;
 
 AbstractDataStore::AbstractDataStore() {
   _duplicates = Duplicates::IGNORE;
@@ -178,6 +181,7 @@ bool LevelDBDataStore::put(ds_bulk_t &key, ds_bulk_t &data) {
   leveldb::Status status;
   bool success = false;
   
+  high_resolution_clock::time_point start = high_resolution_clock::now();
   // IGNORE case deals with redundant puts (where key/value is the same). In LevelDB a
   // redundant put simply overwrites previous value which is fine when key/value is the same.
   if (_duplicates == Duplicates::IGNORE) {
@@ -195,6 +199,8 @@ bool LevelDBDataStore::put(ds_bulk_t &key, ds_bulk_t &data) {
   else {
     std::cerr << "LevelDBDataStore::put: Unexpected Duplicates option = " << int32_t(_duplicates) << std::endl;
   }
+  uint64_t elapsed = duration_cast<microseconds>(high_resolution_clock::now()-start).count();
+  std::cout << "LevelDBDataStore::put time = " << elapsed << " microseconds" << std::endl;
 
   return success;
 };
@@ -203,6 +209,7 @@ bool LevelDBDataStore::get(ds_bulk_t &key, ds_bulk_t &data) {
   leveldb::Status status;
   bool success = false;
 
+  high_resolution_clock::time_point start = high_resolution_clock::now();
   data.clear();
   std::string value;
   status = _dbm->Get(leveldb::ReadOptions(), toString(key), &value);
@@ -213,6 +220,8 @@ bool LevelDBDataStore::get(ds_bulk_t &key, ds_bulk_t &data) {
   else if (!status.IsNotFound()) {
     std::cerr << "LevelDBDataStore::get: LevelDB error on Get = " << status.ToString() << std::endl;
   }
+  uint64_t elapsed = duration_cast<microseconds>(high_resolution_clock::now()-start).count();
+  std::cout << "LevelDBDataStore::get time = " << elapsed << " microseconds" << std::endl;
 
   return success;
 };
@@ -354,16 +363,17 @@ bool BerkeleyDBDataStore::put(ds_bulk_t &key, ds_bulk_t &data) {
   bool success = false;
   
   // IGNORE case deals with redundant puts (where key/value is the same). In BerkeleyDB a
-  // redundant put simply overwrites previous value which is fine when key/value is the same.
+  // redundant may overwrite previous value which is fine when key/value is the same.
   // ALLOW case deals with actual duplicates (where key is the same but value is different).
   // This option might be used when eraseOnGet is set (e.g. ParSplice hotpoint use case).
   if (_duplicates == Duplicates::IGNORE || _duplicates == Duplicates::ALLOW) {
     ds_bulk_t keydata;
     Dbt db_key(&(keydata[0]), uint32_t(keydata.size()));
     Dbt put_data(&(data[0]), uint32_t(data.size()));
-    uint32_t flags = DB_NOOVERWRITE;
+    uint32_t flags = DB_NOOVERWRITE; // to simply overwrite value, don't use this flag
     status = _dbm->put(NULL, &db_key, &put_data, flags);
-    if (status == 0) { // is this the right test for success?
+    if (status == 0 || 
+	(_duplicates == Duplicates::IGNORE && status == DB_KEYEXIST)) {
       success = true;
     }
     else {

@@ -112,10 +112,13 @@ hg_return_t kv_put(kv_context_t *context,
   
   msize = ksize + vsize + 2*sizeof(hg_size_t);
 
+  printf("kv_put ksize %lu, vsize %lu, msize %lu\n", ksize, vsize, msize);
   /* 
    * If total payload is large, we'll do our own
    * explicit transfer of the value data.
    */
+  double st1, et1, st2, et2;
+  st1 = ABT_get_wtime();
   if (msize <= MAX_RPC_MESSAGE_SIZE) {
     put_in_t pin;
     put_out_t pout;
@@ -125,7 +128,10 @@ hg_return_t kv_put(kv_context_t *context,
     pin.pi.value = (kv_data_t)value;
     pin.pi.vsize = vsize;
 
+    st2 = ABT_get_wtime();
     ret = margo_forward(context->put_handle, &pin);
+    et2 = ABT_get_wtime();
+    printf("kv_put forward time: %f microseconds\n", (et2-st2)*1000000);
     assert(ret == HG_SUCCESS);
 
     ret = margo_get_output(context->put_handle, &pout);
@@ -149,11 +155,17 @@ hg_return_t kv_put(kv_context_t *context,
     bpin.bulk.ksize = ksize;
     bpin.bulk.vsize = vsize;
 
+    st2 = ABT_get_wtime();
     ret = margo_bulk_create(context->mid, 1, &value, &bpin.bulk.vsize,
 			    HG_BULK_READ_ONLY, &bpin.bulk.handle);
+    et2 = ABT_get_wtime();
+    printf("kv_put bulk create time: %f microseconds\n", (et2-st2)*1000000);
     assert(ret == HG_SUCCESS);
 
+    st2 = ABT_get_wtime();
     ret = margo_forward(context->bulk_put_handle, &bpin);
+    et2 = ABT_get_wtime();
+    printf("kv_put bulk forward time: %f microseconds\n", (et2-st2)*1000000);
     assert(ret == HG_SUCCESS);
 
     ret = margo_get_output(context->bulk_put_handle, &bpout);
@@ -162,6 +174,8 @@ hg_return_t kv_put(kv_context_t *context,
 
     margo_free_output(context->bulk_put_handle, &bpout);
   }
+  et1 = ABT_get_wtime();
+  printf("kv_put time: %f microseconds\n", (et1-st1)*1000000);
 
     return ret;
 }
@@ -176,12 +190,15 @@ hg_return_t kv_get(kv_context_t *context,
   hg_size_t msize;
   
   size = *(hg_size_t*)vsize;
-  msize = size + sizeof(hg_size_t);
+  msize = size + sizeof(hg_size_t) + sizeof(hg_return_t);
 
+  printf("kv_get ksize %lu, vsize %lu, msize %lu\n", ksize, size, msize);
   /* 
    * If return payload is large, we'll do our own
    * explicit transfer of the value data.
    */
+  double st1, et1, st2, et2;
+  st1 = ABT_get_wtime();
   if (msize <= MAX_RPC_MESSAGE_SIZE) {
     get_in_t gin;
     get_out_t gout;
@@ -190,7 +207,10 @@ hg_return_t kv_get(kv_context_t *context,
     gin.gi.ksize = ksize;
     gin.gi.vsize = size;
 
+    st2 = ABT_get_wtime();
     ret = margo_forward(context->get_handle, &gin);
+    et2 = ABT_get_wtime();
+    printf("kv_get forward time: %f microseconds\n", (et2-st2)*1000000);
     assert(ret == HG_SUCCESS);
 
     ret = margo_get_output(context->get_handle, &gout);
@@ -217,11 +237,17 @@ hg_return_t kv_get(kv_context_t *context,
     bgin.bulk.ksize = ksize;
     bgin.bulk.vsize = size;
 
+    st2 = ABT_get_wtime();
     ret = margo_bulk_create(context->mid, 1, &value, &bgin.bulk.vsize,
 			    HG_BULK_WRITE_ONLY, &bgin.bulk.handle);
+    et2 = ABT_get_wtime();
+    printf("kv_get bulk create time: %f microseconds\n", (et2-st2)*1000000);
     assert(ret == HG_SUCCESS);
 
+    st2 = ABT_get_wtime();
     ret = margo_forward(context->bulk_get_handle, &bgin);
+    et2 = ABT_get_wtime();
+    printf("kv_get bulk forward time: %f microseconds\n", (et2-st2)*1000000);
     assert(ret == HG_SUCCESS);
 
     ret = margo_get_output(context->bulk_get_handle, &bgout);
@@ -237,6 +263,8 @@ hg_return_t kv_get(kv_context_t *context,
 
     margo_free_output(context->bulk_get_handle, &bgout);
   }
+  et1 = ABT_get_wtime();
+  printf("kv_get time: %f microseconds\n", (et1-st1)*1000000);
 
   return ret;
 }
