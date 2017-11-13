@@ -229,6 +229,7 @@ static hg_return_t get_handler(hg_handle_t handle)
       gout.go.ret = HG_SUCCESS;
     }
     else {
+      gout.go.vsize = 0; // not returning a value
       gout.go.ret = HG_SIZE_ERROR; // caller should be checking return value
     }
   }
@@ -239,7 +240,7 @@ static hg_return_t get_handler(hg_handle_t handle)
 #ifdef KV_DEBUG
     std::cout << "get_handler datastore did not return a value" << std::endl;
 #endif
-    gout.go.vsize = 0;
+    gout.go.vsize = 0; // not returning a value
     gout.go.ret = HG_OTHER_ERROR; // caller should be checking return value
   }
 
@@ -305,13 +306,14 @@ static hg_return_t bulk_get_handler(hg_handle_t handle)
       bgout.ret = HG_SUCCESS;
     }
     else {
-      bgout.ret = HG_SIZE_ERROR;
+      bgout.size = 0; // not returning a value
+      bgout.ret = HG_SIZE_ERROR; // assuming caller will check return code
     }
   }
   else {
     // get on key did not find a value (return 0 for size)
-    bgout.size = 0; // assuming caller will check return code
-    bgout.ret = HG_OTHER_ERROR;
+    bgout.size = 0; // not returning a value
+    bgout.ret = HG_OTHER_ERROR; // assuming caller will check return code
   }
 	
 #ifdef KV_DEBUG

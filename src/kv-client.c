@@ -131,7 +131,7 @@ hg_return_t kv_put(kv_context_t *context,
     st2 = ABT_get_wtime();
     ret = margo_forward(context->put_handle, &pin);
     et2 = ABT_get_wtime();
-    printf("kv_put forward time: %f microseconds\n", (et2-st2)*1000000);
+    printf("kv_put forward time: %f microseconds, vsize = %lu\n", (et2-st2)*1000000, vsize);
     assert(ret == HG_SUCCESS);
 
     ret = margo_get_output(context->put_handle, &pout);
@@ -165,7 +165,7 @@ hg_return_t kv_put(kv_context_t *context,
     st2 = ABT_get_wtime();
     ret = margo_forward(context->bulk_put_handle, &bpin);
     et2 = ABT_get_wtime();
-    printf("kv_put bulk forward time: %f microseconds\n", (et2-st2)*1000000);
+    printf("kv_put bulk forward time: %f microseconds, vsize = %lu\n", (et2-st2)*1000000, vsize);
     assert(ret == HG_SUCCESS);
 
     ret = margo_get_output(context->bulk_put_handle, &bpout);
@@ -210,7 +210,7 @@ hg_return_t kv_get(kv_context_t *context,
     st2 = ABT_get_wtime();
     ret = margo_forward(context->get_handle, &gin);
     et2 = ABT_get_wtime();
-    printf("kv_get forward time: %f microseconds\n", (et2-st2)*1000000);
+    printf("kv_get forward time: %f microseconds, vsize = %lu\n", (et2-st2)*1000000, size);
     assert(ret == HG_SUCCESS);
 
     ret = margo_get_output(context->get_handle, &gout);
@@ -247,7 +247,7 @@ hg_return_t kv_get(kv_context_t *context,
     st2 = ABT_get_wtime();
     ret = margo_forward(context->bulk_get_handle, &bgin);
     et2 = ABT_get_wtime();
-    printf("kv_get bulk forward time: %f microseconds\n", (et2-st2)*1000000);
+    printf("kv_get bulk forward time: %f microseconds, vsize = %lu\n", (et2-st2)*1000000, size);
     assert(ret == HG_SUCCESS);
 
     ret = margo_get_output(context->bulk_get_handle, &bgout);
