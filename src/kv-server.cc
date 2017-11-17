@@ -5,12 +5,13 @@
 #include <margo.h>
 #include <abt-snoozer.h>
 #include <abt.h>
-#include <assert.h>
+#include <ssg.h>
 
 //#include <random>
 #include <stdlib.h>
 #include <time.h>
 #include <iostream>
+#include <assert.h>
 
 // since this is global, we're assuming this server instance will manage a single DB
 AbstractDataStore *datastore = NULL;
@@ -86,7 +87,7 @@ static hg_return_t put_handler(hg_handle_t handle)
   hg_return_t ret;
   put_in_t pin;
   put_out_t pout;
-  double st1, et1, st2, et2;
+  double st1, et1;
 
   st1 = ABT_get_wtime();
   ret = margo_get_input(handle, &pin);
@@ -136,7 +137,7 @@ static hg_return_t bulk_put_handler(hg_handle_t handle)
   hg_bulk_t bulk_handle;
   const struct hg_info *hgi;
   margo_instance_id mid;
-  double st1, et1, st2, et2;
+  double st1, et1;
 
   st1 = ABT_get_wtime();
   ret = margo_get_input(handle, &bpin);
@@ -204,7 +205,7 @@ static hg_return_t get_handler(hg_handle_t handle)
   hg_return_t ret;
   get_in_t gin;
   get_out_t gout;
-  double st1, et1, st2, et2;
+  double st1, et1;
 
   st1 = ABT_get_wtime();
   ret = margo_get_input(handle, &gin);
@@ -265,7 +266,7 @@ static hg_return_t bulk_get_handler(hg_handle_t handle)
   hg_bulk_t bulk_handle;
   const struct hg_info *hgi;
   margo_instance_id mid;
-  double st1, et1, st2, et2;
+  double st1, et1;
 
   st1 = ABT_get_wtime();
   ret = margo_get_input(handle, &bgin);
@@ -355,6 +356,7 @@ static void shutdown_handler(hg_handle_t handle)
    * RPC executes, so there is no need to send any 
    * extra signal to notify it.
    */
+  ssg_finalize(); // ignore return and should be a no-op?
   margo_finalize(mid);
 
   std::cout << "SERVER: margo finalized" << std::endl;

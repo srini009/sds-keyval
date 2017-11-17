@@ -6,7 +6,6 @@
 
 #include <assert.h>
 
-
 // pass in Margo instance ID
 kv_context_t *kv_client_register(const margo_instance_id mid) {
   hg_return_t ret;
@@ -39,6 +38,7 @@ kv_context_t *kv_client_register(const margo_instance_id mid) {
 
   context->shutdown_id = MARGO_REGISTER(context->mid, "shutdown",
 					void, void, NULL);
+
   return context;
 }
 

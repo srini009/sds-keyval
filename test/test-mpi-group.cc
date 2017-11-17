@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &nranks);
 
-    assert(nranks >= (num_servers+2)); // insist on at least 2 clients
+    assert(nranks >= (num_servers+1)); // insist on at least 1 clients
 
     MPI_Comm clientComm, ssgComm;
 
@@ -83,9 +83,9 @@ int main(int argc, char *argv[])
 	ssg_group_id_serialize(context->gid, &serialized_gid, &gid_size);
 	assert(serialized_gid != NULL && gid_size != 0);
 	// send size first
-	MPI_Bcast(&gid_size, 1, MPI_UNSIGNED_LONG, 0, clientComm);
+	MPI_Bcast(&gid_size, 1, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
 	// then send data
-	MPI_Bcast(serialized_gid, gid_size, MPI_BYTE, 0, clientComm);
+	MPI_Bcast(serialized_gid, gid_size, MPI_BYTE, 0, MPI_COMM_WORLD);
       }
 
       // process requests until finalized
@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
       kvgroup_server_deregister(context);
       printf("rank %d: server deregistered\n", rank);
 
-      kv_margo_finalize(mid);
+      //kv_margo_finalize(mid); // already finalized in server's shutdown_handler
     }
     else {
       hg_size_t addr_str_sz = 128;
@@ -112,11 +112,11 @@ int main(int argc, char *argv[])
       char *serialized_gid = NULL;
       size_t gid_size = 0;
       // recv size first
-      MPI_Bcast(&gid_size, 1, MPI_UNSIGNED_LONG, 0, clientComm);
+      MPI_Bcast(&gid_size, 1, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
       assert(gid_size != 0);
       // then recv data
       serialized_gid = (char*)malloc(gid_size);
-      MPI_Bcast(serialized_gid, gid_size, MPI_BYTE, 0, clientComm);
+      MPI_Bcast(serialized_gid, gid_size, MPI_BYTE, 0, MPI_COMM_WORLD);
       ssg_group_id_deserialize(serialized_gid, gid_size, &gid);
 
       printf("client (rank %d): received group\n", rank);
@@ -193,7 +193,7 @@ int main(int argc, char *argv[])
       int client_rank;
       MPI_Comm_rank(clientComm, &client_rank);
       MPI_Barrier(clientComm);
-      if (rank==0) {
+      if (client_rank==0) {
 	printf("rank %d: sending server a shutdown request\n", rank);
 	kvgroup_client_signal_shutdown(context);
       }
@@ -202,7 +202,7 @@ int main(int argc, char *argv[])
       kvgroup_client_deregister(context);
       printf("rank %d: client deregistered\n", rank);
 
-      kv_margo_finalize(mid);
+      //kv_margo_finalize(mid); // already finalized in kv_client_deregister
     }
 
     MPI_Finalize();

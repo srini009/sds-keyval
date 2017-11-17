@@ -28,12 +28,6 @@ if test "x$PKG_CONFIG" == "x"; then
    AC_MSG_ERROR([Could not find pkg-config utility!])
 fi
 
-PKG_CHECK_MODULES([MARGO],[margo],[],
-      AC_MSG_ERROR([Could not find working margo installation!]) )
-LIBS="$MARGO_LIBS $LIBS"
-CPPFLAGS="$MARGO_CFLAGS $CPPFLAGS"
-CFLAGS="$MARGO_CFLAGS $CFLAGS"
-
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_INLINE
 AC_TYPE_INT64_T
