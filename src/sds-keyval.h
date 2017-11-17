@@ -293,8 +293,8 @@ MERCURY_GEN_PROC(bench_out_t, ((bench_result)(result)) )
 
 
 // kv-client API
-kv_context_t *kv_client_register(const char *addr_str);
-kv_context_t *kv_server_register(const char *addr_str);
+kv_context_t *kv_client_register(const margo_instance_id mid);
+kv_context_t *kv_server_register(const margo_instance_id mid);
 
 // both the same: should probably move to common?
 hg_return_t kv_client_deregister(kv_context_t *context);
@@ -312,6 +312,37 @@ hg_return_t kv_close(kv_context_t *context);
 
 // benchmark routine
 bench_result_t *kv_benchmark(kv_context_t *context, int32_t count);
+
+static char *kv_protocol(char *addr_str) {
+  int psize = 24;
+  
+  char *protocol = (char*)malloc(psize);
+  memset(protocol, 0, psize);
+
+  /* we only need to the proto portion of the address to initialize */
+  for(int i=0; i<proto_size && addr_str[i] != '\0' && addr_str[i] != ':'; i++)
+    protocol[i] = addr_str[i];
+
+  return protocol;
+}
+
+// pass in address string and mode
+// string can be just the protocol (e.g. "ofi+tcp")
+// mode can be MARGO_CLIENT_MODE or MARGO_SERVER_MODE
+static margo_instance_id kv_margo_init(const char *addr_str, int mode)
+{
+  margo_instance_id mid;
+  assert(addr_str != NULL); // better pass something!
+  assert(mode == MARGO_CLIENT_MODE || mode == MARGO_SERVER_MODE);
+  mid = margo_init(addr_str, mode, 0, -1);
+  assert(mid != MARGO_INSTANCE_NULL);
+  return mid;
+}
+
+static void kv_margo_finalize(mid)
+{
+  margo_finalize(mid);
+}
 
 #if defined(__cplusplus)
 }

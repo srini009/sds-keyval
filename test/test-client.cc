@@ -6,10 +6,15 @@
 
 int main(int argc, char **argv) {
   hg_return_t ret;
-  kv_context_t * context = kv_client_register(NULL);
+
+  assert(argc == 2);
+  char *server_addr_str = argv[1];
+  
+  margo_instance_id mid = kv_margo_init(kv_protocol(server_addr_str), MARGO_CLIENT_MODE);
+  kv_context_t *context = kv_client_register(mid);
 
   /* open */
-  ret = kv_open(context, argv[1], "db/booger");
+  ret = kv_open(context, server_addr_str, "db/booger");
   assert(ret == HG_SUCCESS);
 
   /* put */
@@ -83,4 +88,6 @@ int main(int argc, char **argv) {
   /* cleanup */
   ret = kv_client_deregister(context);
   assert(ret == HG_SUCCESS);
+
+  kv_margo_finalize(mid);
 }

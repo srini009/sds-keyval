@@ -67,10 +67,15 @@ int main(int argc, char **argv)
   bench_result_t rpc;
   bench_result_t *server;
   kv_context_t *context;
-  size_t items = atoi(argv[1]);
 
-  context = kv_client_register(NULL);
-  ret = kv_open(context, argv[2], "db/testdb");
+  assert(argc == 3);
+  size_t items = atoi(argv[1]);
+  char *server_addr_str = argv[2];
+
+  margo_instance_id mid = kv_margo_init(kv_protocol(server_addr_str), MARGO_CLIENT_MODE);
+  context = kv_client_register(mid);
+  
+  ret = kv_open(context, server_addr_str, "db/testdb");
   assert(ret == HG_SUCCESS);
 
   RandomInsertSpeedTest(context, items, &rpc);
@@ -93,4 +98,6 @@ int main(int argc, char **argv)
   /* cleanup */
   ret = kv_client_deregister(context);
   assert(ret == HG_SUCCESS);
+
+  kv_margo_finalize(mid);
 }

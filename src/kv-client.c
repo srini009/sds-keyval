@@ -7,48 +7,39 @@
 #include <assert.h>
 
 
-// pass in NULL pointer to get default behavior
-kv_context_t *kv_client_register(const char *addr_str) {
-	hg_return_t ret;
-	kv_context_t * context;
-	context = (kv_context_t*)malloc(sizeof(kv_context_t));
-	memset(context, 0, sizeof(kv_context_t));
+// pass in Margo instance ID
+kv_context_t *kv_client_register(const margo_instance_id mid) {
+  hg_return_t ret;
+  kv_context_t *context;
+  context = (kv_context_t*)malloc(sizeof(kv_context_t));
+  memset(context, 0, sizeof(kv_context_t));
 
-	/* client side: no custom xstreams */
+  context->mid = mid;
+  
+  context->put_id = MARGO_REGISTER(context->mid, "put",
+				   put_in_t, put_out_t, NULL);
 
-	if (!addr_str) {
-	  context->mid = margo_init("ofi+tcp://",
-				    MARGO_CLIENT_MODE, 0, -1);
-	}
-	else {
-	  context->mid = margo_init(addr_str,
-				    MARGO_CLIENT_MODE, 0, -1);
-	}
+  context->bulk_put_id = MARGO_REGISTER(context->mid, "bulk_put",
+					bulk_put_in_t, bulk_put_out_t, NULL);
 
-	context->put_id = MARGO_REGISTER(context->mid, "put",
-					 put_in_t, put_out_t, NULL);
+  context->get_id = MARGO_REGISTER(context->mid, "get",
+				   get_in_t, get_out_t, NULL);
 
-	context->bulk_put_id = MARGO_REGISTER(context->mid, "bulk_put",
-					      bulk_put_in_t, bulk_put_out_t, NULL);
+  context->bulk_get_id = MARGO_REGISTER(context->mid, "bulk_get",
+					bulk_get_in_t, bulk_get_out_t, NULL);
 
-	context->get_id = MARGO_REGISTER(context->mid, "get",
-					 get_in_t, get_out_t, NULL);
+  context->open_id = MARGO_REGISTER(context->mid, "open",
+				    open_in_t, open_out_t, NULL);
 
-	context->bulk_get_id = MARGO_REGISTER(context->mid, "bulk_get",
-					      bulk_get_in_t, bulk_get_out_t, NULL);
+  context->close_id = MARGO_REGISTER(context->mid, "close",
+				     void, close_out_t, NULL);
 
-	context->open_id = MARGO_REGISTER(context->mid, "open",
-					  open_in_t, open_out_t, NULL);
+  context->bench_id = MARGO_REGISTER(context->mid, "bench",
+				     bench_in_t, bench_out_t, NULL);
 
-	context->close_id = MARGO_REGISTER(context->mid, "close",
-					   void, close_out_t, NULL);
-
-	context->bench_id = MARGO_REGISTER(context->mid, "bench",
-					   bench_in_t, bench_out_t, NULL);
-
-	context->shutdown_id = MARGO_REGISTER(context->mid, "shutdown",
-					      void, void, NULL);
-	return context;
+  context->shutdown_id = MARGO_REGISTER(context->mid, "shutdown",
+					void, void, NULL);
+  return context;
 }
 
 hg_return_t kv_open(kv_context_t *context, const char *server_addr, const char *db_name) {
@@ -327,17 +318,15 @@ hg_return_t kv_client_deregister(kv_context_t *context) {
   margo_destroy(context->bulk_get_handle);
   margo_destroy(context->shutdown_handle);
 
-  assert(ret == HG_SUCCESS);
   ret = margo_addr_free(context->mid, context->svr_addr);
-
   assert(ret == HG_SUCCESS);
-  margo_finalize(context->mid);
 
   free(context);
 
   return HG_SUCCESS;
 }
 
+// only one client calls shutdown
 hg_return_t kv_client_signal_shutdown(kv_context_t *context) {
   hg_return_t ret;
 

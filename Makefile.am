@@ -12,20 +12,32 @@ test_bench_client_LDADD = -lkvclient
 lib_LTLIBRARIES = libkvclient.la \
                   libkvserver.la
 
+lib_LTGLIBRARIES = libkvgroupclient.la \
+                   libkvgroupserver.la
+
 libkvclient_la_SOURCES = src/kv-client.c
+
+libkvgroupclient_la_SOURCES = src/kvgroup-client.cc
+libkvgroupclient_la_CXXFLAGS = -pthread -std=c++11 -g -Wall -mcx16 -Wno-invalid-offsetof
+libkvgroupclient_la_CPPFLAGS = ${CPPFLAGS}
 
 libkvserver_la_SOURCES = src/kv-server.cc \
 			 src/datastore.cc \
 			 src/BwTree/src/bwtree.cpp
-
 libkvserver_la_CXXFLAGS = -pthread -std=c++11 -g -Wall -mcx16 -Wno-invalid-offsetof
 libkvserver_la_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src/BwTree/src
 
-include_HEADERS = src/sds-keyval.h
+include_HEADERS = src/sds-keyval.h \
+		  src/sds-keyval-group.h
+
 noinst_HEADERS = src/BwTree/src/bwtree.h \
 		 src/BwTree/src/atomic_stack.h\
 		 src/BwTree/src/bloom_filter.h \
 		 src/BwTree/src/sorted_small_set.h
+libkvgroupserver_la_SOURCES = src/kvgroup-server.cc
+libkvgroupserver_la_CXXFLAGS = -pthread -std=c++11 -g -Wall -mcx16 -Wno-invalid-offsetof
+libkvgroupserver_la_CPPFLAGS = ${CPPFLAGS}
+
 
 check_PROGRAMS = test/test-client \
 		test/test-server \

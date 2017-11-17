@@ -13,7 +13,7 @@
 #include <iostream>
 
 // since this is global, we're assuming this server instance will manage a single DB
-AbstractDataStore *datastore = NULL; // created by caller, passed into kv_server_register
+AbstractDataStore *datastore = NULL;
 std::string db_name;
 
 static hg_return_t open_handler(hg_handle_t handle)
@@ -471,26 +471,19 @@ static hg_return_t bench_handler(hg_handle_t handle)
 DEFINE_MARGO_RPC_HANDLER(bench_handler)
 #endif
 
-kv_context *kv_server_register(margo_instance_id mid);
+kv_context_t *kv_server_register(const margo_instance_id mid)
 {
   hg_return_t ret;
   hg_addr_t addr_self;
   char addr_self_string[128];
   hg_size_t addr_self_string_sz = 128;
-  kv_context_t *context;
+  kv_context_t *context = NULL;
 	
   /* sds keyval server init */
   context = (kv_context_t*)malloc(sizeof(kv_context_t));
   memset(context, 0, sizeof(kv_context_t));
-  if (!addr_str) {
-    context->mid = margo_init("ofi+tcp://",
-			      MARGO_SERVER_MODE, 0, -1);
-  }
-  else {
-    context->mid = margo_init(addr_str,
-			      MARGO_SERVER_MODE, 0, -1);
-  }
-  assert(context->mid);
+
+  context->mid = mid;
 
     /* figure out what address this server is listening on */
     ret = margo_addr_self(context->mid, &addr_self);

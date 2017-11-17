@@ -33,26 +33,31 @@ int main(int argc, char *argv[])
 {
     int rank;
 
+    assert(argc == 2);
+    char *addr_str = argv[1];
+    
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
     MPI_Comm clientComm;
 
     if (rank == 0) {
-      char server_addr_str[128];
-      hg_size_t server_addr_str_sz = 128;
+      hg_size_t addr_str_sz = 128;
+      char server_addr_str[addr_str_sz];
       hg_addr_t server_addr;
       hg_return_t hret;
       
       MPI_Comm_split(MPI_COMM_WORLD, MPI_UNDEFINED, rank, &clientComm);
       
       // kv-server
-      kv_context_t *context = kv_server_register(argv[1]);
+      margo_instance_id mid = kv_margo_init(kv_protocol(addr_str), MARGO_SERVER_MODE);
+      kv_context_t *context = kv_server_register(mid);
+
       hret = margo_addr_self(context->mid, &server_addr);
       DIE_IF(hret != HG_SUCCESS, "margo_addr_self");
 
       // get server address
-      hret = margo_addr_to_string(context->mid, server_addr_str, &server_addr_str_sz, server_addr);
+      hret = margo_addr_to_string(context->mid, server_addr_str, &addr_str_sz, server_addr);
       DIE_IF(hret != HG_SUCCESS, "margo_addr_to_string");
       margo_addr_free(context->mid, server_addr);
       
@@ -66,12 +71,13 @@ int main(int argc, char *argv[])
       // now finish cleaning up
       kv_server_deregister(context);
       printf("rank %d: server deregistered\n", rank);
+
+      kv_margo_finalize(mid);
     }
     else {
-      char server_addr_str[128];
-      char client_addr_str_in[128];
-      char client_addr_str_out[128];
-      hg_size_t client_addr_str_sz = 128;
+      hg_size_t addr_str_sz = 128;
+      char server_addr_str[addr_str_sz];
+      char client_addr_str[addr_str_sz];
       hg_addr_t client_addr;
       hg_return_t hret;
       
@@ -82,17 +88,17 @@ int main(int argc, char *argv[])
       printf("client (rank %d): server addr_str: %s\n", rank, server_addr_str);
 
       // kv-client
-      //sprintf(client_addr_str_in, "cci+tcp://534%02d", rank);
-      sprintf(client_addr_str_in, "ofi+tcp://");
-      kv_context_t *context = kv_client_register(client_addr_str_in);
+      margo_instance_id mid = kv_margo_init(kv_protocol(server_addr_str), MARGO_CLIENT_MODE);
+      kv_context_t *context = kv_client_register(mid);
+
       hret = margo_addr_self(context->mid, &client_addr);
       DIE_IF(hret != HG_SUCCESS, "margo_addr_self");
 
       // get client address
-      hret = margo_addr_to_string(context->mid, client_addr_str_out, &client_addr_str_sz, client_addr);
+      hret = margo_addr_to_string(context->mid, client_addr_str, &addr_str_sz, client_addr);
       DIE_IF(hret != HG_SUCCESS, "margo_addr_to_string");
       margo_addr_free(context->mid, client_addr);
-      printf("client (rank %d): client addr_str: %s\n", rank, client_addr_str_out);
+      printf("client (rank %d): client addr_str: %s\n", rank, client_addr_str);
       
       // open specified "DB" (pass in the server's address)
       const char *db = "db/minima_store";
@@ -156,6 +162,8 @@ int main(int argc, char *argv[])
       // now finish cleaning up
       kv_client_deregister(context);
       printf("rank %d: client deregistered\n", rank);
+
+      kv_margo_finalize(mid);
     }
 
     MPI_Finalize();
