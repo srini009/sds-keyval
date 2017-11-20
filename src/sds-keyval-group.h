@@ -58,6 +58,9 @@ hg_return_t kvgroup_get(kvgroup_context_t *context, uint64_t oid,
 hg_return_t kvgroup_close(kvgroup_context_t *context);
 hg_return_t kvgroup_client_deregister(kvgroup_context_t *context);
 hg_return_t kvgroup_client_signal_shutdown(kvgroup_context_t *context);
+
+void kvgroup_server_send_gid(ssg_group_id_t gid, MPI_Comm comm);
+void kvgroup_client_recv_gid(ssg_group_id_t *gid, MPI_Comm comm);
   
 #if defined(__cplusplus)
 }

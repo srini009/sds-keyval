@@ -61,4 +61,21 @@ hg_return_t kvgroup_server_wait_for_shutdown(kvgroup_context_t *context)
   return ret;
 }
 
+// collective along with kvgroup_client_recv_gid
+// single server rank calls send, all client ranks call recv
+// gid is an input argument
+void kvgroup_server_send_gid(ssg_group_id_t gid, MPI_Comm comm)
+{
+  char *serialized_gid = NULL;
+  size_t gid_size = 0;
+  ssg_group_id_serialize(gid, &serialized_gid, &gid_size);
+  assert(serialized_gid != NULL && gid_size != 0);
+  // send size first
+  MPI_Bcast(&gid_size, 1, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
+  // then send data
+  MPI_Bcast(serialized_gid, gid_size, MPI_BYTE, 0, MPI_COMM_WORLD);
+  free(serialized_gid);
+}
+
+
 

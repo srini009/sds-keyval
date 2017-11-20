@@ -20,6 +20,8 @@
 #include <stdlib.h>
 #include <time.h>
 
+#include <boost/functional/hash.hpp>
+
 #define DIE_IF(cond_expr, err_fmt, ...) \
     do { \
         if (cond_expr) { \
@@ -59,7 +61,9 @@ int main(int argc, char *argv[])
       MPI_Comm_split(MPI_COMM_WORLD, MPI_UNDEFINED, rank, &clientComm);
       
       // kv-server
-      margo_instance_id mid = kv_margo_init(kv_protocol(addr_str), MARGO_SERVER_MODE);
+      char *proto = kv_protocol(addr_str);
+      margo_instance_id mid = kv_margo_init(proto, MARGO_SERVER_MODE);
+      free(proto);
       kvgroup_context_t *context = kvgroup_server_register(mid, ssg_name, ssgComm);
 
       hret = margo_addr_self(context->mid, &server_addr);
@@ -78,14 +82,8 @@ int main(int argc, char *argv[])
       // broadcast (send) SSG ID to all clients
       // this is ugly with all the steps to serialize/deserialize
       if (server_rank == 0) {
-	char *serialized_gid = NULL;
-	size_t gid_size = 0;
-	ssg_group_id_serialize(context->gid, &serialized_gid, &gid_size);
-	assert(serialized_gid != NULL && gid_size != 0);
-	// send size first
-	MPI_Bcast(&gid_size, 1, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
-	// then send data
-	MPI_Bcast(serialized_gid, gid_size, MPI_BYTE, 0, MPI_COMM_WORLD);
+	kvgroup_server_send_gid(context->gid, MPI_COMM_WORLD);
+	printf("server (rank %d): sent group\n", rank);
       }
 
       // process requests until finalized
@@ -109,20 +107,13 @@ int main(int argc, char *argv[])
       // broadcast (recv) SSG ID
       // this is ugly with all the steps to serialize/deserialize
       ssg_group_id_t gid;
-      char *serialized_gid = NULL;
-      size_t gid_size = 0;
-      // recv size first
-      MPI_Bcast(&gid_size, 1, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
-      assert(gid_size != 0);
-      // then recv data
-      serialized_gid = (char*)malloc(gid_size);
-      MPI_Bcast(serialized_gid, gid_size, MPI_BYTE, 0, MPI_COMM_WORLD);
-      ssg_group_id_deserialize(serialized_gid, gid_size, &gid);
-
+      kvgroup_client_recv_gid(&gid, MPI_COMM_WORLD);
       printf("client (rank %d): received group\n", rank);
 
       // kv-client
-      margo_instance_id mid = kv_margo_init(kvgroup_protocol(gid), MARGO_CLIENT_MODE);
+      char *proto = kvgroup_protocol(gid);
+      margo_instance_id mid = kv_margo_init(proto, MARGO_CLIENT_MODE);
+      free(proto);
       kvgroup_context_t *context = kvgroup_client_register(mid, gid);
 
       hret = margo_addr_self(context->mid, &client_addr);
@@ -152,8 +143,9 @@ int main(int argc, char *argv[])
 	put_data.resize(vsize, key);
 	hg_size_t data_size = put_data.size()*sizeof(int32_t); // size in char (bytes)
 
-	// pass key as OID
-	hret = kvgroup_put(context, key, (void*)&key, sizeof(key),
+	// create OID for key
+	size_t oid = boost::hash<int32_t>()(key);
+	hret = kvgroup_put(context, oid, (void*)&key, sizeof(key),
 			   (void*)put_data.data(), data_size);
 	printf("(rank %d: put) key %d, size=%lu\n", rank, key, data_size);
 	DIE_IF(hret != HG_SUCCESS, "kv_put");
@@ -171,8 +163,9 @@ int main(int argc, char *argv[])
 	hg_size_t data_size = get_data.size()*sizeof(int32_t); // size in char (bytes)
 	printf("(rank %d: get) key %d, size=%lu\n", rank, key, data_size);
 
-	// pass key as OID
-	hret = kvgroup_get(context, key, (void*)&key, sizeof(key),
+	// create OID for key
+	size_t oid = boost::hash<int32_t>()(key);
+	hret = kvgroup_get(context, oid, (void*)&key, sizeof(key),
 			   (void*)get_data.data(), &data_size);
 	DIE_IF(hret != HG_SUCCESS, "kv_get");
 

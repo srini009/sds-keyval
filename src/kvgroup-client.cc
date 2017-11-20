@@ -69,6 +69,7 @@ hg_return_t kvgroup_put(kvgroup_context_t *context, uint64_t oid,
   ch_placement_find_closest(context->ch_instance, oid, 1, server_indexes);
   kv_context_t *kv_context = context->kv_context[server_indexes[0]];
   
+  std::cout << "kvgroup_put: key=" << oid << ", server_index=" << server_indexes[0] << std::endl;
   return kv_put(kv_context, key, ksize, value, vsize);
 }
 
@@ -83,6 +84,7 @@ hg_return_t kvgroup_get(kvgroup_context_t *context, uint64_t oid,
   ch_placement_find_closest(context->ch_instance, oid, 1, server_indexes);
   kv_context_t *kv_context = context->kv_context[server_indexes[0]];
   
+  std::cout << "kvgroup_get: key=" << oid << ", server_index=" << server_indexes[0] << std::endl;
   return kv_get(kv_context, key, ksize, value, vsize);
 }
 
@@ -123,4 +125,21 @@ hg_return_t kvgroup_client_signal_shutdown(kvgroup_context_t *context)
     assert(ret == HG_SUCCESS);
   }
   return HG_SUCCESS;
+}
+
+// collective along with kvgroup_server_send_gid
+// single server rank calls send, all client ranks call recv
+// gid is an output argument
+void kvgroup_client_recv_gid(ssg_group_id_t *gid, MPI_Comm comm)
+{
+  char *serialized_gid = NULL;
+  size_t gid_size = 0;
+  // recv size first
+  MPI_Bcast(&gid_size, 1, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
+  assert(gid_size != 0);
+  // then recv data
+  serialized_gid = (char*)malloc(gid_size);
+  MPI_Bcast(serialized_gid, gid_size, MPI_BYTE, 0, MPI_COMM_WORLD);
+  ssg_group_id_deserialize(serialized_gid, gid_size, gid);
+  free(serialized_gid);
 }
