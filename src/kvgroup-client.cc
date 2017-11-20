@@ -5,6 +5,8 @@
 #include <assert.h>
 #include <iostream>
 
+#include <boost/filesystem.hpp>
+
 unsigned long server_indexes[CH_MAX_REPLICATION];
 
 kvgroup_context_t *kvgroup_client_register(margo_instance_id mid, ssg_group_id_t gid)
@@ -31,6 +33,12 @@ hg_return_t kvgroup_open(kvgroup_context_t *context, const char *db_name)
   char addr_str[addr_str_sz];
   hg_return_t ret = HG_SUCCESS;
   
+  std::string dbname(db_name);
+  boost::filesystem::path p(dbname);
+  std::string basepath = p.parent_path().string();
+  std::string name = p.filename().string();
+  std::string separator("/");
+
   // register and open a connection with each kv-server in the group
   hg_size_t gsize = ssg_get_group_size(context->gid);
   context->gsize = gsize;
@@ -44,11 +52,11 @@ hg_return_t kvgroup_open(kvgroup_context_t *context, const char *db_name)
     ret = margo_addr_to_string(context->mid, addr_str, &addr_str_sz, server_addr);
     assert(ret == HG_SUCCESS);
     margo_addr_free(context->mid, server_addr);
-    std::string dbname(db_name);
-    dbname += std::string(".") + std::to_string(i); // each session uses unique db name
+    std::string server_dbname = basepath + separator + std::string("kvdb.") + std::to_string(i)
+      + separator + name; // each session uses unique db name
     // open client connection with this server
-    std::cout << "request open of " << dbname << " from server " << addr_str << std::endl;
-    ret = kv_open(context->kv_context[i], addr_str, dbname.c_str());
+    std::cout << "request open of " << server_dbname << " from server " << addr_str << std::endl;
+    ret = kv_open(context->kv_context[i], addr_str, server_dbname.c_str());
     assert(ret == HG_SUCCESS);
   }
 

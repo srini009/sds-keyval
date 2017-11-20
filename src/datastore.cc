@@ -1,8 +1,9 @@
 // Copyright (c) 2017, Los Alamos National Security, LLC.
 // All rights reserved.
 #include "datastore.h"
-#include <boost/filesystem.hpp>
 #include <chrono>
+
+#include <boost/filesystem.hpp>
 
 using namespace std::chrono;
 
