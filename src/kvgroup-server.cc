@@ -68,12 +68,16 @@ void kvgroup_server_send_gid(ssg_group_id_t gid, MPI_Comm comm)
 {
   char *serialized_gid = NULL;
   size_t gid_size = 0;
+  int rank;
+
+  MPI_Comm_rank(comm, &rank);
   ssg_group_id_serialize(gid, &serialized_gid, &gid_size);
   assert(serialized_gid != NULL && gid_size != 0);
+  std::cout << "kvgroup_server_send_gid: comm rank " << rank << ", sending gid size " << gid_size << std::endl;
   // send size first
-  MPI_Bcast(&gid_size, 1, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
+  MPI_Bcast(&gid_size, 1, MPI_UNSIGNED_LONG, 0, comm);
   // then send data
-  MPI_Bcast(serialized_gid, gid_size, MPI_BYTE, 0, MPI_COMM_WORLD);
+  MPI_Bcast(serialized_gid, gid_size, MPI_BYTE, 0, comm);
   free(serialized_gid);
 }
 

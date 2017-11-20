@@ -1,3 +1,5 @@
-Sample runs:
+Notes on running tests:
+
+test-mpi-group:
   # using mpich
   mpirun -np 4 -prepend-rank -outfile-pattern output/test-%r.log -errfile-pattern output/test-%r.log ./test/test-mpi-group ofi+tcp 2

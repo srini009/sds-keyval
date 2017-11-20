@@ -134,12 +134,16 @@ void kvgroup_client_recv_gid(ssg_group_id_t *gid, MPI_Comm comm)
 {
   char *serialized_gid = NULL;
   size_t gid_size = 0;
+  int rank;
+
+  MPI_Comm_rank(comm, &rank);
   // recv size first
-  MPI_Bcast(&gid_size, 1, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
+  MPI_Bcast(&gid_size, 1, MPI_UNSIGNED_LONG, 0, comm);
+  std::cout << "kvgroup_client_recv_gid: comm rank " << rank << ", recv'd gid size " << gid_size << std::endl;
   assert(gid_size != 0);
   // then recv data
   serialized_gid = (char*)malloc(gid_size);
-  MPI_Bcast(serialized_gid, gid_size, MPI_BYTE, 0, MPI_COMM_WORLD);
+  MPI_Bcast(serialized_gid, gid_size, MPI_BYTE, 0, comm);
   ssg_group_id_deserialize(serialized_gid, gid_size, gid);
   free(serialized_gid);
 }
