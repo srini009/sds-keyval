@@ -58,6 +58,7 @@ protected:
   bool _in_memory;
 };
 
+#if BWTREE
 class BwTreeDataStore : public AbstractDataStore {
 public:
   BwTreeDataStore();
@@ -73,7 +74,9 @@ protected:
 	 my_less, my_equal, my_hash,
 	 my_equal, my_hash> *_tree = NULL;
 };
+#endif
 
+#if LEVELDB
 // may want to implement some caching for persistent stores like LevelDB
 class LevelDBDataStore : public AbstractDataStore {
 public:
@@ -91,7 +94,9 @@ private:
   std::string toString(ds_bulk_t &key);
   ds_bulk_t fromString(std::string &keystr);
 };
+#endif
 
+#if BERKELEYDB
 // may want to implement some caching for persistent stores like BerkeleyDB
 class BerkeleyDBDataStore : public AbstractDataStore {
 public:
@@ -107,5 +112,6 @@ protected:
   DbEnv *_dbenv = NULL;
   Db *_dbm = NULL;
 };
+#endif
 
 #endif // datastore_h

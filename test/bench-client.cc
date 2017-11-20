@@ -65,7 +65,6 @@ int main(int argc, char **argv)
 {
   hg_return_t ret;
   bench_result_t rpc;
-  bench_result_t *server;
   kv_context_t *context;
 
   assert(argc == 3);
@@ -81,7 +80,8 @@ int main(int argc, char **argv)
   RandomInsertSpeedTest(context, items, &rpc);
   print_results(&rpc);
 
-#if 1 // ifdef out when testing with LevelDB or BerkeleyDB
+#if BWTREE // kv_benchmark code only supported when BwTree enabled
+  bench_result_t *server;
   server = kv_benchmark(context, items);
   print_results(server);
   free(server);

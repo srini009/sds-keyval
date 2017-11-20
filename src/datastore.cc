@@ -23,6 +23,7 @@ AbstractDataStore::AbstractDataStore(Duplicates duplicates, bool eraseOnGet, boo
 AbstractDataStore::~AbstractDataStore()
 {};
 
+#if BWTREE  
 BwTreeDataStore::BwTreeDataStore() :
   AbstractDataStore(Duplicates::IGNORE, false, false) {
   _tree = NULL;
@@ -32,7 +33,7 @@ BwTreeDataStore::BwTreeDataStore(Duplicates duplicates, bool eraseOnGet, bool de
   AbstractDataStore(duplicates, eraseOnGet, debug) {
   _tree = NULL;
 };
-  
+
 BwTreeDataStore::~BwTreeDataStore() {
   // deleting BwTree can cause core dump
   delete _tree;
@@ -127,8 +128,9 @@ bool BwTreeDataStore::get(ds_bulk_t &key, std::vector<ds_bulk_t> &data) {
 
 void BwTreeDataStore::BwTreeDataStore::set_in_memory(bool enable)
 {};
+#endif
 
-
+#if LEVELDB
 LevelDBDataStore::LevelDBDataStore() :
   AbstractDataStore(Duplicates::IGNORE, false, false) {
   _dbm = NULL;
@@ -241,8 +243,10 @@ bool LevelDBDataStore::get(ds_bulk_t &key, std::vector<ds_bulk_t> &data) {
 
 void LevelDBDataStore::LevelDBDataStore::set_in_memory(bool enable)
 {};
+#endif
 
 
+#if BERKELEYDB
 BerkeleyDBDataStore::BerkeleyDBDataStore() :
   AbstractDataStore(Duplicates::IGNORE, false, false) {
   _dbm = NULL;
@@ -438,3 +442,4 @@ bool BerkeleyDBDataStore::get(ds_bulk_t &key, std::vector<ds_bulk_t> &data) {
 void BerkeleyDBDataStore::BerkeleyDBDataStore::set_in_memory(bool enable) {
   _in_memory = enable;
 };
+#endif

@@ -1,0 +1,21 @@
+To Build:
+
+  ./prepare.sh
+
+  On Darwin, run configure like this:
+    With BwTree: ./configure CC=mpicc CXX=mpicxx --prefix=$HOME/mochi --enable-BWTREE
+    With BerkeleyDB: ./configure CC=mpicc CXX=mpicxx --prefix=$HOME/mochi --enable-BERKELEYDB
+    With LevelDB: ./configure CC=mpicc CXX=mpicxx --prefix=$HOME/mochi --enable-LEVELDB
+
+  On Cori, run configure like this:
+    With BwTree: ./configure CC=cc CXX=CC LDFLAGS="-dynamic -latomic" --prefix=$HOME/mochi --enable-BWTREE
+    With BerkeleyDB: ./configure CC=cc CXX=CC LDFLAGS="-dynamic -latomic" --prefix=$HOME/mochi --enable-BERKELEYDB
+    With LevelDB: ./configure CC=cc CXX=CC LDFLAGS="-dynamic -latomic" --prefix=$HOME/mochi --enable-LEVELDB
+
+  make -j16
+  make install
+
+For MPI test clients:
+
+  make test/test-mpi
+  make test/test-mpi-group

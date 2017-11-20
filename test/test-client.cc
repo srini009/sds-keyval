@@ -64,7 +64,7 @@ int main(int argc, char **argv) {
     std::cout << "remote_bulk_val: " << remote_bulk_val[0] << std::endl;
   }
 
-#if 1 // ifdef out when testing with LevelDB or BerkeleyDB
+#if BWTREE // kv_benchmark code only supported when BwTree enabled
   bench_result_t *output;
   output = kv_benchmark(context, 1000);
   printf("inserts: %zd keys in %f seconds: %f Million-inserts per sec\n",

@@ -30,10 +30,15 @@ static hg_return_t open_handler(hg_handle_t handle)
 #endif
 
   if (!datastore) {
-    //datastore = new BwTreeDataStore(); // testing BwTree
-    datastore = new LevelDBDataStore(); // testing LevelDB
-    //datastore = new BerkeleyDBDataStore(); // testing BerkeleyDB
+#if BWTREE
+    datastore = new BwTreeDataStore(); // testing BwTree
+#elif BERKELEYDB
+    datastore = new BerkeleyDBDataStore(); // testing BerkeleyDB
+    // in-memory implementation not working, needs debugging
     //datastore->set_in_memory(true); // testing in-memory BerkeleyDB
+#elif LEVELDB
+    datastore = new LevelDBDataStore(); // testing LevelDB
+#endif
     db_name = in_name;
     datastore->createDatabase(db_name);
 #ifdef KV_DEBUG
@@ -363,6 +368,7 @@ static void shutdown_handler(hg_handle_t handle)
 }
 DEFINE_MARGO_RPC_HANDLER(shutdown_handler)
 
+#if BWTREE
 /*
  * from BwTree tests:
  * RandomInsertSpeedTest() - Tests how fast it is to insert keys randomly
@@ -443,6 +449,16 @@ static void RandomInsertSpeedTest(int32_t key_num, bench_result_t *results)
 
   return;
 }
+#else
+static void RandomInsertSpeedTest(int32_t key_num, bench_result_t *results)
+{
+  std::cout << "BwTree not enabled, no results" << std::endl;
+  results->nkeys = 0;
+  results->insert_time = 0.0;
+  results->read_time = 0.0;
+  results->overhead = 0.0;
+}
+#endif
 
 static hg_return_t bench_handler(hg_handle_t handle)
 {
