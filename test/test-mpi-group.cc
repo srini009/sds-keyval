@@ -62,9 +62,10 @@ int main(int argc, char *argv[])
       
       // kv-server
       char *proto = kv_protocol(addr_str);
-      margo_instance_id mid = kv_margo_init(proto, MARGO_SERVER_MODE);
-      free(proto);
-      kvgroup_context_t *context = kvgroup_server_register(mid, ssg_name, ssgComm);
+      kvgroup_context_t *context = kvgroup_server_register(kv_margo_init(proto, MARGO_SERVER_MODE),
+							   ssg_name,
+							   ssgComm);
+      free(proto); // only needed by kv_margo_init
 
       hret = margo_addr_self(context->mid, &server_addr);
       DIE_IF(hret != HG_SUCCESS, "margo_addr_self");
@@ -80,9 +81,8 @@ int main(int argc, char *argv[])
       MPI_Comm_rank(ssgComm, &server_rank);
 
       // broadcast (send) SSG ID to all clients
-      // this is ugly with all the steps to serialize/deserialize
+      kvgroup_server_send_gid(context->gid, MPI_COMM_WORLD);
       if (server_rank == 0) {
-	kvgroup_server_send_gid(context->gid, MPI_COMM_WORLD);
 	printf("server (rank %d): sent group\n", rank);
       }
 
@@ -105,16 +105,15 @@ int main(int argc, char *argv[])
       MPI_Comm_split(MPI_COMM_WORLD, 1, rank, &clientComm);
       
       // broadcast (recv) SSG ID
-      // this is ugly with all the steps to serialize/deserialize
       ssg_group_id_t gid;
       kvgroup_client_recv_gid(&gid, MPI_COMM_WORLD);
       printf("client (rank %d): received group\n", rank);
 
       // kv-client
       char *proto = kvgroup_protocol(gid);
-      margo_instance_id mid = kv_margo_init(proto, MARGO_CLIENT_MODE);
-      free(proto);
-      kvgroup_context_t *context = kvgroup_client_register(mid, gid);
+      kvgroup_context_t *context = kvgroup_client_register(kv_margo_init(proto, MARGO_CLIENT_MODE), 
+							   gid);
+      free(proto); // only needed by kv_margo_init
 
       hret = margo_addr_self(context->mid, &client_addr);
       DIE_IF(hret != HG_SUCCESS, "margo_addr_self");

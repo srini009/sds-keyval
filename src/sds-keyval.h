@@ -313,7 +313,7 @@ hg_return_t kv_close(kv_context_t *context);
 // benchmark routine
 bench_result_t *kv_benchmark(kv_context_t *context, int32_t count);
 
-static inline char *kv_protocol(char *addr_str) {
+static inline char *kv_protocol(const char *addr_str) {
   int psize = 24;
   
   char *protocol = (char*)malloc(psize);
