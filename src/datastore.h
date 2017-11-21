@@ -1,16 +1,24 @@
 // Copyright (c) 2017, Los Alamos National Security, LLC.
 // All rights reserved.
+#if BWTREE
 #include "bwtree.h"
+#endif
 #include "sds-keyval.h"
 
 #include <boost/functional/hash.hpp>
 #include <vector>
+#if LEVELDB
 #include <leveldb/db.h>
 #include <leveldb/env.h>
+#endif
+#if BERKELEYDB
 #include <db_cxx.h>
 #include <dbstl_map.h>
+#endif
 
+#if BWTREE
 using namespace wangziqi2013::bwtree;
+#endif
 
 #ifndef datastore_h
 #define datastore_h
