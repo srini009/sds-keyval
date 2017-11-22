@@ -8,10 +8,8 @@
 
 // pass in Margo instance ID
 kv_context_t *kv_client_register(const margo_instance_id mid) {
-  hg_return_t ret;
   kv_context_t *context;
-  context = (kv_context_t*)malloc(sizeof(kv_context_t));
-  memset(context, 0, sizeof(kv_context_t));
+  context = calloc(1, sizeof(kv_context_t));
 
   context->mid = mid;
   
@@ -283,7 +281,7 @@ hg_return_t kv_close(kv_context_t *context)
     return HG_SUCCESS;
 }
 
-bench_result_t *kv_benchmark(kv_context *context, int32_t count) {
+bench_result_t *kv_benchmark(kv_context_t *context, int32_t count) {
   hg_return_t ret;
   hg_handle_t handle;
   bench_in_t bench_in;
@@ -292,6 +290,9 @@ bench_result_t *kv_benchmark(kv_context *context, int32_t count) {
 
     ret = margo_create(context->mid, context->svr_addr,
 	    context->bench_id, &handle);
+    assert(ret == HG_SUCCESS);
+
+    ret = margo_forward(handle, &bench_in);
     assert(ret == HG_SUCCESS);
 
   ret = margo_get_output(handle, &bench_out);
