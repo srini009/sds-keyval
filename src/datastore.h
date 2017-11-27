@@ -6,7 +6,6 @@
 #endif
 #include "sds-keyval.h"
 
-
 #include <boost/functional/hash.hpp>
 #include <vector>
 #if USE_LEVELDB
