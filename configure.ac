@@ -43,13 +43,19 @@ AC_ARG_ENABLE([BERKELEYDB], [],
  [CPPFLAGS="-DBERKELEYDB $CPPFLAGS"
   CFLAGS="-DBERKELEYDB $CFLAGS"
   LDFLAGS="-ldb_cxx"])
- 
-AC_ARG_ENABLE([LEVELDB], [],
- [PKG_CHECK_MODULES([LEVELDB],[leveldb],[],
-  AC_MSG_ERROR([Could not find working leveldb installation!]) )
- LIBS="$LIBS $LEVELDB_LIBS"
- CPPFLAGS="$LEVELDB_CFLAGS -DLEVELDB $CPPFLAGS"
- CFLAGS="$LEVELDB_CFLAGS -DLEVELDB $CFLAGS"])
+
+# spack provides a pkgconfig file for leveldb but other leveldb packages probably do not provide one
+
+leveldb_backend=no
+AC_ARG_ENABLE([LEVELDB],
+	      AS_HELP_STRING([--enable-LEVELDB], [Select "leveldb" as storage backend (default is no)]),
+	      [leveldb_backend=${enableval}]
+)
+if test "x${leveldb_backend}" == xyes ; then
+	AC_CHECK_HEADERS([leveldb/c.h], ,
+			 AC_ERROR("Could not find leveldb headers"))
+	LIBS="${LIBS} -lleveldb"
+fi
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_INLINE
