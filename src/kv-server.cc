@@ -1,4 +1,5 @@
 #include "sds-keyval.h"
+#include "kv-config.h"
 #include "datastore.h"
 
 #include <mercury.h>

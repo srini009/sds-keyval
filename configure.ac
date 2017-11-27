@@ -7,6 +7,7 @@ AM_INIT_AUTOMAKE([1.14.1 -Wall -Werror foreign subdir-objects silent-rules])
 AM_SILENT_RULES([yes])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([src/sds-keyval.h])
+AC_CONFIG_HEADERS([src/kv-config.h])
 LT_PREREQ([2.2])
 # LT_INIT needs to know about AR
 AM_PROG_AR

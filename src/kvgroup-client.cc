@@ -1,4 +1,5 @@
 #include "sds-keyval-group.h"
+#include "kv-config.h"
 
 #include <stdlib.h>
 #include <time.h>

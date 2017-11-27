@@ -1,9 +1,11 @@
 // Copyright (c) 2017, Los Alamos National Security, LLC.
 // All rights reserved.
-#if BWTREE
+#include "kv-config.h"
+#if USE_BWTREE
 #include "bwtree.h"
 #endif
 #include "sds-keyval.h"
+
 
 #include <boost/functional/hash.hpp>
 #include <vector>

@@ -1,6 +1,7 @@
 // Copyright (c) 2017, Los Alamos National Security, LLC.
 // All rights reserved.
 #include "datastore.h"
+#include "kv-config.h"
 #include <chrono>
 #include <iostream>
 
