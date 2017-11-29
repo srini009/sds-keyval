@@ -80,12 +80,10 @@ int main(int argc, char **argv)
   RandomInsertSpeedTest(context, items, &rpc);
   print_results(&rpc);
 
-#if BWTREE // kv_benchmark code only supported when BwTree enabled
   bench_result_t *server;
   server = kv_benchmark(context, items);
   print_results(server);
   free(server);
-#endif
   
   /* close */
   ret = kv_close(context);

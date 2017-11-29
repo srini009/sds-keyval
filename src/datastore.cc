@@ -26,7 +26,7 @@ AbstractDataStore::AbstractDataStore(Duplicates duplicates, bool eraseOnGet, boo
 AbstractDataStore::~AbstractDataStore()
 {};
 
-#if BWTREE  
+#if USE_BWTREE  
 BwTreeDataStore::BwTreeDataStore() :
   AbstractDataStore(Duplicates::IGNORE, false, false) {
   _tree = NULL;
@@ -131,9 +131,7 @@ bool BwTreeDataStore::get(ds_bulk_t &key, std::vector<ds_bulk_t> &data) {
 
 void BwTreeDataStore::BwTreeDataStore::set_in_memory(bool enable)
 {};
-#endif
-
-#if LEVELDB
+#elif USE_LEVELDB
 LevelDBDataStore::LevelDBDataStore() :
   AbstractDataStore(Duplicates::IGNORE, false, false) {
   _dbm = NULL;
@@ -246,10 +244,7 @@ bool LevelDBDataStore::get(ds_bulk_t &key, std::vector<ds_bulk_t> &data) {
 
 void LevelDBDataStore::LevelDBDataStore::set_in_memory(bool enable)
 {};
-#endif
-
-
-#if BERKELEYDB
+#elif USE_BDB
 BerkeleyDBDataStore::BerkeleyDBDataStore() :
   AbstractDataStore(Duplicates::IGNORE, false, false) {
   _dbm = NULL;
@@ -443,4 +438,6 @@ bool BerkeleyDBDataStore::get(ds_bulk_t &key, std::vector<ds_bulk_t> &data) {
 void BerkeleyDBDataStore::BerkeleyDBDataStore::set_in_memory(bool enable) {
   _in_memory = enable;
 };
+#else
+#error "No backend for datastore selected"
 #endif

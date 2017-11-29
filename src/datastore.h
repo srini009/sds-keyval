@@ -9,17 +9,16 @@
 
 #include <boost/functional/hash.hpp>
 #include <vector>
-#if LEVELDB
+#if USE_LEVELDB
 #include <leveldb/db.h>
 #include <leveldb/env.h>
-#endif
-#if BERKELEYDB
+#elif USE_BDB
 #include <db_cxx.h>
 #include <dbstl_map.h>
-#endif
-
-#if BWTREE
+#elif USE_BWTREE
 using namespace wangziqi2013::bwtree;
+#else
+#error "No backend selected at configure time"
 #endif
 
 #ifndef datastore_h
@@ -68,7 +67,7 @@ protected:
   bool _in_memory;
 };
 
-#if BWTREE
+#if USE_BWTREE
 class BwTreeDataStore : public AbstractDataStore {
 public:
   BwTreeDataStore();
@@ -84,9 +83,7 @@ protected:
 	 my_less, my_equal, my_hash,
 	 my_equal, my_hash> *_tree = NULL;
 };
-#endif
-
-#if LEVELDB
+#elif USE_LEVELDB
 // may want to implement some caching for persistent stores like LevelDB
 class LevelDBDataStore : public AbstractDataStore {
 public:
@@ -104,9 +101,7 @@ private:
   std::string toString(ds_bulk_t &key);
   ds_bulk_t fromString(std::string &keystr);
 };
-#endif
-
-#if BERKELEYDB
+#elif USE_BDB
 // may want to implement some caching for persistent stores like BerkeleyDB
 class BerkeleyDBDataStore : public AbstractDataStore {
 public:
@@ -122,6 +117,8 @@ protected:
   DbEnv *_dbenv = NULL;
   Db *_dbm = NULL;
 };
+#else
+#error "No datastore backend selected"
 #endif
 
 #endif // datastore_h

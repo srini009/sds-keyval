@@ -31,14 +31,16 @@ static hg_return_t open_handler(hg_handle_t handle)
 #endif
 
   if (!datastore) {
-#if BWTREE
+#if USE_BWTREE
     datastore = new BwTreeDataStore(); // testing BwTree
-#elif BERKELEYDB
+#elif USE_BDB
     datastore = new BerkeleyDBDataStore(); // testing BerkeleyDB
     // in-memory implementation not working, needs debugging
     //datastore->set_in_memory(true); // testing in-memory BerkeleyDB
-#elif LEVELDB
+#elif USE_LEVELDB
     datastore = new LevelDBDataStore(); // testing LevelDB
+#else
+#error "No datastore backend selected at configure-time"
 #endif
     db_name = in_name;
     datastore->createDatabase(db_name);
@@ -370,7 +372,7 @@ static void shutdown_handler(hg_handle_t handle)
 }
 DEFINE_MARGO_RPC_HANDLER(shutdown_handler)
 
-#if BWTREE
+#if USE_BWTREE
 /*
  * from BwTree tests:
  * RandomInsertSpeedTest() - Tests how fast it is to insert keys randomly
