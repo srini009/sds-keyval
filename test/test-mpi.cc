@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
       MPI_Comm_split(MPI_COMM_WORLD, MPI_UNDEFINED, rank, &clientComm);
       
       // kv-server
-      margo_instance_id mid = kv_margo_init(kv_protocol(addr_str), MARGO_SERVER_MODE);
+      margo_instance_id mid = margo_init(addr_str, MARGO_SERVER_MODE, 0, -1);
       kv_context_t *context = kv_server_register(mid);
 
       hret = margo_addr_self(context->mid, &server_addr);
@@ -72,7 +72,7 @@ int main(int argc, char *argv[])
       kv_server_deregister(context);
       printf("rank %d: server deregistered\n", rank);
 
-      kv_margo_finalize(mid);
+      margo_finalize(mid);
     }
     else {
       hg_size_t addr_str_sz = 128;
@@ -88,7 +88,8 @@ int main(int argc, char *argv[])
       printf("client (rank %d): server addr_str: %s\n", rank, server_addr_str);
 
       // kv-client
-      margo_instance_id mid = kv_margo_init(kv_protocol(server_addr_str), MARGO_CLIENT_MODE);
+      margo_instance_id mid = margo_init(server_addr_str,
+	      MARGO_CLIENT_MODE, 0, -1);
       kv_context_t *context = kv_client_register(mid);
 
       hret = margo_addr_self(context->mid, &client_addr);
@@ -163,7 +164,7 @@ int main(int argc, char *argv[])
       kv_client_deregister(context);
       printf("rank %d: client deregistered\n", rank);
 
-      kv_margo_finalize(mid);
+      margo_finalize(mid);
     }
 
     MPI_Finalize();

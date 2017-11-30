@@ -61,12 +61,10 @@ int main(int argc, char *argv[])
       MPI_Comm_split(MPI_COMM_WORLD, MPI_UNDEFINED, rank, &clientComm);
       
       // kv-server
-      char *proto = kv_protocol(addr_str);
-      kvgroup_context_t *context = kvgroup_server_register(kv_margo_init(proto, MARGO_SERVER_MODE),
+      kvgroup_context_t *context = kvgroup_server_register(margo_init(addr_str,
+		  MARGO_SERVER_MODE, 0, -1),
 							   ssg_name,
 							   ssgComm);
-      free(proto); // only needed by kv_margo_init
-
       hret = margo_addr_self(context->mid, &server_addr);
       DIE_IF(hret != HG_SUCCESS, "margo_addr_self");
 
@@ -111,10 +109,9 @@ int main(int argc, char *argv[])
 
       // kv-client
       char *proto = kvgroup_protocol(gid);
-      kvgroup_context_t *context = kvgroup_client_register(kv_margo_init(proto, MARGO_CLIENT_MODE), 
+      kvgroup_context_t *context = kvgroup_client_register(margo_init(proto,
+		  MARGO_CLIENT_MODE, 0, -1),
 							   gid);
-      free(proto); // only needed by kv_margo_init
-
       hret = margo_addr_self(context->mid, &client_addr);
       DIE_IF(hret != HG_SUCCESS, "margo_addr_self");
 
