@@ -53,13 +53,13 @@ int main(int argc, char *argv[])
       margo_instance_id mid = margo_init(addr_str, MARGO_SERVER_MODE, 0, -1);
       kv_context_t *context = kv_server_register(mid);
 
-      hret = margo_addr_self(context->mid, &server_addr);
+      hret = margo_addr_self(mid, &server_addr);
       DIE_IF(hret != HG_SUCCESS, "margo_addr_self");
 
       // get server address
-      hret = margo_addr_to_string(context->mid, server_addr_str, &addr_str_sz, server_addr);
+      hret = margo_addr_to_string(mid, server_addr_str, &addr_str_sz, server_addr);
       DIE_IF(hret != HG_SUCCESS, "margo_addr_to_string");
-      margo_addr_free(context->mid, server_addr);
+      margo_addr_free(mid, server_addr);
       
       // broadcast (send) server address to all clients
       printf("server (rank %d): server addr_str: %s\n", rank, server_addr_str);
@@ -92,13 +92,13 @@ int main(int argc, char *argv[])
 	      MARGO_CLIENT_MODE, 0, -1);
       kv_context_t *context = kv_client_register(mid);
 
-      hret = margo_addr_self(context->mid, &client_addr);
+      hret = margo_addr_self(mid, &client_addr);
       DIE_IF(hret != HG_SUCCESS, "margo_addr_self");
 
       // get client address
-      hret = margo_addr_to_string(context->mid, client_addr_str, &addr_str_sz, client_addr);
+      hret = margo_addr_to_string(mid, client_addr_str, &addr_str_sz, client_addr);
       DIE_IF(hret != HG_SUCCESS, "margo_addr_to_string");
-      margo_addr_free(context->mid, client_addr);
+      margo_addr_free(mid, client_addr);
       printf("client (rank %d): client addr_str: %s\n", rank, client_addr_str);
       
       // open specified "DB" (pass in the server's address)

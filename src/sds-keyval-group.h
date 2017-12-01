@@ -1,3 +1,4 @@
+#include <assert.h>
 #include "sds-keyval.h"
 
 /* initial implementation requires MPI */

@@ -1,4 +1,5 @@
 #include "sds-keyval.h"
+#include "keyval-internal.h"
 #include <mercury.h>
 #include <margo.h>
 #include <abt-snoozer.h>

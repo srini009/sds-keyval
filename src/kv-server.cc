@@ -1,5 +1,6 @@
 #include "sds-keyval.h"
 #include "kv-config.h"
+#include "keyval-internal.h"
 #include "datastore.h"
 #include "kv-config.h"
 
