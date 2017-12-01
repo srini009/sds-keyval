@@ -32,7 +32,6 @@ noinst_HEADERS = src/datastore.h \
 		 src/BwTree/src/bloom_filter.h \
 		 src/BwTree/src/sorted_small_set.h
 
-lib_libkvserver_la_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src/BwTree/src
 
 lib_libkvgroupserver_la_SOURCES = src/kvgroup-server.cc
 lib_libkvgroupserver_la_CPPFLAGS = ${CPPFLAGS}

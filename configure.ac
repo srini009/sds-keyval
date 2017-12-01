@@ -97,6 +97,8 @@ fi
 
 if test "x${bwtree_backend}" == xyes ; then
 	AC_DEFINE([USE_BWTREE], 1, [use BwTree backend])
+	CPPFLAGS="-I${srcdir}/src/BwTree/src ${CPPFLAGS}"
+
 	CXXFLAGS="-pthread -std=c++11 -g -Wall -mcx16 -Wno-invalid-offsetof ${CXXFLAGS}"
 	berkeleydb_backend=no
 	leveldb_backend=no
