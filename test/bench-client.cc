@@ -4,7 +4,7 @@
 #include <random>
 #include <chrono>
 
-void RandomInsertSpeedTest(kv_context_t *context,
+void RandomInsertSpeedTest(kv_database_t *db,
 			   size_t key_num, bench_result_t *results)
 {
   hg_return_t ret;
@@ -19,7 +19,7 @@ void RandomInsertSpeedTest(kv_context_t *context,
   start = std::chrono::system_clock::now();
   for(size_t i = 0;i < key_num * 2;i++) {
     int32_t key = uniform_dist(e1);
-    ret = kv_put(context, &key, sizeof(key), &key, sizeof(key));
+    ret = kv_put(db, &key, sizeof(key), &key, sizeof(key));
     assert(ret == HG_SUCCESS);
   }
   end = std::chrono::system_clock::now();
@@ -36,7 +36,7 @@ void RandomInsertSpeedTest(kv_context_t *context,
   for(size_t i = 0;i < key_num * 2;i++) {
     int32_t key = uniform_dist(e1);
     vsize = sizeof(value);
-    ret = kv_get(context, &key, sizeof(key), &value, &vsize);
+    ret = kv_get(db, &key, sizeof(key), &value, &vsize);
     // key might not be in store due to randomness
     // HG_OTHER_ERROR is basically a "key not found" return code
     assert(ret == HG_SUCCESS || ret == HG_OTHER_ERROR);
@@ -66,6 +66,7 @@ int main(int argc, char **argv)
   hg_return_t ret;
   bench_result_t rpc;
   kv_context_t *context;
+  kv_database_t *db;
 
   assert(argc == 3);
   size_t items = atoi(argv[1]);
@@ -76,23 +77,23 @@ int main(int argc, char **argv)
   free(proto);
   context = kv_client_register(mid);
   
-  ret = kv_open(context, server_addr_str, "db/testdb");
-  assert(ret == HG_SUCCESS);
+  db = kv_open(context, server_addr_str, "db/testdb");
+  assert(db != NULL);
 
-  RandomInsertSpeedTest(context, items, &rpc);
+  RandomInsertSpeedTest(db, items, &rpc);
   print_results(&rpc);
 
   bench_result_t *server;
-  server = kv_benchmark(context, items);
+  server = kv_benchmark(db, items);
   print_results(server);
   free(server);
   
   /* close */
-  ret = kv_close(context);
+  ret = kv_close(db);
   assert(ret == HG_SUCCESS);
 
   /* signal server */
-  ret = kv_client_signal_shutdown(context);
+  ret = kv_client_signal_shutdown(db);
   assert(ret == HG_SUCCESS);
   
   /* cleanup */

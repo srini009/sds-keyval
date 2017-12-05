@@ -23,10 +23,10 @@ extern "C" {
 
 typedef int kv_id;
 
+/* 'Context' describes operations available to keyval clients */
 /* do we need one for server, one for client? */
 typedef struct kv_context_s {
 	margo_instance_id mid;
-	hg_addr_t svr_addr;
 	hg_id_t put_id;
 	hg_id_t bulk_put_id;
 	hg_id_t get_id;
@@ -35,13 +35,23 @@ typedef struct kv_context_s {
 	hg_id_t close_id;
 	hg_id_t bench_id;
 	hg_id_t shutdown_id;
-	hg_handle_t put_handle;
+	kv_id kv;
+} kv_context_t;
+
+/* 'Database' contains server-specific information: the instantiation of a
+ * particular keyval service; the handles used to send information back and
+ * forth */
+typedef struct kv_database_s  {
+	margo_instance_id mid;   /* bulk xfer needs to create bulk handles */
+	hg_addr_t svr_addr;
+	hg_handle_t close_handle;
+    	hg_handle_t put_handle;
         hg_handle_t bulk_put_handle;
 	hg_handle_t get_handle;
 	hg_handle_t bulk_get_handle;
 	hg_handle_t shutdown_handle;
-	kv_id kv;
-} kv_context_t;
+	hg_handle_t bench_handle;
+} kv_database_t;
 
 
 #define MAX_RPC_MESSAGE_SIZE 4000 // in bytes

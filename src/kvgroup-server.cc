@@ -19,17 +19,17 @@ static void group_update_cb(ssg_membership_update_t update, void *cb_dat)
 }
 
 /* this is a collective operation */
-kvgroup_context_t *kvgroup_server_register(margo_instance_id mid, const char *ssg_name, MPI_Comm ssg_comm)
+kv_group_t *kvgroup_server_register(margo_instance_id mid,
+	const char *ssg_name, MPI_Comm ssg_comm)
 {
-  kvgroup_context_t *context = (kvgroup_context_t*)malloc(sizeof(kvgroup_context_t));
-  memset(context, 0, sizeof(kvgroup_context_t));
+  kv_group_t * group = (kv_group_t *)calloc(1, sizeof(kv_group_t));
 
   /* update kvgroup_context_t with MID */
-  context->mid = mid;
+  group->mid = mid;
   
-  context->kv_context = (kv_context_t**)malloc(sizeof(kv_context_t*)); // just 1
-  context->kv_context[0] = kv_server_register(mid);
-  assert(context->kv_context[0] != NULL);
+  group->db = (kv_database_t **)malloc(sizeof(kv_database_t*)); // just 1
+  group->kv_context = kv_server_register(mid);
+  assert(group->kv_context != NULL);
 
   int sret = ssg_init(mid);
   assert(sret == SSG_SUCCESS);
@@ -40,24 +40,24 @@ kvgroup_context_t *kvgroup_server_register(margo_instance_id mid, const char *ss
   assert(gid != SSG_GROUP_ID_NULL);
 
   /* update kvgroup_context_t with GID */
-  context->gid = gid;
+  group->gid = gid;
 
-  return context;
+  return group;
 }
 
-hg_return_t kvgroup_server_deregister(kvgroup_context_t *context)
+hg_return_t kvgroup_server_deregister(kv_group_t *group)
 {
-  hg_return_t ret = kv_server_deregister(context->kv_context[0]);
-  ssg_group_destroy(context->gid);
-  free(context->kv_context);
-  free(context);
+  hg_return_t ret = kv_server_deregister(group->kv_context);
+  ssg_group_destroy(group->gid);
+  free(group->kv_context);
+  free(group);
   std::cout << "GROUP_SERVER: deregistered" << std::endl;
   return ret;
 }
 
-hg_return_t kvgroup_server_wait_for_shutdown(kvgroup_context_t *context)
+hg_return_t kvgroup_server_wait_for_shutdown(kv_group_t *group)
 {
-  hg_return_t ret = kv_server_wait_for_shutdown(context->kv_context[0]);
+  hg_return_t ret = kv_server_wait_for_shutdown(group->kv_context);
   return ret;
 }
 

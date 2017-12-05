@@ -1,3 +1,4 @@
+#include "keyval-internal.h"
 #include "sds-keyval-group.h"
 #include "kv-config.h"
 
@@ -10,10 +11,9 @@
 
 unsigned long server_indexes[CH_MAX_REPLICATION];
 
-kvgroup_context_t *kvgroup_client_register(margo_instance_id mid, ssg_group_id_t gid)
+kv_group_t *kvgroup_client_register(margo_instance_id mid, ssg_group_id_t gid)
 {
-  kvgroup_context_t *context = (kvgroup_context_t*)malloc(sizeof(kvgroup_context_t));
-  memset(context, 0, sizeof(kvgroup_context_t));
+  kv_group_t *group = (kv_group_t*)calloc(1, sizeof(group));
   
   int sret = ssg_init(mid);
   assert(sret == SSG_SUCCESS);
@@ -22,13 +22,13 @@ kvgroup_context_t *kvgroup_client_register(margo_instance_id mid, ssg_group_id_t
   assert(sret == SSG_SUCCESS);
   
   /* update kvgroup_context_t with MID, GID */
-  context->mid = mid;
-  context->gid = gid;
+  group->mid = mid;
+  group->gid = gid;
 
-  return context;
+  return group;
 }
 
-hg_return_t kvgroup_open(kvgroup_context_t *context, const char *db_name)
+hg_return_t kvgroup_open(kv_group_t *group, const char *db_name)
 {
   hg_size_t addr_str_sz = 128;
   char addr_str[addr_str_sz];
@@ -41,96 +41,97 @@ hg_return_t kvgroup_open(kvgroup_context_t *context, const char *db_name)
   std::string separator("/");
 
   // register and open a connection with each kv-server in the group
-  hg_size_t gsize = ssg_get_group_size(context->gid);
-  context->gsize = gsize;
-  context->kv_context = (kv_context_t**)malloc(gsize*sizeof(kv_context_t*));
+  hg_size_t gsize = ssg_get_group_size(group->gid);
+  group->gsize = gsize;
+  /* one 'context' for sds-keyval itself; one 'database' per server */
+  group->kv_context = (kv_context_t *)calloc(1,sizeof(kv_context_t));
+  group->db = (kv_database_t **) calloc(gsize, sizeof(kv_database_t *));
+
+  // register this client context with Margo
+  group->kv_context = kv_client_register(group->mid);
+  assert(group->kv_context != NULL);
+
   for (hg_size_t i=0; i<gsize; i++) {
-    // register this client context with Margo
-    context->kv_context[i] = kv_client_register(context->mid);
-    assert(context->kv_context[i] != NULL);
-    hg_addr_t server_addr = ssg_get_addr(context->gid, i);
+    hg_addr_t server_addr = ssg_get_addr(group->gid, i);
     // turn server_addr into string
-    ret = margo_addr_to_string(context->mid, addr_str, &addr_str_sz, server_addr);
+    ret = margo_addr_to_string(group->mid, addr_str,
+	    &addr_str_sz, server_addr);
     assert(ret == HG_SUCCESS);
-    margo_addr_free(context->mid, server_addr);
+    margo_addr_free(group->mid, server_addr);
     std::string server_dbname = basepath + separator + std::string("kvdb.") + std::to_string(i)
       + separator + name; // each session uses unique db name
     // open client connection with this server
     std::cout << "request open of " << server_dbname << " from server " << addr_str << std::endl;
-    ret = kv_open(context->kv_context[i], addr_str, server_dbname.c_str());
+    group->db[i] = kv_open(group->kv_context, addr_str, server_dbname.c_str());
     assert(ret == HG_SUCCESS);
   }
 
   // initialize consistent hash using "hash_lookup3" with gsize servers each with 1 virtual node for now
-  context->ch_instance = ch_placement_initialize("hash_lookup3", gsize, 4, 0);
+  group->ch_instance = ch_placement_initialize("hash_lookup3", gsize, 4, 0);
 
   return HG_SUCCESS;
 }
 
 // oid is unique associated with key
 // in ParSplice key is already a uint64_t hashed value
-hg_return_t kvgroup_put(kvgroup_context_t *context, uint64_t oid,
+hg_return_t kvgroup_put(kv_group_t * group, uint64_t oid,
 			void *key, hg_size_t ksize,
 			void *value, hg_size_t vsize)
 {
 
   // not using any replication for now (is this right?)
-  ch_placement_find_closest(context->ch_instance, oid, 1, server_indexes);
-  kv_context_t *kv_context = context->kv_context[server_indexes[0]];
-  
+  ch_placement_find_closest(group->ch_instance, oid, 1, server_indexes);
+
   std::cout << "kvgroup_put: key=" << oid << ", server_index=" << server_indexes[0] << std::endl;
-  return kv_put(kv_context, key, ksize, value, vsize);
+  return kv_put(group->db[server_indexes[0]], key, ksize, value, vsize);
 }
 
 // oid is unique associated with key
 // in ParSplice key is already a uint64_t hashed value
 // vsize is in/out
-hg_return_t kvgroup_get(kvgroup_context_t *context, uint64_t oid,
+hg_return_t kvgroup_get(kv_group_t *group, uint64_t oid,
 			void *key, hg_size_t ksize,
 			void *value, hg_size_t *vsize)
 {
   // not using any replication for now (is this right?)
-  ch_placement_find_closest(context->ch_instance, oid, 1, server_indexes);
-  kv_context_t *kv_context = context->kv_context[server_indexes[0]];
-  
+  ch_placement_find_closest(group->ch_instance, oid, 1, server_indexes);
+
   std::cout << "kvgroup_get: key=" << oid << ", server_index=" << server_indexes[0] << std::endl;
-  return kv_get(kv_context, key, ksize, value, vsize);
+  return kv_get(group->db[server_indexes[0]], key, ksize, value, vsize);
 }
 
-hg_return_t kvgroup_close(kvgroup_context_t *context)
+hg_return_t kvgroup_close(kv_group_t * group)
 {
   hg_return_t ret;
-  for (hg_size_t i=0; i<context->gsize; i++) {
-    ret = kv_close(context->kv_context[i]);
+  for (hg_size_t i=0; i<group->gsize; i++) {
+    ret = kv_close(group->db[i]);
     assert(ret == HG_SUCCESS);
   }
   return HG_SUCCESS;
 }
 
-hg_return_t kvgroup_client_deregister(kvgroup_context_t *context)
+hg_return_t kvgroup_client_deregister(kv_group_t * group)
 {
   hg_return_t ret;
-  for (hg_size_t i=0; i<context->gsize; i++) {
-    ret = kv_client_deregister(context->kv_context[i]);
-    assert(ret == HG_SUCCESS);
-  }
-  ch_placement_finalize(context->ch_instance);
-  ssg_group_detach(context->gid);
+  ret = kv_client_deregister(group->kv_context);
+  ch_placement_finalize(group->ch_instance);
+  ssg_group_detach(group->gid);
   ssg_finalize();
-  margo_diag_dump(context->mid, "-", 0);
+  margo_diag_dump(group->mid, "-", 0);
   //margo_finalize(context->mid); // workaround since we core dump here
-  ssg_group_id_free(context->gid);
-  free(context->kv_context);
-  free(context);
-  return HG_SUCCESS;
+  ssg_group_id_free(group->gid);
+  free(group->kv_context);
+  free(group->db);
+  free(group);
+  return ret;
 }
 
 // only one client calls shutdown
-hg_return_t kvgroup_client_signal_shutdown(kvgroup_context_t *context)
+hg_return_t kvgroup_client_signal_shutdown(kv_group_t *group)
 {
   hg_return_t ret;
-  for (hg_size_t i=0; i<context->gsize; i++) {
-    ret = kv_client_signal_shutdown(context->kv_context[i]);
+  for (hg_size_t i=0; i<group->gsize; i++) {
+    ret = kv_client_signal_shutdown(group->db[i]);
     assert(ret == HG_SUCCESS);
   }
   return HG_SUCCESS;

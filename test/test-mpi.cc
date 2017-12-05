@@ -80,6 +80,7 @@ int main(int argc, char *argv[])
       char client_addr_str[addr_str_sz];
       hg_addr_t client_addr;
       hg_return_t hret;
+      kv_database_t * kv_db;
       
       MPI_Comm_split(MPI_COMM_WORLD, 1, rank, &clientComm);
       
@@ -104,8 +105,8 @@ int main(int argc, char *argv[])
       
       // open specified "DB" (pass in the server's address)
       const char *db = "db/minima_store";
-      hret = kv_open(context, server_addr_str, (char*)db);
-      DIE_IF(hret != HG_SUCCESS, "kv_open");
+      kv_db = kv_open(context, server_addr_str, db);
+      DIE_IF(kv_db == NULL, "kv_open");
       
       size_t vsize = 1;
       if (argc == 3) {
@@ -120,7 +121,7 @@ int main(int argc, char *argv[])
 	put_data.resize(vsize, key);
 	hg_size_t data_size = put_data.size()*sizeof(int32_t); // size in char (bytes)
 
-	hret = kv_put(context, (void*)&key, sizeof(key),
+	hret = kv_put(kv_db, (void*)&key, sizeof(key),
 		      (void*)put_data.data(), data_size);
 	printf("(rank %d: put) key %d, size=%lu\n", rank, key, data_size);
 	DIE_IF(hret != HG_SUCCESS, "kv_put");
@@ -137,7 +138,7 @@ int main(int argc, char *argv[])
 	get_data.resize(vsize);
 	hg_size_t data_size = get_data.size()*sizeof(int32_t); // size in char (bytes)
 	printf("(rank %d: get) key %d, size=%lu\n", rank, key, data_size);
-	hret = kv_get(context, (void*)&key, sizeof(key),
+	hret = kv_get(kv_db, (void*)&key, sizeof(key),
 		      (void*)get_data.data(), &data_size);
 	DIE_IF(hret != HG_SUCCESS, "kv_get");
 
@@ -151,14 +152,14 @@ int main(int argc, char *argv[])
       }
 
       // close
-      hret = kv_close(context);
+      hret = kv_close(kv_db);
       DIE_IF(hret != HG_SUCCESS, "kv_close");
 
       // once all clients are done with the close, one client can signal server
       MPI_Barrier(clientComm);
       if (rank==1) {
 	printf("rank %d: sending server a shutdown request\n", rank);
-	kv_client_signal_shutdown(context);
+	kv_client_signal_shutdown(kv_db);
       }
 
       // now finish cleaning up

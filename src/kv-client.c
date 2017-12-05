@@ -41,17 +41,22 @@ kv_context_t *kv_client_register(const margo_instance_id mid) {
   return context;
 }
 
-hg_return_t kv_open(kv_context_t *context, const char *server_addr, const char *db_name) {
+kv_database_t * kv_open(kv_context_t *context,
+	const char *server_addr, const char *db_name)
+{
   hg_return_t ret = HG_SUCCESS;
   hg_handle_t handle;
   open_in_t open_in;
   open_out_t open_out;
 
+  kv_database_t *db = calloc(1, sizeof(*db));
+  db->mid = context->mid;
+
   printf("kv-client: kv_open, server_addr %s\n", server_addr);
-  ret = margo_addr_lookup(context->mid, server_addr, &(context->svr_addr));
+  ret = margo_addr_lookup(context->mid, server_addr, &(db->svr_addr));
   assert(ret == HG_SUCCESS);
 
-  ret = margo_create(context->mid, context->svr_addr,
+  ret = margo_create(context->mid, db->svr_addr,
 		     context->open_id, &handle);
   assert(ret == HG_SUCCESS);
 
@@ -70,31 +75,39 @@ hg_return_t kv_open(kv_context_t *context, const char *server_addr, const char *
    * BAKE has a handle-caching mechanism we should consult.
    * should margo be caching handles? */
   
-  ret = margo_create(context->mid, context->svr_addr,
-		     context->put_id, &(context->put_handle));
+  ret = margo_create(context->mid, db->svr_addr,
+		     context->put_id, &(db->put_handle));
   assert(ret == HG_SUCCESS);
-  ret = margo_create(context->mid, context->svr_addr,
-		     context->bulk_put_id, &(context->bulk_put_handle));
+  ret = margo_create(context->mid, db->svr_addr,
+		     context->bulk_put_id, &(db->bulk_put_handle));
   assert(ret == HG_SUCCESS);
-  ret = margo_create(context->mid, context->svr_addr,
-		     context->get_id, &(context->get_handle));
+  ret = margo_create(context->mid, db->svr_addr,
+		     context->get_id, &(db->get_handle));
   assert(ret == HG_SUCCESS);
-  ret = margo_create(context->mid, context->svr_addr,
-		     context->bulk_get_id, &(context->bulk_get_handle));
+  ret = margo_create(context->mid, db->svr_addr,
+		     context->bulk_get_id, &(db->bulk_get_handle));
   assert(ret == HG_SUCCESS);
-  ret = margo_create(context->mid, context->svr_addr,
-		     context->shutdown_id, &(context->shutdown_handle));
+  ret = margo_create(context->mid, db->svr_addr,
+		     context->shutdown_id, &(db->shutdown_handle));
   assert(ret == HG_SUCCESS);
+  ret = margo_create(context->mid, db->svr_addr,
+	    context->close_id, &(db->close_handle) );
+  assert(ret == HG_SUCCESS);
+  ret = margo_create(context->mid, db->svr_addr,
+	  context->bench_id, &(db->bench_handle));
+  assert(ret == HG_SUCCESS);
+
+
 	
   margo_free_output(handle, &open_out);
   margo_destroy(handle);
 	
-  return HG_SUCCESS;
+  return db;
 }
 
 /* we gave types in the open call.  Will need to maintain in 'context' the
  * size. */
-hg_return_t kv_put(kv_context_t *context, 
+hg_return_t kv_put(kv_database_t *db,
 		   void *key, hg_size_t ksize,
 		   void *value, hg_size_t vsize) {
   hg_return_t ret;
@@ -119,16 +132,16 @@ hg_return_t kv_put(kv_context_t *context,
     pin.pi.vsize = vsize;
 
     st2 = ABT_get_wtime();
-    ret = margo_forward(context->put_handle, &pin);
+    ret = margo_forward(db->put_handle, &pin);
     et2 = ABT_get_wtime();
     printf("kv_put forward time: %f microseconds, vsize = %lu\n", (et2-st2)*1000000, vsize);
     assert(ret == HG_SUCCESS);
 
-    ret = margo_get_output(context->put_handle, &pout);
+    ret = margo_get_output(db->put_handle, &pout);
     assert(ret == HG_SUCCESS);
     ret = pout.ret;
 
-    margo_free_output(context->put_handle, &pout);
+    margo_free_output(db->put_handle, &pout);
   }
   else {
     // use bulk transfer method to move value
@@ -146,23 +159,23 @@ hg_return_t kv_put(kv_context_t *context,
     bpin.bulk.vsize = vsize;
 
     st2 = ABT_get_wtime();
-    ret = margo_bulk_create(context->mid, 1, &value, &bpin.bulk.vsize,
+    ret = margo_bulk_create(db->mid, 1, &value, &bpin.bulk.vsize,
 			    HG_BULK_READ_ONLY, &bpin.bulk.handle);
     et2 = ABT_get_wtime();
     printf("kv_put bulk create time: %f microseconds\n", (et2-st2)*1000000);
     assert(ret == HG_SUCCESS);
 
     st2 = ABT_get_wtime();
-    ret = margo_forward(context->bulk_put_handle, &bpin);
+    ret = margo_forward(db->bulk_put_handle, &bpin);
     et2 = ABT_get_wtime();
     printf("kv_put bulk forward time: %f microseconds, vsize = %lu\n", (et2-st2)*1000000, vsize);
     assert(ret == HG_SUCCESS);
 
-    ret = margo_get_output(context->bulk_put_handle, &bpout);
+    ret = margo_get_output(db->bulk_put_handle, &bpout);
     assert(ret == HG_SUCCESS);
     ret = bpout.ret; // make sure the server side says all is OK
 
-    margo_free_output(context->bulk_put_handle, &bpout);
+    margo_free_output(db->bulk_put_handle, &bpout);
   }
   et1 = ABT_get_wtime();
   printf("kv_put time: %f microseconds\n", (et1-st1)*1000000);
@@ -171,7 +184,7 @@ hg_return_t kv_put(kv_context_t *context,
 }
 
 // vsize is in/out
-hg_return_t kv_get(kv_context_t *context, 
+hg_return_t kv_get(kv_database_t *db,
 		   void *key, hg_size_t ksize,
 		   void *value, hg_size_t *vsize)
 {
@@ -198,12 +211,12 @@ hg_return_t kv_get(kv_context_t *context,
     gin.gi.vsize = size;
 
     st2 = ABT_get_wtime();
-    ret = margo_forward(context->get_handle, &gin);
+    ret = margo_forward(db->get_handle, &gin);
     et2 = ABT_get_wtime();
     printf("kv_get forward time: %f microseconds, vsize = %lu\n", (et2-st2)*1000000, size);
     assert(ret == HG_SUCCESS);
 
-    ret = margo_get_output(context->get_handle, &gout);
+    ret = margo_get_output(db->get_handle, &gout);
     assert(ret == HG_SUCCESS);
     ret = gout.go.ret;
 
@@ -217,7 +230,7 @@ hg_return_t kv_get(kv_context_t *context,
       memcpy(value, gout.go.value, gout.go.vsize);
     }
 
-    margo_free_output(context->get_handle, &gout);
+    margo_free_output(db->get_handle, &gout);
   }
   else {
     bulk_get_in_t bgin;
@@ -228,19 +241,19 @@ hg_return_t kv_get(kv_context_t *context,
     bgin.bulk.vsize = size;
 
     st2 = ABT_get_wtime();
-    ret = margo_bulk_create(context->mid, 1, &value, &bgin.bulk.vsize,
+    ret = margo_bulk_create(db->mid, 1, &value, &bgin.bulk.vsize,
 			    HG_BULK_WRITE_ONLY, &bgin.bulk.handle);
     et2 = ABT_get_wtime();
     printf("kv_get bulk create time: %f microseconds\n", (et2-st2)*1000000);
     assert(ret == HG_SUCCESS);
 
     st2 = ABT_get_wtime();
-    ret = margo_forward(context->bulk_get_handle, &bgin);
+    ret = margo_forward(db->bulk_get_handle, &bgin);
     et2 = ABT_get_wtime();
     printf("kv_get bulk forward time: %f microseconds, vsize = %lu\n", (et2-st2)*1000000, size);
     assert(ret == HG_SUCCESS);
 
-    ret = margo_get_output(context->bulk_get_handle, &bgout);
+    ret = margo_get_output(db->bulk_get_handle, &bgout);
     assert(ret == HG_SUCCESS);
     ret = bgout.ret; // make sure the server side says all is OK
 
@@ -251,7 +264,7 @@ hg_return_t kv_get(kv_context_t *context,
      */
     *vsize = (hg_size_t)bgout.size;
 
-    margo_free_output(context->bulk_get_handle, &bgout);
+    margo_free_output(db->bulk_get_handle, &bgout);
   }
   et1 = ABT_get_wtime();
   printf("kv_get time: %f microseconds\n", (et1-st1)*1000000);
@@ -259,45 +272,43 @@ hg_return_t kv_get(kv_context_t *context,
   return ret;
 }
 
-hg_return_t kv_close(kv_context_t *context)
+hg_return_t kv_close(kv_database_t *db)
 {
     hg_return_t ret;
-    hg_handle_t handle;
     close_out_t close_out;
 
-    ret = margo_create(context->mid, context->svr_addr,
-	    context->close_id, &handle);
+    ret = margo_forward(db->close_handle, NULL);
     assert(ret == HG_SUCCESS);
 
-    ret = margo_forward(handle, NULL);
-    assert(ret == HG_SUCCESS);
-
-    ret = margo_get_output(handle, &close_out);
+    ret = margo_get_output(db->close_handle, &close_out);
     assert(ret == HG_SUCCESS);
     assert(close_out.ret == HG_SUCCESS);
 
-    margo_free_output(handle, &close_out);
-    margo_destroy(handle);
+    margo_free_output(db->close_handle, &close_out);
 
+    margo_destroy(db->put_handle);
+    margo_destroy(db->get_handle);
+    margo_destroy(db->bulk_put_handle);
+    margo_destroy(db->bulk_get_handle);
+    margo_destroy(db->shutdown_handle);
+
+    ret = margo_addr_free(db->mid, db->svr_addr);
+    assert(ret == HG_SUCCESS);
     return HG_SUCCESS;
 }
 
-bench_result_t *kv_benchmark(kv_context_t *context, int32_t count) {
+bench_result_t *kv_benchmark(kv_database_t *db, int32_t count) {
   hg_return_t ret;
-  hg_handle_t handle;
   bench_in_t bench_in;
   bench_out_t bench_out;
   bench_result_t *result = NULL;
 
-    ret = margo_create(context->mid, context->svr_addr,
-	    context->bench_id, &handle);
-    assert(ret == HG_SUCCESS);
 
     bench_in.count = count;
-    ret = margo_forward(handle, &bench_in);
+    ret = margo_forward(db->bench_handle, &bench_in);
     assert(ret == HG_SUCCESS);
 
-  ret = margo_get_output(handle, &bench_out);
+  ret = margo_get_output(db->bench_handle, &bench_out);
   assert(ret == HG_SUCCESS);
     
   result = malloc(sizeof(bench_result_t));
@@ -306,23 +317,12 @@ bench_result_t *kv_benchmark(kv_context_t *context, int32_t count) {
   result->read_time = bench_out.result.read_time;
   result->overhead = bench_out.result.overhead;
 
-  margo_free_output(handle, &bench_out);
-  margo_destroy(handle);
+  margo_free_output(db->bench_handle, &bench_out);
 
     return result;
 }
 
 hg_return_t kv_client_deregister(kv_context_t *context) {
-  hg_return_t ret;
-
-  margo_destroy(context->put_handle);
-  margo_destroy(context->get_handle);
-  margo_destroy(context->bulk_put_handle);
-  margo_destroy(context->bulk_get_handle);
-  margo_destroy(context->shutdown_handle);
-
-  ret = margo_addr_free(context->mid, context->svr_addr);
-  assert(ret == HG_SUCCESS);
 
   free(context);
 
@@ -330,10 +330,10 @@ hg_return_t kv_client_deregister(kv_context_t *context) {
 }
 
 // only one client calls shutdown
-hg_return_t kv_client_signal_shutdown(kv_context_t *context) {
+hg_return_t kv_client_signal_shutdown(kv_database_t *db) {
   hg_return_t ret;
 
-  ret = margo_forward(context->shutdown_handle, NULL);
+  ret = margo_forward(db->shutdown_handle, NULL);
   assert(ret == HG_SUCCESS);
 
   return HG_SUCCESS;

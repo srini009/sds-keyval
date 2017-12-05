@@ -15,13 +15,14 @@
 extern "C" {
 #endif
 
-typedef struct kvgroup_context_s {
-  kv_context_t **kv_context;
+typedef struct kv_group_s {
+  kv_context_t *kv_context;
+  kv_database_t **db;
   margo_instance_id mid;
   ssg_group_id_t gid; // SSG ID
   hg_size_t gsize; // size of SSG
   struct ch_placement_instance *ch_instance;
-} kvgroup_context_t;
+} kv_group_t;
 
 // helper routine for stripping protocol part of address string
 // stored in ssg_group_id_t data structure
@@ -47,22 +48,22 @@ static inline char *kvgroup_protocol(ssg_group_id_t gid) {
   return protocol;
 }
 
-kvgroup_context_t *kvgroup_server_register(margo_instance_id mid,
+kv_group_t *kvgroup_server_register(margo_instance_id mid,
 					   const char *ssg_name, MPI_Comm ssg_comm);
-hg_return_t kvgroup_server_deregister(kvgroup_context_t *context);
-hg_return_t kvgroup_server_wait_for_shutdown(kvgroup_context_t *context);
+hg_return_t kvgroup_server_deregister(kv_group_t *group);
+hg_return_t kvgroup_server_wait_for_shutdown(kv_group_t *group);
 
-kvgroup_context_t *kvgroup_client_register(margo_instance_id mid, ssg_group_id_t gid);
-hg_return_t kvgroup_open(kvgroup_context_t *context, const char *db_name);
-hg_return_t kvgroup_put(kvgroup_context_t *context, uint64_t oid,
+kv_group_t  *kvgroup_client_register(margo_instance_id mid, ssg_group_id_t gid);
+hg_return_t kvgroup_open(kv_group_t  *group, const char *db_name);
+hg_return_t kvgroup_put(kv_group_t *group, uint64_t oid,
 			void *key, hg_size_t ksize,
 			void *value, hg_size_t vsize);
-hg_return_t kvgroup_get(kvgroup_context_t *context, uint64_t oid,
+hg_return_t kvgroup_get(kv_group_t *group, uint64_t oid,
 			void *key, hg_size_t ksize,
 			void *value, hg_size_t *vsize);
-hg_return_t kvgroup_close(kvgroup_context_t *context);
-hg_return_t kvgroup_client_deregister(kvgroup_context_t *context);
-hg_return_t kvgroup_client_signal_shutdown(kvgroup_context_t *context);
+hg_return_t kvgroup_close(kv_group_t *group);
+hg_return_t kvgroup_client_deregister(kv_group_t *group);
+hg_return_t kvgroup_client_signal_shutdown(kv_group_t *group);
 
 void kvgroup_server_send_gid(ssg_group_id_t gid, MPI_Comm comm);
 void kvgroup_client_recv_gid(ssg_group_id_t *gid, MPI_Comm comm);
