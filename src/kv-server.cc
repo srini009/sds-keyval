@@ -19,6 +19,7 @@
 // since this is global, we're assuming this server instance will manage a single DB
 AbstractDataStore *datastore = NULL;
 std::string db_name;
+ABT_mutex mutex; // lock for protecting above global vars in open_handler
 
 static hg_return_t open_handler(hg_handle_t handle)
 {
@@ -32,6 +33,7 @@ static hg_return_t open_handler(hg_handle_t handle)
   std::cout << "SERVER: OPEN " << in_name << std::endl;
 #endif
 
+  ABT_mutex_lock(mutex);
   if (!datastore) {
 #if USE_BWTREE
     datastore = new BwTreeDataStore(); // testing BwTree
@@ -54,7 +56,7 @@ static hg_return_t open_handler(hg_handle_t handle)
   else {
     if (db_name == in_name) {
 #ifdef KV_DEBUG
-      std::cout << "SERVER OPEN: DataStore initialized and ready for " << db_name << std::endl;
+      std::cout << "SERVER OPEN: DataStore ready for " << db_name << std::endl;
 #endif
       out.ret = HG_SUCCESS;
     }
@@ -66,6 +68,7 @@ static hg_return_t open_handler(hg_handle_t handle)
       out.ret = HG_OTHER_ERROR;
     }
   }
+  ABT_mutex_unlock(mutex);
 
     ret = margo_respond(handle, &out);
     assert(ret == HG_SUCCESS);
@@ -502,6 +505,8 @@ kv_context_t *kv_server_register(const margo_instance_id mid)
   hg_size_t addr_self_string_sz = 128;
   kv_context_t *context = NULL;
 	
+  ABT_mutex_create(&mutex); // initialize mutex
+
   /* sds keyval server init */
   context = (kv_context_t*)malloc(sizeof(kv_context_t));
   memset(context, 0, sizeof(kv_context_t));
