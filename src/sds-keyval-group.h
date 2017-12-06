@@ -23,6 +23,10 @@ typedef struct kvgroup_context_s {
   struct ch_placement_instance *ch_instance;
 } kvgroup_context_t;
 
+// helper routine for stripping protocol part of address string
+// stored in ssg_group_id_t data structure
+// clients can use to dynamically match server's protocol
+// caller is responsible for freeing up char buffer
 static inline char *kvgroup_protocol(ssg_group_id_t gid) {
   char *addr_str;
   int psize = 24;

@@ -71,8 +71,9 @@ int main(int argc, char **argv)
   size_t items = atoi(argv[1]);
   char *server_addr_str = argv[2];
 
-  margo_instance_id mid = margo_init(server_addr_str,
-	  MARGO_CLIENT_MODE, 0, -1);
+  char *proto = kv_protocol(server_addr_str);
+  margo_instance_id mid = margo_init(proto, MARGO_CLIENT_MODE, 0, -1);
+  free(proto);
   context = kv_client_register(mid);
   
   ret = kv_open(context, server_addr_str, "db/testdb");

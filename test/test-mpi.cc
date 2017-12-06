@@ -88,8 +88,9 @@ int main(int argc, char *argv[])
       printf("client (rank %d): server addr_str: %s\n", rank, server_addr_str);
 
       // kv-client
-      margo_instance_id mid = margo_init(server_addr_str,
-	      MARGO_CLIENT_MODE, 0, -1);
+      char *proto = kv_protocol(server_addr_str);
+      margo_instance_id mid = margo_init(proto, MARGO_CLIENT_MODE, 0, -1);
+      free(proto);
       kv_context_t *context = kv_client_register(mid);
 
       hret = margo_addr_self(mid, &client_addr);

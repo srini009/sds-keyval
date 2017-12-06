@@ -15,6 +15,22 @@ typedef struct {
   double overhead;
 } bench_result_t;
 
+// helper routine for stripping protocol part of address string
+// e.g. given "ofi+sockets://192.168.101.20:36259" returns "ofi+sockets"
+// clients can use to dynamically match server's protocol
+// caller is responsible for freeing up char buffer
+static inline char *kv_protocol(const char *addr_str) {
+  int psize = 24;
+  
+  char *protocol = (char*)malloc(psize);
+  memset(protocol, 0, psize);
+
+  /* we only need to the proto portion of the address to initialize */
+  for(int i=0; i<psize && addr_str[i] != '\0' && addr_str[i] != ':'; i++)
+    protocol[i] = addr_str[i];
+
+  return protocol;
+}
 
 typedef struct kv_context_s kv_context_t;
 // kv-client API

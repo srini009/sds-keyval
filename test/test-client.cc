@@ -10,7 +10,9 @@ int main(int argc, char **argv) {
   assert(argc == 2);
   char *server_addr_str = argv[1];
   
-  margo_instance_id mid = margo_init(argv[1], MARGO_CLIENT_MODE, 0, -1);
+  char *proto = kv_protocol(server_addr_str);
+  margo_instance_id mid = margo_init(proto, MARGO_CLIENT_MODE, 0, -1);
+  free(proto);
   kv_context_t *context = kv_client_register(mid);
 
   /* open */

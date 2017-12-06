@@ -109,9 +109,8 @@ int main(int argc, char *argv[])
 
       // kv-client
       char *proto = kvgroup_protocol(gid);
-      kvgroup_context_t *context = kvgroup_client_register(margo_init(proto,
-		  MARGO_CLIENT_MODE, 0, -1),
-							   gid);
+      kvgroup_context_t *context = kvgroup_client_register(margo_init(proto, MARGO_CLIENT_MODE, 0, -1), gid);
+      free(proto);
       hret = margo_addr_self(context->mid, &client_addr);
       DIE_IF(hret != HG_SUCCESS, "margo_addr_self");
 
