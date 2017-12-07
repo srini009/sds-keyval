@@ -8,5 +8,5 @@ Description: services-based keyval server
 Version: 0.1
 URL: https://xgitlab.cels.anl.gov/sds/sds-keyval
 Requires: margo
-Libs: -L${libdir} -lkvserver
+Libs: -L${libdir} -lkvserver @SERVER_LIBS@
 Cflags: -I${includedir}

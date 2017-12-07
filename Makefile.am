@@ -1,5 +1,7 @@
 ACLOCAL_AMFLAGS="-Im4"
 
+SERVER_LIBS=@SERVER_LIBS@
+
 bin_PROGRAMS = test/bench-client \
 	       test/test-client \
 	       test/test-server
@@ -62,7 +64,7 @@ test_test_client_LDFLAGS = -Llib -lkvclient
 test_test_server_SOURCES = test/test-server.cc
 test_test_server_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src
 test_test_server_DEPENDENCIES = lib/libkvserver.la
-test_test_server_LDFLAGS = -Llib -lkvserver -lssg -lboost_filesystem -lboost_system
+test_test_server_LDFLAGS = -Llib -lkvserver ${SERVER_LIBS}
 
 test_test_mpi_SOURCES = test/test-mpi.cc
 
@@ -70,12 +72,12 @@ test_test_mpi_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src
 
 
 test_test_mpi_DEPENDENCIES = lib/libkvserver.la lib/libkvclient.la
-test_test_mpi_LDFLAGS = -Llib -lkvclient -lkvserver -lssg -lboost_filesystem -lboost_system
+test_test_mpi_LDFLAGS = -Llib -lkvclient -lkvserver ${SERVER_LIBS}
 
 test_test_mpi_group_SOURCES = test/test-mpi-group.cc
 test_test_mpi_group_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src
 test_test_mpi_group_DEPENDENCIES = lib/libkvgroupserver.la lib/libkvgroupclient.la lib/libkvserver.la lib/libkvclient.la
-test_test_mpi_group_LDFLAGS = -Llib -lkvgroupserver -lkvgroupclient -lkvclient -lkvserver -lssg -lch-placement -lleveldb -ldb_cxx -lboost_filesystem -lboost_system
+test_test_mpi_group_LDFLAGS = -Llib -lkvgroupserver -lkvgroupclient -lkvclient -lkvserver ${SERVER_LIBS}
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = maint/kv-server.pc \

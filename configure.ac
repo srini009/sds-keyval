@@ -45,6 +45,19 @@ LIBS="$MARGO_LIBS $LIBS"
 CPPFLAGS="$MARGO_CFLAGS $CPPFLAGS"
 CFLAGS="$MARGO_CFLAGS $CFLAGS"
 
+PKG_CHECK_MODULES([SSG], [ssg], [],
+		  AC_MSG_ERROR([Could not find ssg]) )
+CFLAGS="$SSG_CFLAGS $CFLAGS"
+SERVER_LIBS="$SSG_LIBS $SERVER_LIBS"
+
+PKG_CHECK_MODULES([CHPLACEMENT], [ch-placement], [],
+		  AC_MSG_ERROR([Could not find ch-placement]) )
+CFLAGS="$CHPLACEMENT_CFLAGS $CFLAGS"
+SERVER_LIBS="$CHPLAEMENT_LIBS $SERVER_LIBS"
+
+# todo: proper configure checks for boost
+SERVER_LIBS="$SERVER_LIBS -lboost_filesystem -lboost_system"
+
 # we have three possible backends for our datastore.  If none are selected,
 # then nothing will initialize the class and well that doesn't make any sense
 # anyway.  Set BwTree as a default option as it's self-contained to the tree.
@@ -80,7 +93,7 @@ if test "x${berkelydb_backend}" == xyes ; then
 	AC_DEFINE([USE_BDB], 1, [Use Berkely DB backend])
 	bwtree_backend=no
 	leveldb_backend=no
-	LIBS="${LIBS} -ldb_cxx -ldb_stl"
+	SERVER_LIBS="${SERVER_LIBS} -ldb_cxx -ldb_stl"
 	AC_LANG_POP
 fi
 
@@ -90,7 +103,7 @@ if test "x${leveldb_backend}" == xyes ; then
 	AC_CHECK_HEADERS([leveldb/c.h], ,
 			 AC_ERROR("Could not find leveldb headers"))
 	AC_DEFINE([USE_LEVELDB], 1, [use leveldb backend])
-	LIBS="${LIBS} -lleveldb"
+	SERVER_LIBS="${SERVER_LIBS} -lleveldb"
 	berkelydb_backend=no
 	bwtree_backend=no
 fi
@@ -106,6 +119,7 @@ fi
 AM_CONDITIONAL([BUILD_BWTREE], [test "x${bwtree_backend}" == xyes])
 
 
+AC_SUBST(SERVER_LIBS)
 AC_CONFIG_FILES([Makefile maint/kv-client.pc maint/kv-server.pc])
 AC_OUTPUT
 
