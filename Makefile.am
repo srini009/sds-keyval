@@ -20,8 +20,12 @@ lib_libkvgroupclient_la_SOURCES = src/kvgroup-client.cc
 lib_libkvgroupclient_la_CPPFLAGS = ${CPPFLAGS}
 
 lib_libkvserver_la_SOURCES = src/kv-server.cc \
-			 src/datastore.cc \
-			 src/BwTree/src/bwtree.cpp
+                        src/datastore.cc
+
+if BUILD_BWTREE
+lib_libkvserver_la_SOURCES += src/BwTree/src/bwtree.cpp
+endif
+
 
 include_HEADERS = src/sds-keyval.h \
 		  src/sds-keyval-group.h

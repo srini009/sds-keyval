@@ -103,6 +103,8 @@ if test "x${bwtree_backend}" == xyes ; then
 	berkeleydb_backend=no
 	leveldb_backend=no
 fi
+AM_CONDITIONAL([BUILD_BWTREE], [test "x${bwtree_backend}" == xyes])
+
 
 AC_CONFIG_FILES([Makefile maint/kv-client.pc maint/kv-server.pc])
 AC_OUTPUT
