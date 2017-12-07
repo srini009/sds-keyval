@@ -1,6 +1,7 @@
 ACLOCAL_AMFLAGS="-Im4"
 
 SERVER_LIBS=@SERVER_LIBS@
+CLIENT_LiBS=@CLIENT_LIBS@
 
 bin_PROGRAMS = test/bench-client \
 	       test/test-client \
@@ -77,7 +78,7 @@ test_test_mpi_LDFLAGS = -Llib -lkvclient -lkvserver ${SERVER_LIBS}
 test_test_mpi_group_SOURCES = test/test-mpi-group.cc
 test_test_mpi_group_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src
 test_test_mpi_group_DEPENDENCIES = lib/libkvgroupserver.la lib/libkvgroupclient.la lib/libkvserver.la lib/libkvclient.la
-test_test_mpi_group_LDFLAGS = -Llib -lkvgroupserver -lkvgroupclient -lkvclient -lkvserver ${SERVER_LIBS}
+test_test_mpi_group_LDFLAGS = -Llib -lkvgroupserver -lkvgroupclient -lkvclient -lkvserver ${SERVER_LIBS} ${GROUP_LIBS}
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = maint/kv-server.pc \

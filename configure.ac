@@ -54,6 +54,7 @@ PKG_CHECK_MODULES([CHPLACEMENT], [ch-placement], [],
 		  AC_MSG_ERROR([Could not find ch-placement]) )
 CFLAGS="$CHPLACEMENT_CFLAGS $CFLAGS"
 SERVER_LIBS="$CHPLAEMENT_LIBS $SERVER_LIBS"
+GROUP_LIBS="$CHPLACEMENT_LIBS $CLIENT_LIBS"
 
 # todo: proper configure checks for boost
 SERVER_LIBS="$SERVER_LIBS -lboost_filesystem -lboost_system"
@@ -120,6 +121,7 @@ AM_CONDITIONAL([BUILD_BWTREE], [test "x${bwtree_backend}" == xyes])
 
 
 AC_SUBST(SERVER_LIBS)
+AC_SUBST(GROUP_LIBS)
 AC_CONFIG_FILES([Makefile maint/kv-client.pc maint/kv-server.pc])
 AC_OUTPUT
 
