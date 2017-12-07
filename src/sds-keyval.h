@@ -21,12 +21,13 @@ typedef struct {
 // caller is responsible for freeing up char buffer
 static inline char *kv_protocol(const char *addr_str) {
   int psize = 24;
+  int i;
   
   char *protocol = (char*)malloc(psize);
   memset(protocol, 0, psize);
 
   /* we only need to the proto portion of the address to initialize */
-  for(int i=0; i<psize && addr_str[i] != '\0' && addr_str[i] != ':'; i++)
+  for(i=0; i<psize && addr_str[i] != '\0' && addr_str[i] != ':'; i++)
     protocol[i] = addr_str[i];
 
   return protocol;
