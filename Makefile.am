@@ -35,6 +35,7 @@ include_HEADERS = src/sds-keyval.h \
 		  src/sds-keyval-group.h
 
 noinst_HEADERS = src/datastore.h \
+		 src/keyval-internal.h \
 		 src/BwTree/src/bwtree.h \
 		 src/BwTree/src/atomic_stack.h\
 		 src/BwTree/src/bloom_filter.h \
