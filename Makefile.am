@@ -3,11 +3,13 @@ ACLOCAL_AMFLAGS="-Im4"
 SERVER_LIBS=@SERVER_LIBS@
 CLIENT_LiBS=@CLIENT_LIBS@
 
+AM_CPPFLAGS = -I${srcdir}/src
+
 bin_PROGRAMS = test/bench-client \
 	       test/test-client \
 	       test/test-server
+
 test_bench_client_SOURCES = test/bench-client.cc
-test_bench_client_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src
 test_bench_client_DEPENDENCIES = lib/libkvclient.la
 test_bench_client_LDFLAGS = -Llib -lkvclient
 test_bench_client_LDADD = ${LIBS} -lkvclient
@@ -20,7 +22,6 @@ lib_LTLIBRARIES = lib/libkvclient.la \
 lib_libkvclient_la_SOURCES = src/kv-client.c
 
 lib_libkvgroupclient_la_SOURCES = src/kvgroup-client.cc
-lib_libkvgroupclient_la_CPPFLAGS = ${CPPFLAGS}
 
 lib_libkvserver_la_SOURCES = src/kv-server.cc \
                         src/datastore.cc
@@ -41,7 +42,6 @@ noinst_HEADERS = src/datastore.h \
 
 
 lib_libkvgroupserver_la_SOURCES = src/kvgroup-server.cc
-lib_libkvgroupserver_la_CPPFLAGS = ${CPPFLAGS}
 
 
 check_PROGRAMS = test/test-client \
@@ -58,25 +58,20 @@ TESTS = test/test-client \
 	test/test-mpi-group
 
 test_test_client_SOURCES = test/test-client.cc
-test_test_client_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src
 test_test_client_DEPENDENCIES = lib/libkvclient.la
 test_test_client_LDFLAGS = -Llib -lkvclient
 
 test_test_server_SOURCES = test/test-server.cc
-test_test_server_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src
 test_test_server_DEPENDENCIES = lib/libkvserver.la
 test_test_server_LDFLAGS = -Llib -lkvserver ${SERVER_LIBS}
 
 test_test_mpi_SOURCES = test/test-mpi.cc
-
-test_test_mpi_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src
 
 
 test_test_mpi_DEPENDENCIES = lib/libkvserver.la lib/libkvclient.la
 test_test_mpi_LDFLAGS = -Llib -lkvclient -lkvserver ${SERVER_LIBS}
 
 test_test_mpi_group_SOURCES = test/test-mpi-group.cc
-test_test_mpi_group_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src
 test_test_mpi_group_DEPENDENCIES = lib/libkvgroupserver.la lib/libkvgroupclient.la lib/libkvserver.la lib/libkvclient.la
 test_test_mpi_group_LDFLAGS = -Llib -lkvgroupserver -lkvgroupclient -lkvclient -lkvserver ${SERVER_LIBS} ${GROUP_LIBS}
 
