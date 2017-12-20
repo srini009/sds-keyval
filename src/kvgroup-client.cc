@@ -49,8 +49,9 @@ hg_return_t kvgroup_open(kvgroup_context_t *context, const char *db_name)
     context->kv_context[i] = kv_client_register(context->mid);
     assert(context->kv_context[i] != NULL);
     hg_addr_t server_addr = ssg_get_addr(context->gid, i);
+    hg_size_t str_size = addr_str_sz;
     // turn server_addr into string
-    ret = margo_addr_to_string(context->mid, addr_str, &addr_str_sz, server_addr);
+    ret = margo_addr_to_string(context->mid, addr_str, &str_size, server_addr);
     assert(ret == HG_SUCCESS);
     margo_addr_free(context->mid, server_addr);
     std::string server_dbname = basepath + separator + std::string("kvdb.") + std::to_string(i)

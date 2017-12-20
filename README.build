@@ -5,7 +5,7 @@ To Build:
   On Darwin, run configure like this:
     With BwTree: ./configure CC=mpicc CXX=mpicxx --prefix=$HOME/mochi --enable-bwtree
     With BerkeleyDB: ./configure CC=mpicc CXX=mpicxx --prefix=$HOME/mochi --enable-berkeleydb
-    With LevelDB: ./configure CC=mpicc CXX=mpicxx --prefix=$HOME/mochi --enable-leveldb
+    With LevelDB: ./configure CC=mpicc CXX=mpicxx LDFLAGS="`pkg-config --libs leveldb`" --prefix=$HOME/mochi --enable-leveldb
 
   On Cori, run configure like this:
     With BwTree: ./configure CC=cc CXX=CC LDFLAGS="-dynamic -latomic" --prefix=$HOME/mochi --enable-bwtree

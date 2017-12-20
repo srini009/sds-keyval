@@ -71,7 +71,7 @@ test_test_mpi_LDFLAGS = -Llib -lkvclient -lkvserver -lssg -lboost_filesystem -lb
 test_test_mpi_group_SOURCES = test/test-mpi-group.cc
 test_test_mpi_group_CPPFLAGS = ${CPPFLAGS} -I${srcdir}/src
 test_test_mpi_group_DEPENDENCIES = lib/libkvgroupserver.la lib/libkvgroupclient.la lib/libkvserver.la lib/libkvclient.la
-test_test_mpi_group_LDFLAGS = -Llib -lkvgroupserver -lkvgroupclient -lkvclient -lkvserver -lssg -lch-placement -lleveldb -ldb_cxx -lboost_filesystem -lboost_system
+test_test_mpi_group_LDFLAGS = -Llib -lkvgroupserver -lkvgroupclient -lkvclient -lkvserver -lssg -lch-placement -lboost_filesystem -lboost_system
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = maint/kv-server.pc \
