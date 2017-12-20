@@ -21,18 +21,21 @@ typedef struct {
 // caller is responsible for freeing up char buffer
 static inline char *kv_protocol(const char *addr_str) {
   int psize = 24;
+  int i;
   
   char *protocol = (char*)malloc(psize);
   memset(protocol, 0, psize);
 
   /* we only need to the proto portion of the address to initialize */
-  for(int i=0; i<psize && addr_str[i] != '\0' && addr_str[i] != ':'; i++)
+  for(i=0; i<psize && addr_str[i] != '\0' && addr_str[i] != ':'; i++)
     protocol[i] = addr_str[i];
 
   return protocol;
 }
 
 typedef struct kv_context_s kv_context_t;
+typedef struct kv_database_s kv_database_t;
+
 // kv-client API
 kv_context_t *kv_client_register(const margo_instance_id mid);
 kv_context_t *kv_server_register(const margo_instance_id mid);
@@ -42,17 +45,22 @@ hg_return_t kv_client_deregister(kv_context_t *context);
 hg_return_t kv_server_deregister(kv_context_t *context);
 
 // server-side routine
+// server doesn't have a "database" -- that's a client notion
 hg_return_t kv_server_wait_for_shutdown(kv_context_t *context);
 
 // client-side routines wrapping up all the RPC stuff
-hg_return_t kv_client_signal_shutdown(kv_context_t *context);
-hg_return_t kv_open(kv_context_t *context, const char *server, const char *db_name);
-hg_return_t kv_put(kv_context_t *context, void *key, hg_size_t ksize, void *value, hg_size_t vsize);
-hg_return_t kv_get(kv_context_t *context, void *key, hg_size_t ksize, void *value, hg_size_t *vsize);
-hg_return_t kv_close(kv_context_t *context);
+hg_return_t kv_client_signal_shutdown(kv_database_t *db);
+
+kv_database_t * kv_open(kv_context_t *context,
+	const char *server, const char *db_name);
+hg_return_t kv_put(kv_database_t *db, void *key, hg_size_t ksize,
+	void *value, hg_size_t vsize);
+hg_return_t kv_get(kv_database_t *db, void *key, hg_size_t ksize,
+	void *value, hg_size_t *vsize);
+hg_return_t kv_close(kv_database_t * db);
 
 // benchmark routine
-bench_result_t *kv_benchmark(kv_context_t *context, int32_t count);
+bench_result_t *kv_benchmark(kv_database_t *context, int32_t count);
 
 #if defined(__cplusplus)
 }

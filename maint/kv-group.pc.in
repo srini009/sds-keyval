@@ -3,10 +3,10 @@ exec_prefix=@exec_prefix@
 libdir=@libdir@
 includedir=@includedir@
 
-Name: kv-server
-Description: services-based keyval server
+Name: kv-group
+Description: services-based keyval, group logic
 Version: 0.1
 URL: https://xgitlab.cels.anl.gov/sds/sds-keyval
 Requires: margo
-Libs: -L${libdir} -lkvserver @SERVER_LIBS@
+Libs: -L${libdir} @GROUP_LIBS@
 Cflags: -I${includedir}

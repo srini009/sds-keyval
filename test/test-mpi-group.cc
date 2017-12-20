@@ -61,17 +61,17 @@ int main(int argc, char *argv[])
       MPI_Comm_split(MPI_COMM_WORLD, MPI_UNDEFINED, rank, &clientComm);
       
       // kv-server
-      kvgroup_context_t *context = kvgroup_server_register(margo_init(addr_str,
+      kv_group_t *group = kvgroup_server_register(margo_init(addr_str,
 		  MARGO_SERVER_MODE, 0, -1),
 							   ssg_name,
 							   ssgComm);
-      hret = margo_addr_self(context->mid, &server_addr);
+      hret = margo_addr_self(group->mid, &server_addr);
       DIE_IF(hret != HG_SUCCESS, "margo_addr_self");
 
       // get server address
-      hret = margo_addr_to_string(context->mid, server_addr_str, &addr_str_sz, server_addr);
+      hret = margo_addr_to_string(group->mid, server_addr_str, &addr_str_sz, server_addr);
       DIE_IF(hret != HG_SUCCESS, "margo_addr_to_string");
-      margo_addr_free(context->mid, server_addr);
+      margo_addr_free(group->mid, server_addr);
       
       printf("server (rank %d): server addr_str: %s, group: %s\n", rank, server_addr_str, ssg_name);
 
@@ -79,16 +79,16 @@ int main(int argc, char *argv[])
       MPI_Comm_rank(ssgComm, &server_rank);
 
       // broadcast (send) SSG ID to all clients
-      kvgroup_server_send_gid(context->gid, MPI_COMM_WORLD);
+      kvgroup_server_send_gid(group->gid, MPI_COMM_WORLD);
       if (server_rank == 0) {
 	printf("server (rank %d): sent group\n", rank);
       }
 
       // process requests until finalized
-      kvgroup_server_wait_for_shutdown(context);
+      kvgroup_server_wait_for_shutdown(group);
 
       // now finish cleaning up
-      kvgroup_server_deregister(context);
+      kvgroup_server_deregister(group);
       printf("rank %d: server deregistered\n", rank);
 
       //kv_margo_finalize(mid); // already finalized in server's shutdown_handler
@@ -109,20 +109,20 @@ int main(int argc, char *argv[])
 
       // kv-client
       char *proto = kvgroup_protocol(gid);
-      kvgroup_context_t *context = kvgroup_client_register(margo_init(proto, MARGO_CLIENT_MODE, 0, -1), gid);
+      kv_group_t *group= kvgroup_client_register(margo_init(proto, MARGO_CLIENT_MODE, 0, -1), gid);
       free(proto);
-      hret = margo_addr_self(context->mid, &client_addr);
+      hret = margo_addr_self(group->mid, &client_addr);
       DIE_IF(hret != HG_SUCCESS, "margo_addr_self");
 
       // get client address
-      hret = margo_addr_to_string(context->mid, client_addr_str, &addr_str_sz, client_addr);
+      hret = margo_addr_to_string(group->mid, client_addr_str, &addr_str_sz, client_addr);
       DIE_IF(hret != HG_SUCCESS, "margo_addr_to_string");
-      margo_addr_free(context->mid, client_addr);
+      margo_addr_free(group->mid, client_addr);
       printf("client (rank %d): client addr_str: %s\n", rank, client_addr_str);
       
       // open specified "DB" (pass in the server's address)
       const char *db = "db/minima_store";
-      hret = kvgroup_open(context, (char*)db);
+      hret = kvgroup_open(group, (char*)db);
       DIE_IF(hret != HG_SUCCESS, "kvgroup_open");
       
       size_t vsize = 1;
@@ -140,7 +140,7 @@ int main(int argc, char *argv[])
 
 	// create OID for key
 	size_t oid = boost::hash<int32_t>()(key);
-	hret = kvgroup_put(context, oid, (void*)&key, sizeof(key),
+	hret = kvgroup_put(group, oid, (void*)&key, sizeof(key),
 			   (void*)put_data.data(), data_size);
 	printf("(rank %d: put) key %d, size=%lu\n", rank, key, data_size);
 	DIE_IF(hret != HG_SUCCESS, "kv_put");
@@ -160,7 +160,7 @@ int main(int argc, char *argv[])
 
 	// create OID for key
 	size_t oid = boost::hash<int32_t>()(key);
-	hret = kvgroup_get(context, oid, (void*)&key, sizeof(key),
+	hret = kvgroup_get(group, oid, (void*)&key, sizeof(key),
 			   (void*)get_data.data(), &data_size);
 	DIE_IF(hret != HG_SUCCESS, "kv_get");
 
@@ -174,7 +174,7 @@ int main(int argc, char *argv[])
       }
 
       // close
-      hret = kvgroup_close(context);
+      hret = kvgroup_close(group);
       DIE_IF(hret != HG_SUCCESS, "kv_close");
 
       // once all clients are done with the close, one client can signal server
@@ -183,11 +183,11 @@ int main(int argc, char *argv[])
       MPI_Barrier(clientComm);
       if (client_rank==0) {
 	printf("rank %d: sending server a shutdown request\n", rank);
-	kvgroup_client_signal_shutdown(context);
+	kvgroup_client_signal_shutdown(group);
       }
 
       // now finish cleaning up
-      kvgroup_client_deregister(context);
+      kvgroup_client_deregister(group);
       printf("rank %d: client deregistered\n", rank);
 
       //kv_margo_finalize(mid); // already finalized in kv_client_deregister
