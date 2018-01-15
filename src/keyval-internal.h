@@ -35,6 +35,7 @@ typedef struct kv_context_s {
 	hg_id_t close_id;
 	hg_id_t bench_id;
 	hg_id_t shutdown_id;
+	hg_id_t list_id;
 	kv_id kv;
 } kv_context_t;
 
@@ -51,6 +52,7 @@ typedef struct kv_database_s  {
 	hg_handle_t bulk_get_handle;
 	hg_handle_t shutdown_handle;
 	hg_handle_t bench_handle;
+	hg_handle_t list_handle;
 } kv_database_t;
 
 
@@ -82,6 +84,9 @@ static inline hg_return_t hg_proc_hg_return_t(hg_proc_t proc, void *data)
 {
   return hg_proc_hg_int32_t(proc, data);
 }
+
+
+/* the put_in, get_in, put_out, get_out, list_in, list_out code is repetitive.  candidate for a template? */
 
 static inline hg_return_t hg_proc_kv_put_in_t(hg_proc_t proc, void *data)
 {
@@ -194,6 +199,106 @@ static inline hg_return_t hg_proc_kv_get_out_t(hg_proc_t proc, void *data)
   return HG_SUCCESS;
 }
 
+typedef struct {
+    kv_data_t start_key;
+    hg_size_t start_ksize;
+    hg_size_t max_keys;
+} kv_list_in_t;
+
+typedef struct {
+    hg_size_t nkeys;
+    kv_data_t *keys;
+    hg_size_t *ksizes;
+    hg_return_t ret;
+} kv_list_out_t;
+
+static inline hg_return_t hg_proc_kv_list_in_t(hg_proc_t proc, void *data)
+{
+    hg_return_t ret;
+    kv_list_in_t *in = (kv_list_in_t*)data;
+
+    ret = hg_proc_hg_size_t(proc, &in->start_ksize);
+    assert(ret == HG_SUCCESS);
+    if (in->start_ksize) {
+	switch(hg_proc_get_op(proc)) {
+	    case HG_ENCODE:
+		ret = hg_proc_raw(proc, in->start_key, in->start_ksize);
+		assert(ret == HG_SUCCESS);
+		break;
+	    case HG_DECODE:
+		in->start_key = (kv_data_t)malloc(in->start_ksize);
+		ret = hg_proc_raw(proc, in->start_key, in->start_ksize);
+		assert(ret == HG_SUCCESS);
+		break;
+	    case HG_FREE:
+		free(in->start_key);
+	    default:
+		break;
+	}
+    }
+    ret = hg_proc_hg_size_t(proc, &in->max_keys);
+    assert(ret == HG_SUCCESS);
+
+    return ret;
+}
+
+static inline hg_return_t hg_proc_kv_list_out_t(hg_proc_t proc, void *data)
+{
+    hg_return_t ret;
+    unsigned int i;
+    kv_list_out_t *out = (kv_list_out_t*)data;
+    /* typedef struct {
+       hg_size_t nkeys;
+       kv_data_t *keys;
+       hg_size_t *ksizes;
+       } kv_list_out_t; */
+
+    ret = hg_proc_hg_size_t(proc, &out->nkeys);
+    assert (ret == HG_SUCCESS);
+    if (out->nkeys) {
+	switch(hg_proc_get_op(proc)) {
+	    case HG_ENCODE:
+		for (i=0; i<out->nkeys; i++) {
+		    ret = hg_proc_raw(proc, &(out->ksizes[i]),
+			    sizeof(*(out->ksizes)) );
+		}
+		for (i=0; i<out->nkeys; i++) {
+		    ret = hg_proc_raw(proc, out->keys[i], out->ksizes[i]);
+		    assert(ret == HG_SUCCESS);
+		}
+		break;
+	    case HG_DECODE:
+		out->ksizes =
+		    (hg_size_t*)malloc(out->nkeys*sizeof(*out->ksizes));
+		for (i=0; i<out->nkeys; i++) {
+		    ret = hg_proc_raw(proc, &(out->ksizes[i]),
+			    sizeof(*out->ksizes));
+
+		}
+		out->keys = (kv_data_t *)malloc(out->nkeys*sizeof(kv_data_t));
+		for (i=0; i<out->nkeys; i++) {
+		    out->keys[i] = (kv_data_t)malloc(out->ksizes[i]);
+		    ret = hg_proc_raw(proc, out->keys[i], out->ksizes[i]);
+		    assert(ret == HG_SUCCESS);
+		}
+		break;
+	    case HG_FREE:
+		for (i=0; i<out->nkeys; i++) {
+		    free(out->keys[i]);
+		}
+		free(out->keys);
+		free(out->ksizes);
+		break;
+	    default:
+		break;
+	}
+    }
+    ret = hg_proc_hg_return_t(proc, &out->ret);
+    assert (ret == HG_SUCCESS);
+    return ret;
+}
+
+
 MERCURY_GEN_PROC(put_in_t, ((kv_put_in_t)(pi)))
 MERCURY_GEN_PROC(put_out_t, ((hg_return_t)(ret)))
 DECLARE_MARGO_RPC_HANDLER(put_handler)
@@ -251,6 +356,10 @@ static inline hg_return_t hg_proc_kv_bulk_t(hg_proc_t proc, void *data)
   return HG_SUCCESS;
 }
 
+MERCURY_GEN_PROC(list_in_t, ((kv_list_in_t)(list_in)))
+MERCURY_GEN_PROC(list_out_t, ((kv_list_out_t)(list_out)))
+
+
 MERCURY_GEN_PROC(bulk_put_in_t, ((kv_bulk_t)(bulk)))
 MERCURY_GEN_PROC(bulk_put_out_t, ((hg_return_t)(ret)))
 DECLARE_MARGO_RPC_HANDLER(bulk_put_handler)
@@ -261,6 +370,7 @@ DECLARE_MARGO_RPC_HANDLER(bulk_get_handler)
 
 DECLARE_MARGO_RPC_HANDLER(shutdown_handler)
 
+DECLARE_MARGO_RPC_HANDLER(list_keys_handler)
 
 // some setup to support simple benchmarking
 static inline hg_return_t hg_proc_double(hg_proc_t proc, void *data)

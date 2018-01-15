@@ -38,6 +38,9 @@ kv_context_t *kv_client_register(const margo_instance_id mid) {
   context->shutdown_id = MARGO_REGISTER(context->mid, "shutdown",
 					void, void, NULL);
 
+  context->list_id = MARGO_REGISTER(context->mid, "list",
+					list_in_t, list_out_t, NULL);
+
   return context;
 }
 
@@ -95,6 +98,9 @@ kv_database_t * kv_open(kv_context_t *context,
   assert(ret == HG_SUCCESS);
   ret = margo_create(context->mid, db->svr_addr,
 	  context->bench_id, &(db->bench_handle));
+  assert(ret == HG_SUCCESS);
+  ret = margo_create(context->mid, db->svr_addr,
+	  context->list_id, &(db->list_handle));
   assert(ret == HG_SUCCESS);
 
 
@@ -271,6 +277,34 @@ hg_return_t kv_get(kv_database_t *db,
 
   return ret;
 }
+
+hg_return_t kv_list_keys(kv_database_t *db,
+	const void *start_key, hg_size_t start_ksize,
+	void **keys, hg_size_t *ksizes, hg_size_t *max_keys)
+{
+    list_in_t list_in;
+    list_out_t list_out;
+    int ret = HG_SUCCESS;
+    int i;
+
+    list_in.list_in.start_key = (kv_data_t) start_key;
+    list_in.list_in.start_ksize = start_ksize;
+    list_in.list_in.max_keys = *max_keys;
+
+    ret = margo_forward(db->list_handle, &list_in);
+    ret = margo_get_output(db->list_handle, &list_out);
+
+    *max_keys = list_out.list_out.nkeys;
+    for (i=0; i<list_out.list_out.nkeys; i++) {
+	ksizes[i] = list_out.list_out.ksizes[i];
+	memcpy(keys[i], list_out.list_out.keys[i], list_out.list_out.ksizes[i]);
+    }
+    margo_free_output(db->list_handle, &list_out);
+
+    return ret;
+}
+
+
 
 hg_return_t kv_close(kv_database_t *db)
 {

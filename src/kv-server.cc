@@ -349,6 +349,43 @@ static hg_return_t bulk_get_handler(hg_handle_t handle)
 }
 DEFINE_MARGO_RPC_HANDLER(bulk_get_handler)
 
+static hg_return_t list_handler(hg_handle_t handle)
+{
+    hg_return_t ret;
+    list_in_t list_in;
+    list_out_t list_out;
+
+    std::vector<char> start{};
+    margo_get_input(handle, &list_in);
+
+    auto keys = datastore->list(start, list_in.list_in.max_keys);
+
+    list_out.list_out.nkeys = keys->size();
+    /* we have a C++ vector but will serialize it before shipping over wire.
+     * One array of "ksizes" tells us how the data is packed into "keys". */
+
+    list_out.list_out.keys =
+	(kv_data_t *)malloc(keys->size()*sizeof(kv_data_t));
+    list_out.list_out.ksizes =
+	(hg_size_t *)malloc(keys->size()*sizeof(hg_size_t));
+	
+    int j=0;
+    for (auto it: *keys) {
+	list_out.list_out.ksizes[j] = it.size();
+	list_out.list_out.keys[j] = (kv_data_t)malloc(it.size());
+	memcpy(list_out.list_out.keys[j],
+		it.data(), it.size());
+	j++;
+    }
+    list_out.list_out.ret = HG_SUCCESS;
+    ret = margo_respond(handle, &list_out);
+    margo_free_input(handle, &list_in);
+    margo_destroy(handle);
+
+    return ret;
+}
+DEFINE_MARGO_RPC_HANDLER(list_handler)
+
 static void shutdown_handler(hg_handle_t handle)
 {
   hg_return_t ret;
@@ -555,6 +592,10 @@ kv_context_t *kv_server_register(const margo_instance_id mid)
 
     context->shutdown_id = MARGO_REGISTER(context->mid, "shutdown",
 	    void, void, shutdown_handler);
+
+    context->list_id = MARGO_REGISTER(context->mid, "list",
+	    list_in_t, list_out_t, list_handler);
+
     return context;
 }
 
