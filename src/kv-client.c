@@ -325,6 +325,9 @@ hg_return_t kv_close(kv_database_t *db)
     margo_destroy(db->bulk_put_handle);
     margo_destroy(db->bulk_get_handle);
     margo_destroy(db->shutdown_handle);
+    margo_destroy(db->list_handle);
+    margo_destroy(db->bench_handle);
+    margo_destroy(db->close_handle);
 
     ret = margo_addr_free(db->mid, db->svr_addr);
     assert(ret == HG_SUCCESS);
