@@ -307,7 +307,9 @@ MERCURY_GEN_PROC(get_in_t, ((kv_get_in_t)(gi)))
 MERCURY_GEN_PROC(get_out_t, ((kv_get_out_t)(go)))
 DECLARE_MARGO_RPC_HANDLER(get_handler)
 
-MERCURY_GEN_PROC(open_in_t, ((hg_string_t)(name)))
+MERCURY_GEN_PROC(open_in_t, 
+        ((hg_string_t)(name))\
+        ((int32_t)(db_type)))
 MERCURY_GEN_PROC(open_out_t, ((hg_return_t)(ret)))
 DECLARE_MARGO_RPC_HANDLER(open_handler)
 

@@ -76,8 +76,9 @@ int main(int argc, char **argv)
   margo_instance_id mid = margo_init(proto, MARGO_CLIENT_MODE, 0, -1);
   free(proto);
   context = kv_client_register(mid);
-  
-  db = kv_open(context, server_addr_str, "db/testdb");
+ 
+  kv_db_type_t db_type = KVDB_BWTREE; // XXX make that an argument from argv 
+  db = kv_open(context, server_addr_str, "db/testdb", db_type);
   assert(db != NULL);
 
   RandomInsertSpeedTest(db, items, &rpc);

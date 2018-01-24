@@ -28,7 +28,7 @@ kv_group_t *kvgroup_client_register(margo_instance_id mid, ssg_group_id_t gid)
   return group;
 }
 
-hg_return_t kvgroup_open(kv_group_t *group, const char *db_name)
+hg_return_t kvgroup_open(kv_group_t *group, const char *db_name, kv_db_type_t db_type)
 {
   hg_size_t addr_str_sz = 128;
   char addr_str[addr_str_sz];
@@ -62,7 +62,7 @@ hg_return_t kvgroup_open(kv_group_t *group, const char *db_name)
       + separator + name; // each session uses unique db name
     // open client connection with this server
     std::cout << "request open of " << server_dbname << " from server " << addr_str << std::endl;
-    group->db[i] = kv_open(group->kv_context, addr_str, server_dbname.c_str());
+    group->db[i] = kv_open(group->kv_context, addr_str, server_dbname.c_str(), db_type);
     assert(ret == HG_SUCCESS);
   }
 

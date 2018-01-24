@@ -45,7 +45,7 @@ kv_context_t *kv_client_register(const margo_instance_id mid) {
 }
 
 kv_database_t * kv_open(kv_context_t *context,
-	const char *server_addr, const char *db_name)
+	const char *server_addr, const char *db_name, kv_db_type_t db_type)
 {
   hg_return_t ret = HG_SUCCESS;
   hg_handle_t handle;
@@ -64,6 +64,7 @@ kv_database_t * kv_open(kv_context_t *context,
   assert(ret == HG_SUCCESS);
 
   open_in.name = (hg_string_t)db_name;
+  open_in.db_type = (int32_t)db_type;
 	
   ret = margo_forward(handle, &open_in);
   assert(ret == HG_SUCCESS);

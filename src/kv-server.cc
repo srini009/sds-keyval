@@ -4,17 +4,7 @@
 #include "datastore.h"
 #include "kv-config.h"
 
-#ifdef USE_BWTREE
-#include "bwtree_datastore.h"
-#endif
-
-#ifdef USE_BDB
-#include "berkeleydb_datastore.h"
-#endif
-
-#ifdef USE_LEVELDB
-#include "leveldb_datastore.h"
-#endif
+#include "datastore_factory.h"
 
 #include <mercury.h>
 #include <margo.h>
@@ -47,17 +37,18 @@ static hg_return_t open_handler(hg_handle_t handle)
 
   ABT_mutex_lock(mutex);
   if (!datastore) {
-#if USE_BWTREE
-    datastore = new BwTreeDataStore(); // testing BwTree
-#elif USE_BDB
-    datastore = new BerkeleyDBDataStore(); // testing BerkeleyDB
-    // in-memory implementation not working, needs debugging
-    //datastore->set_in_memory(true); // testing in-memory BerkeleyDB
-#elif USE_LEVELDB
-    datastore = new LevelDBDataStore(); // testing LevelDB
-#else
-#error "No datastore backend selected at configure-time"
-#endif
+    if(in.db_type < 0 || in.db_type > 2) {
+        std::cerr << "SERVER OPEN: Invalid db type" << std::endl;
+        out.ret = HG_OTHER_ERROR;
+        goto finish;
+    }
+    kv_db_type_t db_type = (kv_db_type_t)(in.db_type);
+    datastore = datastore_factory::create_datastore(db_type);
+    if(!datastore) {
+        std::cerr << "SERVER OPEN: Could not create database (invalid database type requested)" << std::endl;
+        out.ret = HG_OTHER_ERROR;
+        goto finish;
+    }
     db_name = in_name;
     datastore->createDatabase(db_name);
 #ifdef KV_DEBUG
@@ -82,6 +73,7 @@ static hg_return_t open_handler(hg_handle_t handle)
   }
   ABT_mutex_unlock(mutex);
 
+finish:
     ret = margo_respond(handle, &out);
     assert(ret == HG_SUCCESS);
 

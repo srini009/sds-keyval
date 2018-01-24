@@ -16,7 +16,8 @@ int main(int argc, char **argv) {
   kv_context_t *context = kv_client_register(mid);
 
   /* open */
-  kv_database_t *db = kv_open(context, server_addr_str, "db/booger");
+  kv_db_type_t db_type = KVDB_BWTREE; // XXX take that from argv
+  kv_database_t *db = kv_open(context, server_addr_str, "db/booger", db_type);
   assert(db != NULL);
 
   /* put */

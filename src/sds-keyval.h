@@ -1,11 +1,20 @@
 #ifndef sds_keyval_h
 #define sds_keyval_h
 
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
+
 #include <margo.h>
 #include <stdint.h>
+
+typedef enum kv_db_type_t 
+{
+    KVDB_BWTREE,
+    KVDB_LEVELDB,
+    KVDB_BERKELEYDB
+} kv_db_type_t;
 
 // some setup to support simple benchmarking
 typedef struct {
@@ -52,7 +61,7 @@ hg_return_t kv_server_wait_for_shutdown(kv_context_t *context);
 hg_return_t kv_client_signal_shutdown(kv_database_t *db);
 
 kv_database_t * kv_open(kv_context_t *context,
-	const char *server, const char *db_name);
+	const char *server, const char *db_name, kv_db_type_t db_type);
 hg_return_t kv_put(kv_database_t *db, void *key, hg_size_t ksize,
 	void *value, hg_size_t vsize);
 hg_return_t kv_get(kv_database_t *db, void *key, hg_size_t ksize,
