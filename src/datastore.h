@@ -55,11 +55,11 @@ public:
   AbstractDataStore(Duplicates duplicates, bool eraseOnGet, bool debug);
   virtual ~AbstractDataStore();
   virtual void createDatabase(std::string db_name)=0;
-  virtual bool put(ds_bulk_t &key, ds_bulk_t &data)=0;
-  virtual bool get(ds_bulk_t &key, ds_bulk_t &data)=0;
-  virtual bool get(ds_bulk_t &key, std::vector<ds_bulk_t> &data)=0;
+  virtual bool put(const ds_bulk_t &key, const ds_bulk_t &data)=0;
+  virtual bool get(const ds_bulk_t &key, ds_bulk_t &data)=0;
+  virtual bool get(const ds_bulk_t &key, std::vector<ds_bulk_t> &data)=0;
   virtual void set_in_memory(bool enable)=0; // enable/disable in-memory mode (where supported)
-  virtual std::vector<ds_bulk_t>* list(ds_bulk_t &start, size_t count)=0;
+  virtual std::vector<ds_bulk_t> list(const ds_bulk_t &start_key, size_t count)=0;
 protected:
   Duplicates _duplicates;
   bool _eraseOnGet;
@@ -74,11 +74,11 @@ public:
   BwTreeDataStore(Duplicates duplicates, bool eraseOnGet, bool debug);
   virtual ~BwTreeDataStore();
   virtual void createDatabase(std::string db_name);
-  virtual bool put(ds_bulk_t &key, ds_bulk_t &data);
-  virtual bool get(ds_bulk_t &key, ds_bulk_t &data);
-  virtual bool get(ds_bulk_t &key, std::vector<ds_bulk_t> &data);
+  virtual bool put(const ds_bulk_t &key, const ds_bulk_t &data);
+  virtual bool get(const ds_bulk_t &key, ds_bulk_t &data);
+  virtual bool get(const ds_bulk_t &key, std::vector<ds_bulk_t> &data);
   virtual void set_in_memory(bool enable); // a no-op
-  virtual std::vector<ds_bulk_t>* list(ds_bulk_t &start, size_t count);
+  virtual std::vector<ds_bulk_t> list(const ds_bulk_t &start, size_t count);
 protected:
   BwTree<ds_bulk_t, ds_bulk_t, 
 	 my_less, my_equal, my_hash,
@@ -92,11 +92,11 @@ public:
   LevelDBDataStore(Duplicates duplicates, bool eraseOnGet, bool debug);
   virtual ~LevelDBDataStore();
   virtual void createDatabase(std::string db_name);
-  virtual bool put(ds_bulk_t &key, ds_bulk_t &data);
-  virtual bool get(ds_bulk_t &key, ds_bulk_t &data);
-  virtual bool get(ds_bulk_t &key, std::vector<ds_bulk_t> &data);
+  virtual bool put(const ds_bulk_t &key, const ds_bulk_t &data);
+  virtual bool get(const ds_bulk_t &key, ds_bulk_t &data);
+  virtual bool get(const ds_bulk_t &key, std::vector<ds_bulk_t> &data);
   virtual void set_in_memory(bool enable); // not supported, a no-op
-  virtual std::vector<ds_bulk_t>* list(ds_bulk_t &start, size_t count);
+  virtual std::vector<ds_bulk_t> list(const ds_bulk_t &start, size_t count);
 protected:
   leveldb::DB *_dbm = NULL;
 private:
@@ -111,11 +111,11 @@ public:
   BerkeleyDBDataStore(Duplicates duplicates, bool eraseOnGet, bool debug);
   virtual ~BerkeleyDBDataStore();
   virtual void createDatabase(std::string db_name);
-  virtual bool put(ds_bulk_t &key, ds_bulk_t &data);
-  virtual bool get(ds_bulk_t &key, ds_bulk_t &data);
-  virtual bool get(ds_bulk_t &key, std::vector<ds_bulk_t> &data);
+  virtual bool put(const ds_bulk_t &key, const ds_bulk_t &data);
+  virtual bool get(const ds_bulk_t &key, ds_bulk_t &data);
+  virtual bool get(const ds_bulk_t &key, std::vector<ds_bulk_t> &data);
   virtual void set_in_memory(bool enable); // enable/disable in-memory mode
-  virtual std::vector<ds_bulk_t>* list(ds_bulk_t &start, size_t count);
+  virtual std::vector<ds_bulk_t> list(const ds_bulk_t &start, size_t count);
 protected:
   DbEnv *_dbenv = NULL;
   Db *_dbm = NULL;

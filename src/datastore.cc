@@ -56,9 +56,11 @@ void BwTreeDataStore::createDatabase(std::string db_name) {
   _tree->AssignGCID(0);
 };
 
-bool BwTreeDataStore::put(ds_bulk_t &key, ds_bulk_t &data) {
+bool BwTreeDataStore::put(const ds_bulk_t &key, const ds_bulk_t &data) {
   std::vector<ds_bulk_t> values;
   bool success = false;
+
+  if(!_tree) return false;
   
   if (_duplicates == Duplicates::ALLOW) {
     success = _tree->Insert(key, data);
@@ -81,19 +83,19 @@ bool BwTreeDataStore::put(ds_bulk_t &key, ds_bulk_t &data) {
   return success;
 };
 
-bool BwTreeDataStore::get(ds_bulk_t &key, ds_bulk_t &data) {
+bool BwTreeDataStore::get(const ds_bulk_t &key, ds_bulk_t &data) {
   std::vector<ds_bulk_t> values;
   bool success = false;
 
   _tree->GetValue(key, values);
   if (values.size() == 1) {
-    data = values.front();
+    data = std::move(values.front());
     success = true;
   }
   else if (values.size() > 1) {
     // this should only happen if duplicates are allowed
     if (_duplicates == Duplicates::ALLOW) {
-      data = values.front(); // caller is asking for just 1
+      data = std::move(values.front()); // caller is asking for just 1
       success = true;
     }
   }
@@ -109,7 +111,7 @@ bool BwTreeDataStore::get(ds_bulk_t &key, ds_bulk_t &data) {
   return success;
 };
 
-bool BwTreeDataStore::get(ds_bulk_t &key, std::vector<ds_bulk_t> &data) {
+bool BwTreeDataStore::get(const ds_bulk_t &key, std::vector<ds_bulk_t> &data) {
   std::vector<ds_bulk_t> values;
   bool success = false;
 
@@ -117,12 +119,12 @@ bool BwTreeDataStore::get(ds_bulk_t &key, std::vector<ds_bulk_t> &data) {
   if (values.size() > 1) {
     // this should only happen if duplicates are allowed
     if (_duplicates == Duplicates::ALLOW) {
-      data = values;
+      data = std::move(values);
       success = true;
     }
   }
   else {
-    data = values;
+    data = std::move(values);
     success = true;
   }
   
@@ -132,13 +134,13 @@ bool BwTreeDataStore::get(ds_bulk_t &key, std::vector<ds_bulk_t> &data) {
 void BwTreeDataStore::BwTreeDataStore::set_in_memory(bool enable)
 {};
 
-std::vector<ds_bulk_t>* BwTreeDataStore::BwTreeDataStore::list(ds_bulk_t &start, size_t count)
+std::vector<ds_bulk_t> BwTreeDataStore::BwTreeDataStore::list(const ds_bulk_t &start, size_t count)
 {
-    auto keys = new std::vector<ds_bulk_t>;
+    std::vector<ds_bulk_t> keys;
     auto it = _tree->Begin(start);
     while (it.IsEnd() == false) {
 	/* BUG: bwtree doesn't support "list keys" or "get a key" */
-	//keys->push_back(it.GetLeafNode());
+	//keys.push_back(it.GetLeafNode());
     }
 
     return keys;
@@ -154,12 +156,12 @@ LevelDBDataStore::LevelDBDataStore(Duplicates duplicates, bool eraseOnGet, bool 
   _dbm = NULL;
 };
   
-std::string LevelDBDataStore::toString(ds_bulk_t &bulk_val) {
+std::string LevelDBDataStore::toString(const ds_bulk_t &bulk_val) {
   std::string str_val(bulk_val.begin(), bulk_val.end());
   return str_val;
 };
 
-ds_bulk_t LevelDBDataStore::fromString(std::string &str_val) {
+ds_bulk_t LevelDBDataStore::fromString(const std::string &str_val) {
   ds_bulk_t bulk_val(str_val.begin(), str_val.end());
   return bulk_val;
 };
@@ -192,7 +194,7 @@ void LevelDBDataStore::createDatabase(std::string db_name) {
   // debugging support?
 };
 
-bool LevelDBDataStore::put(ds_bulk_t &key, ds_bulk_t &data) {
+bool LevelDBDataStore::put(const ds_bulk_t &key, const ds_bulk_t &data) {
   leveldb::Status status;
   bool success = false;
   
@@ -220,7 +222,7 @@ bool LevelDBDataStore::put(ds_bulk_t &key, ds_bulk_t &data) {
   return success;
 };
 
-bool LevelDBDataStore::get(ds_bulk_t &key, ds_bulk_t &data) {
+bool LevelDBDataStore::get(const ds_bulk_t &key, ds_bulk_t &data) {
   leveldb::Status status;
   bool success = false;
 
@@ -241,7 +243,7 @@ bool LevelDBDataStore::get(ds_bulk_t &key, ds_bulk_t &data) {
   return success;
 };
 
-bool LevelDBDataStore::get(ds_bulk_t &key, std::vector<ds_bulk_t> &data) {
+bool LevelDBDataStore::get(const ds_bulk_t &key, std::vector<ds_bulk_t> &data) {
   bool success = false;
 
   data.clear();
@@ -257,15 +259,15 @@ bool LevelDBDataStore::get(ds_bulk_t &key, std::vector<ds_bulk_t> &data) {
 void LevelDBDataStore::LevelDBDataStore::set_in_memory(bool enable)
 {};
 
-std::vector<ds_bulk_t>* LevelDBDataStore::LevelDBDataStore::list(ds_bulk_t &start, size_t count)
+std::vector<ds_bulk_t> LevelDBDataStore::LevelDBDataStore::list(const ds_bulk_t &start, size_t count)
 {
-    auto keys = new std::vector<ds_bulk_t>;
+    std::vector<ds_bulk_t> keys;
 
     leveldb::Iterator *it = _dbm->NewIterator(leveldb::ReadOptions());
     for (it->SeekToFirst(); it->Valid(); it->Next() ) {
-	ds_bulk_t *k = new ds_bulk_t(it->key().size());
-	memcpy(k->data(), it->key().data(), it->key().size() );
-	keys->push_back(*k);
+        ds_bulk_t k(it->key().size());
+        memcpy(k.data(), it->key().data(), it->key().size() );
+        keys.push_back(k);
     }
     delete it;
     return keys;
@@ -387,7 +389,7 @@ void BerkeleyDBDataStore::createDatabase(std::string db_name) {
   // debugging support?
 };
 
-bool BerkeleyDBDataStore::put(ds_bulk_t &key, ds_bulk_t &data) {
+bool BerkeleyDBDataStore::put(const ds_bulk_t &key, const ds_bulk_t &data) {
   int status = 0;
   bool success = false;
   
@@ -419,7 +421,7 @@ bool BerkeleyDBDataStore::put(ds_bulk_t &key, ds_bulk_t &data) {
 
 // In the case where Duplicates::ALLOW, this will return the first
 // value found using key.
-bool BerkeleyDBDataStore::get(ds_bulk_t &key, ds_bulk_t &data) {
+bool BerkeleyDBDataStore::get(const ds_bulk_t &key, ds_bulk_t &data) {
   int status = 0;
   bool success = false;
 
@@ -454,7 +456,7 @@ bool BerkeleyDBDataStore::get(ds_bulk_t &key, ds_bulk_t &data) {
 
 // TODO: To return more than 1 value (when Duplicates::ALLOW), this code should
 // use the c_get interface.
-bool BerkeleyDBDataStore::get(ds_bulk_t &key, std::vector<ds_bulk_t> &data) {
+bool BerkeleyDBDataStore::get(const ds_bulk_t &key, std::vector<ds_bulk_t> &data) {
   bool success = false;
 
   data.clear();
@@ -471,18 +473,18 @@ void BerkeleyDBDataStore::BerkeleyDBDataStore::set_in_memory(bool enable) {
   _in_memory = enable;
 };
 
-std::vector<ds_bulk_t>* BerkeleyDBDataStore::BerkeleyDBDataStore::list(ds_bulk_t &start, size_t count)
+std::vector<ds_bulk_t> BerkeleyDBDataStore::BerkeleyDBDataStore::list(const ds_bulk_t &start, size_t count)
 {
-    auto keys = new std::vector<ds_bulk_t>;
+    std::vector<ds_bulk_t> keys;
     Dbc * cursorp;
     Dbt key, data;
     int ret;
     _dbm->cursor(NULL, &cursorp, 0);
     while (ret = cursorp->get(&key, &data, DB_NEXT) == 0) {
-	ds_bulk_t *k = new ds_bulk_t(key.get_size() );
-	memcpy(k->data(), key.get_data(), key.get_size() );
+	ds_bulk_t k(key.get_size() );
+	memcpy(k.data(), key.get_data(), key.get_size() );
 	/* I hope this is a deep copy! */
-	keys->push_back(*k);
+	keys.push_back(std::move(k));
     }
     cursorp->close();
     return keys;

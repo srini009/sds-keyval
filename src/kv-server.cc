@@ -360,17 +360,17 @@ static hg_return_t list_handler(hg_handle_t handle)
 
     auto keys = datastore->list(start, list_in.list_in.max_keys);
 
-    list_out.list_out.nkeys = keys->size();
+    list_out.list_out.nkeys = keys.size();
     /* we have a C++ vector but will serialize it before shipping over wire.
      * One array of "ksizes" tells us how the data is packed into "keys". */
 
     list_out.list_out.keys =
-	(kv_data_t *)malloc(keys->size()*sizeof(kv_data_t));
+	(kv_data_t *)malloc(keys.size()*sizeof(kv_data_t));
     list_out.list_out.ksizes =
-	(hg_size_t *)malloc(keys->size()*sizeof(hg_size_t));
+	(hg_size_t *)malloc(keys.size()*sizeof(hg_size_t));
 	
     int j=0;
-    for (auto it: *keys) {
+    for (auto it: keys) {
 	list_out.list_out.ksizes[j] = it.size();
 	list_out.list_out.keys[j] = (kv_data_t)malloc(it.size());
 	memcpy(list_out.list_out.keys[j],
