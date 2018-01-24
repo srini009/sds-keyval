@@ -92,8 +92,6 @@ if test "x${berkelydb_backend}" == xyes ; then
 	AC_CHECK_HEADERS([dbstl_map.h],,
 			 AC_ERROR("Could not find Berkely DB STL headers"))
 	AC_DEFINE([USE_BDB], 1, [Use Berkely DB backend])
-	bwtree_backend=no
-	leveldb_backend=no
 	SERVER_LIBS="${SERVER_LIBS} -ldb_cxx -ldb_stl"
 	AC_LANG_POP
 fi
@@ -105,20 +103,17 @@ if test "x${leveldb_backend}" == xyes ; then
 			 AC_ERROR("Could not find leveldb headers"))
 	AC_DEFINE([USE_LEVELDB], 1, [use leveldb backend])
 	SERVER_LIBS="${SERVER_LIBS} -lleveldb"
-	berkelydb_backend=no
-	bwtree_backend=no
 fi
 
 if test "x${bwtree_backend}" == xyes ; then
 	AC_DEFINE([USE_BWTREE], 1, [use BwTree backend])
 	CPPFLAGS="-I${srcdir}/src/BwTree/src ${CPPFLAGS}"
-
 	CXXFLAGS="-pthread -std=c++11 -g -Wall -mcx16 -Wno-invalid-offsetof ${CXXFLAGS}"
-	berkeleydb_backend=no
-	leveldb_backend=no
 fi
-AM_CONDITIONAL([BUILD_BWTREE], [test "x${bwtree_backend}" == xyes])
 
+AM_CONDITIONAL([BUILD_BDB], [test "x${berkelydb_backend}" == xyes])
+AM_CONDITIONAL([BUILD_LEVELDB], [test "x${leveldb_backend}" == xyes])
+AM_CONDITIONAL([BUILD_BWTREE], [test "x${bwtree_backend}" == xyes])
 
 AC_SUBST(SERVER_LIBS)
 AC_SUBST(GROUP_LIBS)

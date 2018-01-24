@@ -27,7 +27,16 @@ lib_libkvserver_la_SOURCES = src/kv-server.cc \
                         src/datastore.cc
 
 if BUILD_BWTREE
-lib_libkvserver_la_SOURCES += src/BwTree/src/bwtree.cpp
+lib_libkvserver_la_SOURCES += src/BwTree/src/bwtree.cpp \
+			      src/bwtree_datastore.cc
+endif
+
+if BUILD_BDB
+lib_libkvserver_la_SOURCES += src/berkeleydb_datastore.cc
+endif
+
+if BUILD_LEVELDB
+lib_libkvserver_la_SOURCES += src/leveldb_datastore.cc
 endif
 
 

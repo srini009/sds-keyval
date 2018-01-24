@@ -4,6 +4,18 @@
 #include "datastore.h"
 #include "kv-config.h"
 
+#ifdef USE_BWTREE
+#include "bwtree_datastore.h"
+#endif
+
+#ifdef USE_BDB
+#include "berkeleydb_datastore.h"
+#endif
+
+#ifdef USE_LEVELDB
+#include "leveldb_datastore.h"
+#endif
+
 #include <mercury.h>
 #include <margo.h>
 #include <abt-snoozer.h>
