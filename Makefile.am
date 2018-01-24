@@ -24,26 +24,30 @@ lib_libkvclient_la_SOURCES = src/kv-client.c
 lib_libkvgroupclient_la_SOURCES = src/kvgroup-client.cc
 
 lib_libkvserver_la_SOURCES = src/kv-server.cc \
-                        src/datastore.cc
+			     src/datastore/datastore.cc
 
 if BUILD_BWTREE
 lib_libkvserver_la_SOURCES += src/BwTree/src/bwtree.cpp \
-			      src/bwtree_datastore.cc
+			      src/datastore/bwtree_datastore.cc
 endif
 
 if BUILD_BDB
-lib_libkvserver_la_SOURCES += src/berkeleydb_datastore.cc
+lib_libkvserver_la_SOURCES += src/datastore/berkeleydb_datastore.cc
 endif
 
 if BUILD_LEVELDB
-lib_libkvserver_la_SOURCES += src/leveldb_datastore.cc
+lib_libkvserver_la_SOURCES += src/datastore/leveldb_datastore.cc
 endif
 
 
 include_HEADERS = src/sds-keyval.h \
 		  src/sds-keyval-group.h
 
-noinst_HEADERS = src/datastore.h \
+noinst_HEADERS = src/datastore/datastore.h \
+		 src/datastore/bwtree_datastore.h \
+		 src/datastore/leveldb_datastore.h \
+		 src/datastore/berkeleydb_datastore.h \
+		 src/datastore/datastore_factory.h \
 		 src/keyval-internal.h \
 		 src/BwTree/src/bwtree.h \
 		 src/BwTree/src/atomic_stack.h\

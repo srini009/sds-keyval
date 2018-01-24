@@ -1,10 +1,8 @@
 #include "sds-keyval.h"
 #include "kv-config.h"
 #include "keyval-internal.h"
-#include "datastore.h"
-#include "kv-config.h"
-
-#include "datastore_factory.h"
+#include "datastore/datastore.h"
+#include "datastore/datastore_factory.h"
 
 #include <mercury.h>
 #include <margo.h>
