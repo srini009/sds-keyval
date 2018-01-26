@@ -7,7 +7,8 @@ AM_CPPFLAGS = -I${srcdir}/src
 
 bin_PROGRAMS = bin/sdskv-server-daemon \
 	       bin/sdskv-shutdown \
-	       test/sdskv-client-test
+	       test/sdskv-open-test \
+	       test/sdskv-put-test
 
 bin_sdskv_server_daemon_SOURCES = src/sdskv-server-daemon.c
 bin_sdskv_server_daemon_DEPENDENCIES = lib/libsdskv-server.la
@@ -76,16 +77,22 @@ noinst_HEADERS = src/datastore/datastore.h \
 
 lib_libkvgroupserver_la_SOURCES = src/kvgroup-server.cc
 
-check_PROGRAMS = test/sdskv-client-test
+check_PROGRAMS = test/sdskv-open-test
 
-TESTS = test/basic.sh
+TESTS = test/basic.sh \
+	test/open-test.sh \
+       	test/put-test.sh
 
 TESTS_ENVIRONMENT = TIMEOUT="$(TIMEOUT)" \
 		    MKTEMP="$(MKTEMP)"
 
-test_sdskv_client_test_SOURCES = test/sdskv-client-test.cc
-test_sdskv_client_test_DEPENDENCIES = lib/libsdskv-client.la
-test_sdskv_client_test_LDFLAGS = -Llib -lsdskv-client
+test_sdskv_open_test_SOURCES = test/sdskv-open-test.cc
+test_sdskv_open_test_DEPENDENCIES = lib/libsdskv-client.la
+test_sdskv_open_test_LDFLAGS = -Llib -lsdskv-client
+
+test_sdskv_put_test_SOURCES = test/sdskv-put-test.cc
+test_sdskv_put_test_DEPENDENCIES = lib/libsdskv-client.la
+test_sdskv_put_test_LDFLAGS = -Llib -lsdskv-client
 
 #############################################################
 ## tests bellow correspond to old tests (see old-test folder)

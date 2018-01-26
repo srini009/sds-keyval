@@ -164,6 +164,8 @@ int sdskv_open(
         return -1;
     }
 
+    in.name = (char*)db_name;
+
     hret = margo_forward(handle, &in);
     if(hret != HG_SUCCESS) {
         margo_destroy(handle);
@@ -213,23 +215,29 @@ int sdskv_put(sdskv_provider_handle_t provider,
                 provider->addr,
                 provider->client->sdskv_put_id,
                 &handle);
-        if(hret != HG_SUCCESS) return -1;
+        if(hret != HG_SUCCESS) {
+            fprintf(stderr,"[SDSKV] margo_create() failed in sdskv_put()\n");
+            return -1;
+        }
 
         hret = margo_set_target_id(handle, provider->mplex_id);
 
         if(hret != HG_SUCCESS) {
+            fprintf(stderr,"[SDSKV] margo_set_target_id() failed in sdskv_put()\n");
             margo_destroy(handle);
             return -1;
         }
 
         hret = margo_forward(handle, &in);
         if(hret != HG_SUCCESS) {
+            fprintf(stderr,"[SDSKV] margo_forward() failed in sdskv_put()\n");
             margo_destroy(handle);
             return -1;
         }
 
         hret = margo_get_output(handle, &out);
         if(hret != HG_SUCCESS) {
+            fprintf(stderr,"[SDSKV] margo_get_output() failed in sdskv_put()\n");
             margo_destroy(handle);
             return -1;
         }
@@ -250,7 +258,10 @@ int sdskv_put(sdskv_provider_handle_t provider,
 
         hret = margo_bulk_create(provider->client->mid, 1, (void**)(&value), &in.bulk.vsize,
                                 HG_BULK_READ_ONLY, &in.bulk.handle);
-        if(ret != HG_SUCCESS) return -1;
+        if(ret != HG_SUCCESS) {
+            fprintf(stderr,"[SDSKV] margo_bulk_create() failed in sdskv_put()\n");
+            return -1;
+        }
 
         /* create handle */
         hret = margo_create(
@@ -259,6 +270,7 @@ int sdskv_put(sdskv_provider_handle_t provider,
                 provider->client->sdskv_bulk_put_id,
                 &handle);
         if(hret != HG_SUCCESS) {
+            fprintf(stderr,"[SDSKV] margo_create() failed in sdskv_put()\n");
             margo_bulk_free(in.bulk.handle);
             return -1;
         }
@@ -266,6 +278,7 @@ int sdskv_put(sdskv_provider_handle_t provider,
         hret = margo_set_target_id(handle, provider->mplex_id);
 
         if(hret != HG_SUCCESS) {
+            fprintf(stderr,"[SDSKV] margo_set_target_id() failed in sdskv_put()\n");
             margo_bulk_free(in.bulk.handle);
             margo_destroy(handle);
             return -1;
@@ -273,6 +286,7 @@ int sdskv_put(sdskv_provider_handle_t provider,
 
         hret = margo_forward(handle, &in);
         if(hret != HG_SUCCESS) {
+            fprintf(stderr,"[SDSKV] margo_forward() failed in sdskv_put()\n");
             margo_bulk_free(in.bulk.handle);
             margo_destroy(handle);
             return -1;
@@ -280,6 +294,7 @@ int sdskv_put(sdskv_provider_handle_t provider,
 
         hret = margo_get_output(handle, &out);
         if(hret != HG_SUCCESS) {
+            fprintf(stderr,"[SDSKV] margo_get_output() failed in sdskv_put()\n");
             margo_bulk_free(in.bulk.handle);
             margo_destroy(handle);
             return -1;

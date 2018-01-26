@@ -36,10 +36,11 @@ static void usage(int argc, char **argv)
     return;
 }
 
-static sdskv_db_type_t parse_db_type(const char* db_fullname) {
-    const char* column = strstr(db_fullname, ":");
+static sdskv_db_type_t parse_db_type(char* db_fullname) {
+    char* column = strstr(db_fullname, ":");
     if(column == NULL) return KVDB_BWTREE;
-    const char* db_type = column + 1;
+    *column = '\0';
+    char* db_type = column + 1;
     if(strcmp(db_type, "bwt") == 0) {
         return KVDB_BWTREE;
     } else if(strcmp(db_type, "bdb") == 0) {
@@ -185,7 +186,7 @@ int main(int argc, char **argv)
                 return(-1);
             }
 
-            printf("Provider %d managing new database at multiplex id %d\n", i, i+1);
+            printf("Provider %d managing database \"%s\" at multiplex id %d\n", i, opts.db_names[i], i+1);
         }
 
     } else {
@@ -215,7 +216,7 @@ int main(int argc, char **argv)
                 return(-1);
             }
 
-            printf("Provider 0 managing new database at multiplex id %d\n", 1);
+            printf("Provider 0 managing database \"%s\" at multiplex id %d\n", opts.db_names[i] , 1);
         }
     }
 

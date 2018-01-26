@@ -35,7 +35,7 @@ function test_start_server ()
     startwait=${1:-15}
     maxtime=${2:-120}
 
-    run_to ${maxtime} src/sdskv-server-daemon -f $TMPBASE/sdskv.addr na+sm ${@:3} &
+    run_to ${maxtime} bin/sdskv-server-daemon -f $TMPBASE/sdskv.addr na+sm ${@:3} &
     # wait for server to start
     sleep ${startwait}
 

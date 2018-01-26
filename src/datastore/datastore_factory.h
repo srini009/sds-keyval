@@ -1,5 +1,6 @@
 #ifndef datastore_factory_h
 #define datastore_factory_h
+#include <string>
 
 #ifdef SDSKV
 #include "sdskv-common.h"
@@ -22,25 +23,31 @@
 
 class datastore_factory {
 
-    static AbstractDataStore* create_bwtree_datastore() {
+    static AbstractDataStore* create_bwtree_datastore(const std::string& name) {
 #ifdef USE_BWTREE
-        return new BwTreeDataStore();
+        auto db = new BwTreeDataStore();
+        db->createDatabase(name);
+        return db;
 #else
         return nullptr;
 #endif
     }
 
-    static AbstractDataStore* create_berkeleydb_datastore() {
+    static AbstractDataStore* create_berkeleydb_datastore(const std::string& name) {
 #ifdef USE_BDB
-        return new BerkeleyDBDataStore();
+        auto db = new BerkeleyDBDataStore();
+        db->createDatabase(name);
+        return db;
 #else
         return nullptr;
 #endif
     }
 
-    static AbstractDataStore* create_leveldb_datastore() {
+    static AbstractDataStore* create_leveldb_datastore(const std::string& name) {
 #ifdef USE_LEVELDB
-        return new LevelDBDataStore();
+        auto db = new LevelDBDataStore();
+        db->createDatabase(name);
+        return db;
 #else
         return nullptr;
 #endif
@@ -49,18 +56,18 @@ class datastore_factory {
     public:
 
 #ifdef SDSKV
-    static AbstractDataStore* create_datastore(sdskv_db_type_t type)
+    static AbstractDataStore* create_datastore(sdskv_db_type_t type, const std::string& name)
 #else
-    static AbstractDataStore* create_datastore(kv_db_type_t type)
+    static AbstractDataStore* create_datastore(kv_db_type_t type, const std::string& name="db")
 #endif
     {
         switch(type) {
             case KVDB_BWTREE:
-                return create_bwtree_datastore();
+                return create_bwtree_datastore(name);
             case KVDB_LEVELDB:
-                return create_berkeleydb_datastore();
+                return create_berkeleydb_datastore(name);
             case KVDB_BERKELEYDB:
-                return create_leveldb_datastore();
+                return create_leveldb_datastore(name);
         }
         return nullptr;
     };

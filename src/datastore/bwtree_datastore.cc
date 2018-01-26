@@ -20,7 +20,9 @@ BwTreeDataStore::BwTreeDataStore(Duplicates duplicates, bool eraseOnGet, bool de
 
 BwTreeDataStore::~BwTreeDataStore() {
   // deleting BwTree can cause core dump
-  delete _tree;
+#if 0 // letting leak, for now
+    delete _tree;
+#endif
 };
 
 void BwTreeDataStore::createDatabase(std::string db_name) {

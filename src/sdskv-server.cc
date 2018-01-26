@@ -5,6 +5,7 @@
  */
 
 #include <map>
+#include <iostream>
 #include <unordered_map>
 #define SDSKV
 #include "datastore/datastore_factory.h"
@@ -98,7 +99,7 @@ extern "C" int sdskv_provider_add_database(
         sdskv_db_type_t db_type,
         sdskv_database_id_t* db_id)
 {
-    auto db = datastore_factory::create_datastore(db_type);
+    auto db = datastore_factory::create_datastore(db_type, std::string(db_name));
     if(db == nullptr) return -1;
     sdskv_database_id_t id = (sdskv_database_id_t)(db);
 
@@ -201,7 +202,7 @@ static void sdskv_put_ult(hg_handle_t handle)
     if(it->second->put(kdata, vdata)) {
         out.ret = 0;
     } else {
-        out.ret = 1;
+        out.ret = -1;
     }
 
     margo_respond(handle, &out);
