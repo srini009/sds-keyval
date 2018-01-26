@@ -117,6 +117,6 @@ AM_CONDITIONAL([BUILD_BWTREE], [test "x${bwtree_backend}" == xyes])
 
 AC_SUBST(SERVER_LIBS)
 AC_SUBST(GROUP_LIBS)
-AC_CONFIG_FILES([Makefile maint/kv-client.pc maint/kv-server.pc])
+AC_CONFIG_FILES([Makefile maint/sdskv-client.pc maint/sdskv-server.pc])
 AC_OUTPUT
 

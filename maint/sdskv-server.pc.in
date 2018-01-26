@@ -3,10 +3,10 @@ exec_prefix=@exec_prefix@
 libdir=@libdir@
 includedir=@includedir@
 
-Name: kv-client
-Description: services-based keyval client
+Name: sdskv-server
+Description: services-based keyval server
 Version: 0.1
 URL: https://xgitlab.cels.anl.gov/sds/sds-keyval
 Requires: margo
-Libs: -L${libdir} -lkvclient
+Libs: -L${libdir} -lsdskv-server @SERVER_LIBS@
 Cflags: -I${includedir}
