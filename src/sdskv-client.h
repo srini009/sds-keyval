@@ -28,7 +28,7 @@ int sdskv_provider_handle_create(
 int sdskv_provider_handle_ref_incr(
         sdskv_provider_handle_t handle);
 
-int sdskv_provider_release(sdskv_provider_handle_t handle);
+int sdskv_provider_handle_release(sdskv_provider_handle_t handle);
 
 int sdskv_open(
         sdskv_provider_handle_t provider,

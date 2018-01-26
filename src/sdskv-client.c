@@ -126,7 +126,7 @@ int sdskv_provider_handle_ref_incr(
     return 0;
 }
 
-int sdskv_provider_release(sdskv_provider_handle_t handle)
+int sdskv_provider_handle_release(sdskv_provider_handle_t handle)
 {
     if(handle == SDSKV_PROVIDER_HANDLE_NULL) return -1;
     handle->refcount -= 1;

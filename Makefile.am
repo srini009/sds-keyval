@@ -5,12 +5,19 @@ CLIENT_LiBS=@CLIENT_LIBS@
 
 AM_CPPFLAGS = -I${srcdir}/src
 
-bin_PROGRAMS = bin/sdskv-server-daemon
+bin_PROGRAMS = bin/sdskv-server-daemon \
+	       bin/sdskv-shutdown \
+	       test/sdskv-client-test
 
 bin_sdskv_server_daemon_SOURCES = src/sdskv-server-daemon.c
-bin_sdskv_server_daemon_DEPENDENCIES = lib/libkvclient.la
+bin_sdskv_server_daemon_DEPENDENCIES = lib/libsdskv-server.la
 bin_sdskv_server_daemon_LDFLAGS = -Llib -lsdskv-server
 bin_sdskv_server_daemon_LDADD = ${LIBS} -lsdskv-server ${SERVER_LIBS}
+
+bin_sdskv_shutdown_SOURCES = src/sdskv-shutdown.c
+bin_sdskv_shutdown_DEPENDENCIES = lib/libsdskv-client.la
+bin_sdskv_shutdown_LDFLAGS = -Llib -lsdskv-client
+bin_sdskv_shutdown_LDADD = ${LIBS} -lsdskv-client
 
 lib_LTLIBRARIES = lib/libkvclient.la \
                   lib/libkvserver.la \
@@ -69,6 +76,16 @@ noinst_HEADERS = src/datastore/datastore.h \
 
 lib_libkvgroupserver_la_SOURCES = src/kvgroup-server.cc
 
+check_PROGRAMS = test/sdskv-client-test
+
+TESTS = test/basic.sh
+
+TESTS_ENVIRONMENT = TIMEOUT="$(TIMEOUT)" \
+		    MKTEMP="$(MKTEMP)"
+
+test_sdskv_client_test_SOURCES = test/sdskv-client-test.cc
+test_sdskv_client_test_DEPENDENCIES = lib/libsdskv-client.la
+test_sdskv_client_test_LDFLAGS = -Llib -lsdskv-client
 
 #############################################################
 ## tests bellow correspond to old tests (see old-test folder)
