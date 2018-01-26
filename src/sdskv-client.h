@@ -73,6 +73,17 @@ int sdskv_list_keys_with_prefix(sdskv_provider_handle_t provider,
                                 // keys for each key
         hg_size_t* max_keys);   // maximum number of keys requested
 
+/**
+ * Shuts down a remote SDSKV service (given an address).
+ * This will shutdown all the providers on the target address.
+ * 
+ * @param [in] client SDSKV client
+ * @param [in] addr address of the server 
+ * @returns 0 on success, -1 on failure 
+ */
+int sdskv_shutdown_service(
+        sdskv_client_t client, hg_addr_t addr);
+
 #if defined(__cplusplus)
 }
 #endif

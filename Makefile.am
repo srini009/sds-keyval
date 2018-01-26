@@ -5,6 +5,13 @@ CLIENT_LiBS=@CLIENT_LIBS@
 
 AM_CPPFLAGS = -I${srcdir}/src
 
+bin_PROGRAMS = src/sdskv-server-daemon
+
+src_sdskv_server_daemon_SOURCES = src/sdskv-server-daemon.c
+src_sdskv_server_daemon_DEPENDENCIES = lib/libkvclient.la
+src_sdskv_server_daemon_LDFLAGS = -Llib -lsdskv-server
+src_sdskv_server_daemon_LDADD = ${LIBS} -lsdskv-server ${SERVER_LIBS}
+
 lib_LTLIBRARIES = lib/libkvclient.la \
                   lib/libkvserver.la \
                   lib/libkvgroupclient.la \

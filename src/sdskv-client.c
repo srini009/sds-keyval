@@ -539,3 +539,7 @@ int sdskv_list_keys_with_prefix(sdskv_provider_handle_t provider,
     // TODO
 }
 
+int sdskv_shutdown_service(sdskv_client_t client, hg_addr_t addr)
+{
+    return margo_shutdown_remote_instance(client->mid, addr);
+}

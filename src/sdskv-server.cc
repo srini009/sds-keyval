@@ -48,7 +48,7 @@ extern "C" int sdskv_provider_register(
     }
 
     /* allocate the resulting structure */    
-    tmp_svr_ctx = (sdskv_provider_t)calloc(1,sizeof(*tmp_svr_ctx));
+    tmp_svr_ctx = new sdskv_server_context_t;
     if(!tmp_svr_ctx)
         return(-1);
 
@@ -620,7 +620,6 @@ static void sdskv_list_ult(hg_handle_t handle)
     margo_destroy(handle); 
 
     return;
-    return;
 }
 DEFINE_MARGO_RPC_HANDLER(sdskv_list_ult)
 
@@ -631,7 +630,7 @@ static void sdskv_server_finalize_cb(void *data)
 
     sdskv_provider_remove_all_databases(svr_ctx);
 
-    free(svr_ctx);
+    delete svr_ctx;
 
     return;
 }

@@ -8,7 +8,7 @@
 #define __SDSKV_SERVER_H
 
 #include <margo.h>
-#include "sdskv-common.h"
+#include <sdskv-common.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -36,7 +36,7 @@ int sdskv_provider_register(
  *
  * @return 0 on success, -1 on failure
  */
-int sdskv_provider_add_storage_target(
+int sdskv_provider_add_database(
         sdskv_provider_t provider,
         const char* db_name,
         sdskv_db_type_t db_type,
@@ -50,7 +50,7 @@ int sdskv_provider_add_storage_target(
  *
  * @return 0 on success, -1 on failure
  */
-int sdskv_provider_remove_storage_target(
+int sdskv_provider_remove_database(
         sdskv_provider_t provider,
         sdskv_database_id_t db_id);
 
