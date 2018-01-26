@@ -122,7 +122,8 @@ int main(int argc, char *argv[])
       
       // open specified "DB" (pass in the server's address)
       const char *db = "db/minima_store";
-      hret = kvgroup_open(group, (char*)db);
+      kv_db_type_t db_type = KVDB_BWTREE;
+      hret = kvgroup_open(group, (char*)db, db_type);
       DIE_IF(hret != HG_SUCCESS, "kvgroup_open");
       
       size_t vsize = 1;

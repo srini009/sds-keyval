@@ -105,7 +105,8 @@ int main(int argc, char *argv[])
       
       // open specified "DB" (pass in the server's address)
       const char *db = "db/minima_store";
-      kv_db = kv_open(context, server_addr_str, db);
+      kv_db_type_t db_type = KVDB_BWTREE;
+      kv_db = kv_open(context, server_addr_str, db, db_type);
       DIE_IF(kv_db == NULL, "kv_open");
       
       size_t vsize = 1;

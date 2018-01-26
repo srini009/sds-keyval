@@ -54,7 +54,7 @@ hg_return_t kvgroup_server_deregister(kv_group_t *group);
 hg_return_t kvgroup_server_wait_for_shutdown(kv_group_t *group);
 
 kv_group_t  *kvgroup_client_register(margo_instance_id mid, ssg_group_id_t gid);
-hg_return_t kvgroup_open(kv_group_t  *group, const char *db_name);
+hg_return_t kvgroup_open(kv_group_t  *group, const char *db_name, kv_db_type_t db_type);
 hg_return_t kvgroup_put(kv_group_t *group, uint64_t oid,
 			void *key, hg_size_t ksize,
 			void *value, hg_size_t vsize);

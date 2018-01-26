@@ -536,7 +536,7 @@ static hg_return_t bench_handler(hg_handle_t handle)
 }
 DEFINE_MARGO_RPC_HANDLER(bench_handler)
 
-kv_context_t *kv_server_register(const margo_instance_id mid)
+extern "C" kv_context_t *kv_server_register(const margo_instance_id mid)
 {
   hg_return_t ret;
   hg_addr_t addr_self;
@@ -601,13 +601,13 @@ kv_context_t *kv_server_register(const margo_instance_id mid)
     return context;
 }
 
-hg_return_t kv_server_wait_for_shutdown(kv_context_t *context) {
+extern "C" hg_return_t kv_server_wait_for_shutdown(kv_context_t *context) {
   margo_wait_for_finalize(context->mid);
   return HG_SUCCESS;
 }
 
 /* this is the same as client. should be moved to common utility library */
-hg_return_t kv_server_deregister(kv_context_t *context) {
+extern "C" hg_return_t kv_server_deregister(kv_context_t *context) {
   free(context);
   delete datastore;
   std::cout << "SERVER: cleanup complete, deregistered" << std::endl;

@@ -5,7 +5,6 @@
 
 #include "kv-config.h"
 #include "bulk.h"
-#include "sds-keyval.h"
 
 #include <boost/functional/hash.hpp>
 #include <vector>

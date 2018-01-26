@@ -19,7 +19,7 @@ static void group_update_cb(ssg_membership_update_t update, void *cb_dat)
 }
 
 /* this is a collective operation */
-kv_group_t *kvgroup_server_register(margo_instance_id mid,
+extern "C" kv_group_t *kvgroup_server_register(margo_instance_id mid,
 	const char *ssg_name, MPI_Comm ssg_comm)
 {
   kv_group_t * group = (kv_group_t *)calloc(1, sizeof(kv_group_t));
@@ -45,7 +45,7 @@ kv_group_t *kvgroup_server_register(margo_instance_id mid,
   return group;
 }
 
-hg_return_t kvgroup_server_deregister(kv_group_t *group)
+extern "C" hg_return_t kvgroup_server_deregister(kv_group_t *group)
 {
   hg_return_t ret = kv_server_deregister(group->kv_context);
   ssg_group_destroy(group->gid);
@@ -55,7 +55,7 @@ hg_return_t kvgroup_server_deregister(kv_group_t *group)
   return ret;
 }
 
-hg_return_t kvgroup_server_wait_for_shutdown(kv_group_t *group)
+extern "C" hg_return_t kvgroup_server_wait_for_shutdown(kv_group_t *group)
 {
   hg_return_t ret = kv_server_wait_for_shutdown(group->kv_context);
   return ret;
@@ -64,7 +64,7 @@ hg_return_t kvgroup_server_wait_for_shutdown(kv_group_t *group)
 // collective along with kvgroup_client_recv_gid
 // single server rank calls send, all client ranks call recv
 // gid is an input argument
-void kvgroup_server_send_gid(ssg_group_id_t gid, MPI_Comm comm)
+extern "C" void kvgroup_server_send_gid(ssg_group_id_t gid, MPI_Comm comm)
 {
   char *serialized_gid = NULL;
   size_t gid_size = 0;

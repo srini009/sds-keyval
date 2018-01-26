@@ -17,7 +17,11 @@ test_bench_client_LDADD = ${LIBS} -lkvclient
 lib_LTLIBRARIES = lib/libkvclient.la \
                   lib/libkvserver.la \
                   lib/libkvgroupclient.la \
-                  lib/libkvgroupserver.la
+                  lib/libkvgroupserver.la \
+		  lib/libsdskv-client.la \
+		  lib/libsdskv-server.la
+
+lib_libsdskv_client_la_SOURCES = src/sdskv-client.c
 
 lib_libkvclient_la_SOURCES = src/kv-client.c
 
@@ -26,17 +30,27 @@ lib_libkvgroupclient_la_SOURCES = src/kvgroup-client.cc
 lib_libkvserver_la_SOURCES = src/kv-server.cc \
 			     src/datastore/datastore.cc
 
+lib_libsdskv_server_la_SOURCES = src/sdskv-server.cc \
+				 src/datastore/datastore.cc
+
 if BUILD_BWTREE
 lib_libkvserver_la_SOURCES += src/BwTree/src/bwtree.cpp \
 			      src/datastore/bwtree_datastore.cc
+
+lib_libsdskv_server_la_SOURCES += src/BwTree/src/bwtree.cpp \
+				  src/datastore/bwtree_datastore.cc
 endif
 
 if BUILD_BDB
 lib_libkvserver_la_SOURCES += src/datastore/berkeleydb_datastore.cc
+
+lib_libsdskv_server_la_SOURCES += src/datastore/berkeleydb_datastore.cc
 endif
 
 if BUILD_LEVELDB
 lib_libkvserver_la_SOURCES += src/datastore/leveldb_datastore.cc
+
+lib_libsdskv_server_la_SOURCES += src/datastore/leveldb_datastore.cc
 endif
 
 

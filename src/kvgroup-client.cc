@@ -11,7 +11,7 @@
 
 unsigned long server_indexes[CH_MAX_REPLICATION];
 
-kv_group_t *kvgroup_client_register(margo_instance_id mid, ssg_group_id_t gid)
+extern "C" kv_group_t *kvgroup_client_register(margo_instance_id mid, ssg_group_id_t gid)
 {
   kv_group_t *group = (kv_group_t*)calloc(1, sizeof(group));
   
@@ -28,7 +28,7 @@ kv_group_t *kvgroup_client_register(margo_instance_id mid, ssg_group_id_t gid)
   return group;
 }
 
-hg_return_t kvgroup_open(kv_group_t *group, const char *db_name, kv_db_type_t db_type)
+extern "C" hg_return_t kvgroup_open(kv_group_t *group, const char *db_name, kv_db_type_t db_type)
 {
   hg_size_t addr_str_sz = 128;
   char addr_str[addr_str_sz];
@@ -74,7 +74,7 @@ hg_return_t kvgroup_open(kv_group_t *group, const char *db_name, kv_db_type_t db
 
 // oid is unique associated with key
 // in ParSplice key is already a uint64_t hashed value
-hg_return_t kvgroup_put(kv_group_t * group, uint64_t oid,
+extern "C" hg_return_t kvgroup_put(kv_group_t * group, uint64_t oid,
 			void *key, hg_size_t ksize,
 			void *value, hg_size_t vsize)
 {
@@ -89,7 +89,7 @@ hg_return_t kvgroup_put(kv_group_t * group, uint64_t oid,
 // oid is unique associated with key
 // in ParSplice key is already a uint64_t hashed value
 // vsize is in/out
-hg_return_t kvgroup_get(kv_group_t *group, uint64_t oid,
+extern "C" hg_return_t kvgroup_get(kv_group_t *group, uint64_t oid,
 			void *key, hg_size_t ksize,
 			void *value, hg_size_t *vsize)
 {
@@ -100,7 +100,7 @@ hg_return_t kvgroup_get(kv_group_t *group, uint64_t oid,
   return kv_get(group->db[server_indexes[0]], key, ksize, value, vsize);
 }
 
-hg_return_t kvgroup_close(kv_group_t * group)
+extern "C" hg_return_t kvgroup_close(kv_group_t * group)
 {
   hg_return_t ret;
   for (hg_size_t i=0; i<group->gsize; i++) {
@@ -110,7 +110,7 @@ hg_return_t kvgroup_close(kv_group_t * group)
   return HG_SUCCESS;
 }
 
-hg_return_t kvgroup_client_deregister(kv_group_t * group)
+extern "C" hg_return_t kvgroup_client_deregister(kv_group_t * group)
 {
   hg_return_t ret;
   ret = kv_client_deregister(group->kv_context);
@@ -127,7 +127,7 @@ hg_return_t kvgroup_client_deregister(kv_group_t * group)
 }
 
 // only one client calls shutdown
-hg_return_t kvgroup_client_signal_shutdown(kv_group_t *group)
+extern "C" hg_return_t kvgroup_client_signal_shutdown(kv_group_t *group)
 {
   hg_return_t ret;
   for (hg_size_t i=0; i<group->gsize; i++) {
@@ -140,7 +140,7 @@ hg_return_t kvgroup_client_signal_shutdown(kv_group_t *group)
 // collective along with kvgroup_server_send_gid
 // single server rank calls send, all client ranks call recv
 // gid is an output argument
-void kvgroup_client_recv_gid(ssg_group_id_t *gid, MPI_Comm comm)
+extern "C" void kvgroup_client_recv_gid(ssg_group_id_t *gid, MPI_Comm comm)
 {
   char *serialized_gid = NULL;
   size_t gid_size = 0;

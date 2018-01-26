@@ -1,8 +1,12 @@
 #ifndef datastore_factory_h
 #define datastore_factory_h
 
-#include "datastore.h"
+#ifdef SDSKV
+#include "sdskv-common.h"
+#else
 #include "sds-keyval.h"
+#endif
+#include "datastore.h"
 
 #ifdef USE_BWTREE
 #include "bwtree_datastore.h"
@@ -44,7 +48,11 @@ class datastore_factory {
 
     public:
 
+#ifdef SDSKV
+    static AbstractDataStore* create_datastore(sdskv_db_type_t type)
+#else
     static AbstractDataStore* create_datastore(kv_db_type_t type)
+#endif
     {
         switch(type) {
             case KVDB_BWTREE:
