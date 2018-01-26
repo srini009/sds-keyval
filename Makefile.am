@@ -5,15 +5,6 @@ CLIENT_LiBS=@CLIENT_LIBS@
 
 AM_CPPFLAGS = -I${srcdir}/src
 
-bin_PROGRAMS = test/bench-client \
-	       test/test-client \
-	       test/test-server
-
-test_bench_client_SOURCES = test/bench-client.cc
-test_bench_client_DEPENDENCIES = lib/libkvclient.la
-test_bench_client_LDFLAGS = -Llib -lkvclient
-test_bench_client_LDADD = ${LIBS} -lkvclient
-
 lib_LTLIBRARIES = lib/libkvclient.la \
                   lib/libkvserver.la \
                   lib/libkvgroupclient.la \
@@ -72,40 +63,53 @@ noinst_HEADERS = src/datastore/datastore.h \
 lib_libkvgroupserver_la_SOURCES = src/kvgroup-server.cc
 
 
-check_PROGRAMS = test/test-client \
-		test/test-server \
-		test/bench-client \
-		test/test-mpi \
-		test/test-mpi-group
+#############################################################
+## tests bellow correspond to old tests (see old-test folder)
+#############################################################
+
+#bin_PROGRAMS = test/bench-client \
+#	       test/test-client \
+#	       test/test-server
+
+#test_bench_client_SOURCES = test/bench-client.cc
+#test_bench_client_DEPENDENCIES = lib/libkvclient.la
+#test_bench_client_LDFLAGS = -Llib -lkvclient
+#test_bench_client_LDADD = ${LIBS} -lkvclient
+
+#check_PROGRAMS = test/test-client \
+#		test/test-server \
+#		test/bench-client \
+#		test/test-mpi \
+#		test/test-mpi-group
+#
+
+#TESTS = test/test-client \
+#        test/test-server \
+#	test/bench-client \
+#	test/test-mpi \
+#	test/test-mpi-group
+
+#test_test_client_SOURCES = test/test-client.cc
+#test_test_client_DEPENDENCIES = lib/libkvclient.la
+#test_test_client_LDFLAGS = -Llib -lkvclient
+
+#test_test_server_SOURCES = test/test-server.cc
+#test_test_server_DEPENDENCIES = lib/libkvserver.la
+#test_test_server_LDFLAGS = -Llib -lkvserver ${SERVER_LIBS}
+
+#test_test_mpi_SOURCES = test/test-mpi.cc
 
 
-TESTS = test/test-client \
-        test/test-server \
-	test/bench-client \
-	test/test-mpi \
-	test/test-mpi-group
+#test_test_mpi_DEPENDENCIES = lib/libkvserver.la lib/libkvclient.la
+#test_test_mpi_LDFLAGS = -Llib -lkvclient -lkvserver ${SERVER_LIBS}
 
-test_test_client_SOURCES = test/test-client.cc
-test_test_client_DEPENDENCIES = lib/libkvclient.la
-test_test_client_LDFLAGS = -Llib -lkvclient
-
-test_test_server_SOURCES = test/test-server.cc
-test_test_server_DEPENDENCIES = lib/libkvserver.la
-test_test_server_LDFLAGS = -Llib -lkvserver ${SERVER_LIBS}
-
-test_test_mpi_SOURCES = test/test-mpi.cc
-
-
-test_test_mpi_DEPENDENCIES = lib/libkvserver.la lib/libkvclient.la
-test_test_mpi_LDFLAGS = -Llib -lkvclient -lkvserver ${SERVER_LIBS}
-
-test_test_mpi_group_SOURCES = test/test-mpi-group.cc
-test_test_mpi_group_DEPENDENCIES = lib/libkvgroupserver.la lib/libkvgroupclient.la lib/libkvserver.la lib/libkvclient.la
-test_test_mpi_group_LDFLAGS = -Llib -lkvgroupserver -lkvgroupclient -lkvclient -lkvserver ${SERVER_LIBS} ${GROUP_LIBS}
+#test_test_mpi_group_SOURCES = test/test-mpi-group.cc
+#test_test_mpi_group_DEPENDENCIES = lib/libkvgroupserver.la lib/libkvgroupclient.la lib/libkvserver.la lib/libkvclient.la
+#test_test_mpi_group_LDFLAGS = -Llib -lkvgroupserver -lkvgroupclient -lkvclient -lkvserver ${SERVER_LIBS} ${GROUP_LIBS}
 
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = maint/kv-server.pc \
-		 maint/kv-client.pc
+pkgconfig_DATA = maint/sdskv-server.pc \
+		 maint/sdskv-client.pc
 
 
 
