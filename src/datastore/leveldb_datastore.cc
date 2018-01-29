@@ -132,10 +132,12 @@ std::vector<ds_bulk_t> LevelDBDataStore::LevelDBDataStore::list(const ds_bulk_t 
     std::vector<ds_bulk_t> keys;
 
     leveldb::Iterator *it = _dbm->NewIterator(leveldb::ReadOptions());
+    size_t i=0;
     for (it->SeekToFirst(); it->Valid(); it->Next() ) {
         ds_bulk_t k(it->key().size());
         memcpy(k.data(), it->key().data(), it->key().size() );
         keys.push_back(k);
+	if (i++ > count) break;
     }
     delete it;
     return keys;

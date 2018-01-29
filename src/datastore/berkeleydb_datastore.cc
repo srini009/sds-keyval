@@ -220,7 +220,10 @@ std::vector<ds_bulk_t> BerkeleyDBDataStore::BerkeleyDBDataStore::list(const ds_b
     Dbc * cursorp;
     Dbt key, data;
     _dbm->cursor(NULL, &cursorp, 0);
-    while (cursorp->get(&key, &data, DB_NEXT) == 0) {
+    for (size_t i=0; i< count; i++) {
+	int ret = cursorp->get(&key, &data, DB_NEXT);
+	if (ret !=0 ) break;
+
 	ds_bulk_t k(key.get_size() );
 	memcpy(k.data(), key.get_data(), key.get_size() );
 	/* I hope this is a deep copy! */
