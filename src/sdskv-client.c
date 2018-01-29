@@ -531,8 +531,8 @@ int sdskv_list_keys(sdskv_provider_handle_t provider,
         ksizes[i] = out.ksizes[i];
         memcpy(keys[i], out.keys[i], out.ksizes[i]);
     }
-    margo_free_output(handle, &out);
 
+    margo_free_output(handle, &out);
     margo_destroy(handle);
 
     return ret;

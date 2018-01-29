@@ -248,6 +248,7 @@ static inline hg_return_t hg_proc_list_out_t(hg_proc_t proc, void *data)
 		for (i=0; i<out->nkeys; i++) {
 		    ret = hg_proc_raw(proc, &(out->ksizes[i]),
 			    sizeof(*(out->ksizes)) );
+            if(ret != HG_SUCCESS) return ret;
 		}
 		for (i=0; i<out->nkeys; i++) {
 		    ret = hg_proc_raw(proc, out->keys[i], out->ksizes[i]);
@@ -260,7 +261,7 @@ static inline hg_return_t hg_proc_list_out_t(hg_proc_t proc, void *data)
 		for (i=0; i<out->nkeys; i++) {
 		    ret = hg_proc_raw(proc, &(out->ksizes[i]),
 			    sizeof(*out->ksizes));
-
+            if(ret != HG_SUCCESS) return ret;
 		}
 		out->keys = (kv_data_t *)malloc(out->nkeys*sizeof(kv_data_t));
 		for (i=0; i<out->nkeys; i++) {

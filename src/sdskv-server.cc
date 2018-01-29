@@ -566,7 +566,10 @@ static void sdskv_list_ult(hg_handle_t handle)
         (sdskv_provider_t)margo_registered_data_mplex(mid, info->id, info->target_id);
     if(!svr_ctx) {
         fprintf(stderr, "Error: SDSKV could not find provider\n"); 
-        out.ret = -1;
+        out.ret    = -1;
+        out.nkeys  = 0;
+        out.keys   = nullptr;
+        out.ksizes = nullptr;
         margo_respond(handle, &out);
         margo_destroy(handle);
         return;
@@ -600,21 +603,17 @@ static void sdskv_list_ult(hg_handle_t handle)
     out.nkeys = keys.size();
     /* create the array of sizes */
     std::vector<hg_size_t> sizes(out.nkeys);
-    hg_size_t total_size = 0;
     for(unsigned i = 0; i < out.nkeys; i++) {
         sizes[i] = keys[i].size();
-        total_size += sizes[i];
     }
     out.ksizes = sizes.data();
     /* create the packed data */
-    std::vector<kv_data_t> packed_keys(total_size);
-    hg_size_t offset = 0;
+    std::vector<kv_data_t> packed_keys(keys.size());
     for(unsigned i = 0; i < out.nkeys; i++) {
-        std::memcpy((void*)(packed_keys.data()+offset), 
-                (void*)(keys[i].data()), keys[i].size());
-        offset += keys[i].size();
+        packed_keys[i] = (char*)(keys[i].data());
     }
     out.keys = packed_keys.data();
+    out.ret = 0;
 
     margo_respond(handle, &out);
     margo_free_input(handle, &in);
