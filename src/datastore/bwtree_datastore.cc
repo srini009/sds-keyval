@@ -94,6 +94,12 @@ bool BwTreeDataStore::get(const ds_bulk_t &key, ds_bulk_t &data) {
   return success;
 };
 
+bool BwTreeDataStore::erase(const ds_bulk_t &key) {
+    ds_bulk_t data;
+    if(!get(key,data)) return false;
+    return _tree->Delete(key,data);
+}
+
 bool BwTreeDataStore::get(const ds_bulk_t &key, std::vector<ds_bulk_t> &data) {
   std::vector<ds_bulk_t> values;
   bool success = false;

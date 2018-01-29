@@ -18,6 +18,7 @@ public:
   virtual bool put(const ds_bulk_t &key, const ds_bulk_t &data);
   virtual bool get(const ds_bulk_t &key, ds_bulk_t &data);
   virtual bool get(const ds_bulk_t &key, std::vector<ds_bulk_t> &data);
+  virtual bool erase(const ds_bulk_t &key);
   virtual void set_in_memory(bool enable); // a no-op
   virtual std::vector<ds_bulk_t> list(const ds_bulk_t &start, size_t count);
 protected:

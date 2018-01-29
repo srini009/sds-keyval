@@ -84,6 +84,12 @@ bool LevelDBDataStore::put(const ds_bulk_t &key, const ds_bulk_t &data) {
   return success;
 };
 
+bool LevelDBDataStore::erase(const ds_bulk_t &key) {
+    leveldb::Status status;
+    status = _dbm->Delete(leveldb::WriteOptions(), toString(key));
+    return status.ok();
+}
+
 bool LevelDBDataStore::get(const ds_bulk_t &key, ds_bulk_t &data) {
   leveldb::Status status;
   bool success = false;

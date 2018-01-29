@@ -154,6 +154,12 @@ bool BerkeleyDBDataStore::put(const ds_bulk_t &key, const ds_bulk_t &data) {
   return success;
 };
 
+bool BerkeleyDBDataStore::erase(const ds_bulk_t &key) {
+    Dbt db_key((void*)key.data(), key.size());
+    int status = _dbm->del(NULL, &db_key, 0);
+    return status == 0;
+} 
+
 // In the case where Duplicates::ALLOW, this will return the first
 // value found using key.
 bool BerkeleyDBDataStore::get(const ds_bulk_t &key, ds_bulk_t &data) {

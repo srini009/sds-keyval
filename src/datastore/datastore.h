@@ -20,6 +20,7 @@ public:
   virtual bool put(const ds_bulk_t &key, const ds_bulk_t &data)=0;
   virtual bool get(const ds_bulk_t &key, ds_bulk_t &data)=0;
   virtual bool get(const ds_bulk_t &key, std::vector<ds_bulk_t> &data)=0;
+  virtual bool erase(const ds_bulk_t &key) = 0;
   virtual void set_in_memory(bool enable)=0; // enable/disable in-memory mode (where supported)
   virtual std::vector<ds_bulk_t> list(const ds_bulk_t &start_key, size_t count)=0;
 protected:

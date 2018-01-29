@@ -45,6 +45,12 @@ class MapDataStore : public AbstractDataStore {
             return get(key, values[0]);
         }
 
+        virtual bool erase(const ds_bulk_t &key) {
+            bool b = _map.find(key) != _map.end();
+            _map.erase(key);
+            return b;
+        }
+
         virtual void set_in_memory(bool enable) {
             _in_memory = enable;
         }

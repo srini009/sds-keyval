@@ -191,6 +191,46 @@ static inline hg_return_t hg_proc_get_out_t(hg_proc_t proc, void *data)
 }
 
 typedef struct {
+  uint64_t  db_id;
+  kv_data_t key;
+  hg_size_t ksize;
+} erase_in_t;
+
+static inline hg_return_t hg_proc_erase_in_t(hg_proc_t proc, void *data)
+{
+  hg_return_t ret;
+  erase_in_t *in = (erase_in_t*)data;
+
+  ret = hg_proc_uint64_t(proc, &in->db_id);
+  if(ret != HG_SUCCESS) return ret;
+
+  ret = hg_proc_hg_size_t(proc, &in->ksize);
+  if(ret != HG_SUCCESS) return ret;
+  if (in->ksize) {
+    switch (hg_proc_get_op(proc)) {
+    case HG_ENCODE:
+      ret = hg_proc_raw(proc, in->key, in->ksize);
+      if(ret != HG_SUCCESS) return ret;
+      break;
+    case HG_DECODE:
+      in->key = (kv_data_t)malloc(in->ksize);
+      ret = hg_proc_raw(proc, in->key, in->ksize);
+      if(ret != HG_SUCCESS) return ret;
+      break;
+    case HG_FREE:
+      free(in->key);
+      break;
+    default:
+      break;
+    }
+  }
+
+  return HG_SUCCESS;
+}
+
+MERCURY_GEN_PROC(erase_out_t, ((int32_t)(ret)))
+
+typedef struct {
     uint64_t  db_id;
     kv_data_t start_key;
     hg_size_t start_ksize;
@@ -284,7 +324,6 @@ static inline hg_return_t hg_proc_list_out_t(hg_proc_t proc, void *data)
     ret = hg_proc_int32_t(proc, &out->ret);
     return ret;
 }
-
 
 MERCURY_GEN_PROC(put_out_t, ((int32_t)(ret)))
 

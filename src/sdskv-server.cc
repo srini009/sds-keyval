@@ -26,6 +26,7 @@ DECLARE_MARGO_RPC_HANDLER(sdskv_open_ult)
 DECLARE_MARGO_RPC_HANDLER(sdskv_bulk_put_ult)
 DECLARE_MARGO_RPC_HANDLER(sdskv_bulk_get_ult)
 DECLARE_MARGO_RPC_HANDLER(sdskv_list_ult)
+DECLARE_MARGO_RPC_HANDLER(sdskv_erase_ult)
 
 static void sdskv_server_finalize_cb(void *data);
 
@@ -82,6 +83,10 @@ extern "C" int sdskv_provider_register(
     rpc_id = MARGO_REGISTER_MPLEX(mid, "sdskv_list_rpc",
             list_in_t, list_out_t,
             sdskv_list_ult, mplex_id, abt_pool);
+    margo_register_data_mplex(mid, rpc_id, mplex_id, (void*)tmp_svr_ctx, NULL);
+    rpc_id = MARGO_REGISTER_MPLEX(mid, "sdskv_erase_rpc",
+            erase_in_t, erase_out_t,
+            sdskv_erase_ult, mplex_id, abt_pool);
     margo_register_data_mplex(mid, rpc_id, mplex_id, (void*)tmp_svr_ctx, NULL);
 
     /* install the bake server finalize callback */
@@ -551,6 +556,59 @@ static void sdskv_bulk_get_ult(hg_handle_t handle)
     return;
 }
 DEFINE_MARGO_RPC_HANDLER(sdskv_bulk_get_ult)
+
+static void sdskv_erase_ult(hg_handle_t handle)
+{
+
+    hg_return_t hret;
+    erase_in_t in;
+    erase_out_t out;
+
+    margo_instance_id mid = margo_hg_handle_get_instance(handle);
+    assert(mid);
+    const struct hg_info* info = margo_get_info(handle);
+    sdskv_provider_t svr_ctx = 
+        (sdskv_provider_t)margo_registered_data_mplex(mid, info->id, info->target_id);
+    if(!svr_ctx) {
+        fprintf(stderr, "Error: SDSKV could not find provider\n"); 
+        out.ret = -1;
+        margo_respond(handle, &out);
+        margo_destroy(handle);
+        return;
+    }
+
+    hret = margo_get_input(handle, &in);
+    if(hret != HG_SUCCESS) {
+        out.ret = -1;
+        margo_respond(handle, &out);
+        margo_destroy(handle);
+        return;
+    }
+
+    auto it = svr_ctx->databases.find(in.db_id);
+    if(it == svr_ctx->databases.end()) {
+        out.ret = -1;
+        margo_respond(handle, &out);
+        margo_free_input(handle, &in);
+        margo_destroy(handle);
+        return;
+    }
+    
+    ds_bulk_t kdata(in.key, in.key+in.ksize);
+
+    if(it->second->erase(kdata)) {
+        out.ret   = 0;
+    } else {
+        out.ret   = -1;
+    }
+
+    margo_respond(handle, &out);
+    margo_free_input(handle, &in);
+    margo_destroy(handle); 
+
+    return;
+}
+DEFINE_MARGO_RPC_HANDLER(sdskv_erase_ult)
 
 static void sdskv_list_ult(hg_handle_t handle)
 {

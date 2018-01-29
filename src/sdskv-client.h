@@ -49,6 +49,10 @@ int sdskv_length(sdskv_provider_handle_t db,
         sdskv_database_id_t db_id, const void *key, 
         hg_size_t ksize, hg_size_t* vsize);
 
+int sdskv_erase(sdskv_provider_handle_t db,
+        sdskv_database_id_t db_id, const void *key,
+        hg_size_t ksize);
+
 int sdskv_list_keys(sdskv_provider_handle_t provider,
         sdskv_database_id_t db_id,  // db instance
         const void *start_key,  // we want keys strictly after this start_key
