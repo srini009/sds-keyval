@@ -9,6 +9,8 @@
 #endif
 #include "datastore.h"
 
+#include "map_datastore.h"
+
 #ifdef USE_BWTREE
 #include "bwtree_datastore.h"
 #endif
@@ -22,6 +24,12 @@
 #endif
 
 class datastore_factory {
+
+    static AbstractDataStore* create_map_datastore(const std::string& name) {
+        auto db = new MapDataStore();
+        db->createDatabase(name);
+        return db;
+    }
 
     static AbstractDataStore* create_bwtree_datastore(const std::string& name) {
 #ifdef USE_BWTREE
@@ -62,6 +70,8 @@ class datastore_factory {
 #endif
     {
         switch(type) {
+            case KVDB_MAP:
+                return create_map_datastore(name);
             case KVDB_BWTREE:
                 return create_bwtree_datastore(name);
             case KVDB_LEVELDB:

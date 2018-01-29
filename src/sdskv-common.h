@@ -8,6 +8,7 @@ extern "C" {
 
 typedef enum sdskv_db_type_t 
 {
+    KVDB_MAP,
     KVDB_BWTREE,
     KVDB_LEVELDB,
     KVDB_BERKELEYDB

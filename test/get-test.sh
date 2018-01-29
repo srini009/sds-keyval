@@ -14,7 +14,7 @@ sleep 1
 
 #####################
 
-run_to 20 test/sdskv-put-test $svr_addr 1 my_test_db 10
+run_to 20 test/sdskv-get-test $svr_addr 1 my_test_db 10
 if [ $? -ne 0 ]; then
     wait
     exit 1

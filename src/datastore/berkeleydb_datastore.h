@@ -4,7 +4,7 @@
 #define bdb_datastore_h
 
 #include "kv-config.h"
-#include "sds-keyval.h"
+#include "datastore/datastore.h"
 #include <db_cxx.h>
 #include <dbstl_map.h>
 

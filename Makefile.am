@@ -8,7 +8,8 @@ AM_CPPFLAGS = -I${srcdir}/src
 bin_PROGRAMS = bin/sdskv-server-daemon \
 	       bin/sdskv-shutdown \
 	       test/sdskv-open-test \
-	       test/sdskv-put-test
+	       test/sdskv-put-test \
+	       test/sdskv-get-test
 
 bin_sdskv_server_daemon_SOURCES = src/sdskv-server-daemon.c
 bin_sdskv_server_daemon_DEPENDENCIES = lib/libsdskv-server.la
@@ -81,7 +82,8 @@ check_PROGRAMS = test/sdskv-open-test
 
 TESTS = test/basic.sh \
 	test/open-test.sh \
-       	test/put-test.sh
+       	test/put-test.sh \
+	test/get-test.sh
 
 TESTS_ENVIRONMENT = TIMEOUT="$(TIMEOUT)" \
 		    MKTEMP="$(MKTEMP)"
@@ -93,6 +95,10 @@ test_sdskv_open_test_LDFLAGS = -Llib -lsdskv-client
 test_sdskv_put_test_SOURCES = test/sdskv-put-test.cc
 test_sdskv_put_test_DEPENDENCIES = lib/libsdskv-client.la
 test_sdskv_put_test_LDFLAGS = -Llib -lsdskv-client
+
+test_sdskv_get_test_SOURCES = test/sdskv-get-test.cc
+test_sdskv_get_test_DEPENDENCIES = lib/libsdskv-client.la
+test_sdskv_get_test_LDFLAGS = -Llib -lsdskv-client
 
 #############################################################
 ## tests bellow correspond to old tests (see old-test folder)

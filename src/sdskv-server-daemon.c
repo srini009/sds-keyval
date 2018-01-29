@@ -27,7 +27,7 @@ struct options
 
 static void usage(int argc, char **argv)
 {
-    fprintf(stderr, "Usage: sdskv-server-daemon [OPTIONS] <listen_addr> <db name 1>[:bwt|:bdb|:ldb] <db name 2>[:bwt|:bdb|:ldb] ...\n");
+    fprintf(stderr, "Usage: sdskv-server-daemon [OPTIONS] <listen_addr> <db name 1>[:map|:bwt|:bdb|:ldb] <db name 2>[:map|:bwt|:bdb|:ldb] ...\n");
     fprintf(stderr, "       listen_addr is the Mercury address to listen on\n");
     fprintf(stderr, "       db name X are the names of the databases\n");
     fprintf(stderr, "       [-f filename] to write the server address to a file\n");
@@ -38,10 +38,14 @@ static void usage(int argc, char **argv)
 
 static sdskv_db_type_t parse_db_type(char* db_fullname) {
     char* column = strstr(db_fullname, ":");
-    if(column == NULL) return KVDB_BWTREE;
+    if(column == NULL) {
+        return KVDB_MAP;
+    }
     *column = '\0';
     char* db_type = column + 1;
-    if(strcmp(db_type, "bwt") == 0) {
+    if(strcmp(db_type, "map") == 0) {
+        return KVDB_MAP;
+    } else if(strcmp(db_type, "bwt") == 0) {
         return KVDB_BWTREE;
     } else if(strcmp(db_type, "bdb") == 0) {
         return KVDB_BERKELEYDB;
@@ -175,9 +179,8 @@ int main(int argc, char **argv)
                 return(-1);
             }
 
-            sdskv_db_type_t db_type = KVDB_BWTREE; // TODO get from argv
             sdskv_database_id_t db_id;
-            ret = sdskv_provider_add_database(provider, opts.db_names[i], db_type, &db_id);
+            ret = sdskv_provider_add_database(provider, opts.db_names[i], opts.db_types[i], &db_id);
 
             if(ret != 0)
             {
@@ -205,9 +208,8 @@ int main(int argc, char **argv)
         }
 
         for(i=0; i < opts.num_db; i++) {
-            sdskv_db_type_t db_type = KVDB_BWTREE; // TODO get from argv
             sdskv_database_id_t db_id;
-            ret = sdskv_provider_add_database(provider, opts.db_names[i], db_type, &db_id);
+            ret = sdskv_provider_add_database(provider, opts.db_names[i], opts.db_types[i], &db_id);
 
             if(ret != 0)
             {

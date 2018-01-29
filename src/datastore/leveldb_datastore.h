@@ -4,9 +4,9 @@
 #define ldb_datastore_h
 
 #include "kv-config.h"
-#include "sds-keyval.h"
 #include <leveldb/db.h>
 #include <leveldb/env.h>
+#include "datastore/datastore.h"
 
 // may want to implement some caching for persistent stores like LevelDB
 class LevelDBDataStore : public AbstractDataStore {
@@ -23,8 +23,8 @@ public:
 protected:
   leveldb::DB *_dbm = NULL;
 private:
-  std::string toString(ds_bulk_t &key);
-  ds_bulk_t fromString(std::string &keystr);
+  std::string toString(const ds_bulk_t &key);
+  ds_bulk_t fromString(const std::string &keystr);
 };
 
 #endif // ldb_datastore_h

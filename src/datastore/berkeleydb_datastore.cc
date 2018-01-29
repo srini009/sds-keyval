@@ -133,8 +133,8 @@ bool BerkeleyDBDataStore::put(const ds_bulk_t &key, const ds_bulk_t &data) {
   // ALLOW case deals with actual duplicates (where key is the same but value is different).
   // This option might be used when eraseOnGet is set (e.g. ParSplice hotpoint use case).
   if (_duplicates == Duplicates::IGNORE || _duplicates == Duplicates::ALLOW) {
-    Dbt db_key(&(key[0]), uint32_t(key.size()));
-    Dbt db_data(&(data[0]), uint32_t(data.size()));
+    Dbt db_key((void*)&(key[0]), uint32_t(key.size()));
+    Dbt db_data((void*)&(data[0]), uint32_t(data.size()));
     db_key.set_flags(DB_DBT_USERMEM);
     db_data.set_flags(DB_DBT_USERMEM);
     uint32_t flags = DB_NOOVERWRITE; // to simply overwrite value, don't use this flag
@@ -162,7 +162,7 @@ bool BerkeleyDBDataStore::get(const ds_bulk_t &key, ds_bulk_t &data) {
 
   data.clear();
 
-  Dbt db_key(&(key[0]), uint32_t(key.size()));
+  Dbt db_key((void*)&(key[0]), uint32_t(key.size()));
   Dbt db_data;
   db_key.set_flags(DB_DBT_USERMEM);
   db_data.set_flags(DB_DBT_REALLOC);
@@ -213,9 +213,8 @@ std::vector<ds_bulk_t> BerkeleyDBDataStore::BerkeleyDBDataStore::list(const ds_b
     std::vector<ds_bulk_t> keys;
     Dbc * cursorp;
     Dbt key, data;
-    int ret;
     _dbm->cursor(NULL, &cursorp, 0);
-    while (ret = cursorp->get(&key, &data, DB_NEXT) == 0) {
+    while (cursorp->get(&key, &data, DB_NEXT) == 0) {
 	ds_bulk_t k(key.get_size() );
 	memcpy(k.data(), key.get_data(), key.get_size() );
 	/* I hope this is a deep copy! */

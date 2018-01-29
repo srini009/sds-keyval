@@ -11,6 +11,7 @@ extern "C" {
 
 typedef enum kv_db_type_t 
 {
+    KVDB_MAP,
     KVDB_BWTREE,
     KVDB_LEVELDB,
     KVDB_BERKELEYDB
