@@ -5,11 +5,12 @@ CLIENT_LiBS=@CLIENT_LIBS@
 
 AM_CPPFLAGS = -I${srcdir}/src
 
-bin_PROGRAMS = bin/sdskv-server-daemon \
-	       bin/sdskv-shutdown \
-	       test/sdskv-open-test \
-	       test/sdskv-put-test \
-	       test/sdskv-get-test \
+bin_PROGRAMS = bin/sdskv-server-daemon 	\
+	       bin/sdskv-shutdown 	\
+	       test/sdskv-open-test 	\
+	       test/sdskv-put-test 	\
+	       test/sdskv-length-test 	\
+	       test/sdskv-get-test 	\
 	       test/sdskv-list-keys-test
 
 bin_sdskv_server_daemon_SOURCES = src/sdskv-server-daemon.c
@@ -66,6 +67,7 @@ include_HEADERS = src/sds-keyval.h \
 		  src/sds-keyval-group.h
 
 noinst_HEADERS = src/datastore/datastore.h \
+		 src/datastore/map_datastore.h \
 		 src/datastore/bwtree_datastore.h \
 		 src/datastore/leveldb_datastore.h \
 		 src/datastore/berkeleydb_datastore.h \
@@ -81,10 +83,11 @@ lib_libkvgroupserver_la_SOURCES = src/kvgroup-server.cc
 
 check_PROGRAMS = test/sdskv-open-test
 
-TESTS = test/basic.sh \
-	test/open-test.sh \
-       	test/put-test.sh \
-	test/get-test.sh \
+TESTS = test/basic.sh 		\
+	test/open-test.sh 	\
+       	test/put-test.sh 	\
+	test/length-test.sh 	\
+	test/get-test.sh 	\
 	test/list-keys-test.sh
 
 TESTS_ENVIRONMENT = TIMEOUT="$(TIMEOUT)" \
@@ -97,6 +100,10 @@ test_sdskv_open_test_LDFLAGS = -Llib -lsdskv-client
 test_sdskv_put_test_SOURCES = test/sdskv-put-test.cc
 test_sdskv_put_test_DEPENDENCIES = lib/libsdskv-client.la
 test_sdskv_put_test_LDFLAGS = -Llib -lsdskv-client
+
+test_sdskv_length_test_SOURCES = test/sdskv-length-test.cc
+test_sdskv_length_test_DEPENDENCIES = lib/libsdskv-client.la
+test_sdskv_length_test_LDFLAGS = -Llib -lsdskv-client
 
 test_sdskv_get_test_SOURCES = test/sdskv-get-test.cc
 test_sdskv_get_test_DEPENDENCIES = lib/libsdskv-client.la
