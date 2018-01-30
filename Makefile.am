@@ -69,7 +69,7 @@ include_HEADERS = include/sdskv-client.h \
 		  include/sdskv-common.h
 
 noinst_HEADERS = src/sds-keyval.h \
-		 src/sds-leyval-group.h \
+		 src/sds-keyval-group.h \
 		 src/sdskv-rpc-types.h \
 		 src/datastore/datastore.h \
 		 src/datastore/map_datastore.h \

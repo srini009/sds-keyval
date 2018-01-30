@@ -13,7 +13,7 @@ struct sdskv_client {
     hg_id_t sdskv_length_id;
     hg_id_t sdskv_bulk_get_id;
     hg_id_t sdskv_open_id;
-    hg_id_t sdskv_list_id;
+    hg_id_t sdskv_list_keys_id;
 
     uint64_t num_provider_handles;
 };
@@ -43,7 +43,7 @@ static int sdskv_client_register(sdskv_client_t client, margo_instance_id mid)
         margo_registered_name(mid, "sdskv_length_rpc",   &client->sdskv_length_id,   &flag);
         margo_registered_name(mid, "sdskv_bulk_get_rpc", &client->sdskv_bulk_get_id, &flag);
         margo_registered_name(mid, "sdskv_open_rpc",     &client->sdskv_open_id,     &flag);
-        margo_registered_name(mid, "sdskv_list_rpc",     &client->sdskv_list_id,     &flag);
+        margo_registered_name(mid, "sdskv_list_keys_rpc", &client->sdskv_list_keys_id, &flag);
 
     } else {
 
@@ -61,8 +61,8 @@ static int sdskv_client_register(sdskv_client_t client, margo_instance_id mid)
             MARGO_REGISTER(mid, "sdskv_bulk_get_rpc", bulk_get_in_t, bulk_get_out_t, NULL);
         client->sdskv_open_id =
             MARGO_REGISTER(mid, "sdskv_open_rpc", open_in_t, open_out_t, NULL);
-        client->sdskv_list_id =
-            MARGO_REGISTER(mid, "sdskv_list_rpc", list_in_t, list_out_t, NULL);
+        client->sdskv_list_keys_id =
+            MARGO_REGISTER(mid, "sdskv_list_keys_rpc", list_in_t, list_out_t, NULL);
     }
 
     return 0;
@@ -554,7 +554,7 @@ int sdskv_list_keys(sdskv_provider_handle_t provider,
     hret = margo_create(
             provider->client->mid,
             provider->addr,
-            provider->client->sdskv_list_id,
+            provider->client->sdskv_list_keys_id,
             &handle);
     if(hret != HG_SUCCESS) return -1;
 

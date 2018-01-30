@@ -25,7 +25,7 @@ DECLARE_MARGO_RPC_HANDLER(sdskv_get_ult)
 DECLARE_MARGO_RPC_HANDLER(sdskv_open_ult)
 DECLARE_MARGO_RPC_HANDLER(sdskv_bulk_put_ult)
 DECLARE_MARGO_RPC_HANDLER(sdskv_bulk_get_ult)
-DECLARE_MARGO_RPC_HANDLER(sdskv_list_ult)
+DECLARE_MARGO_RPC_HANDLER(sdskv_list_keys_ult)
 DECLARE_MARGO_RPC_HANDLER(sdskv_erase_ult)
 
 static void sdskv_server_finalize_cb(void *data);
@@ -80,9 +80,9 @@ extern "C" int sdskv_provider_register(
             open_in_t, open_out_t,
             sdskv_open_ult, mplex_id, abt_pool);
     margo_register_data_mplex(mid, rpc_id, mplex_id, (void*)tmp_svr_ctx, NULL);
-    rpc_id = MARGO_REGISTER_MPLEX(mid, "sdskv_list_rpc",
+    rpc_id = MARGO_REGISTER_MPLEX(mid, "sdskv_list_keys_rpc",
             list_in_t, list_out_t,
-            sdskv_list_ult, mplex_id, abt_pool);
+            sdskv_list_keys_ult, mplex_id, abt_pool);
     margo_register_data_mplex(mid, rpc_id, mplex_id, (void*)tmp_svr_ctx, NULL);
     rpc_id = MARGO_REGISTER_MPLEX(mid, "sdskv_erase_rpc",
             erase_in_t, erase_out_t,
@@ -610,12 +610,20 @@ static void sdskv_erase_ult(hg_handle_t handle)
 }
 DEFINE_MARGO_RPC_HANDLER(sdskv_erase_ult)
 
-static void sdskv_list_ult(hg_handle_t handle)
+static void sdskv_list_keys_ult(hg_handle_t handle)
 {
 
     hg_return_t hret;
     list_in_t in;
     list_out_t out;
+
+    out.ret     = -1;
+    out.nkeys   = 0;
+    out.ksizes  = nullptr;
+    out.keys    = nullptr;
+    out.nvalues = 0;
+    out.vsizes  = nullptr;
+    out.values  = nullptr;
 
     margo_instance_id mid = margo_hg_handle_get_instance(handle);
     assert(mid);
@@ -624,10 +632,6 @@ static void sdskv_list_ult(hg_handle_t handle)
         (sdskv_provider_t)margo_registered_data_mplex(mid, info->id, info->target_id);
     if(!svr_ctx) {
         fprintf(stderr, "Error: SDSKV could not find provider\n"); 
-        out.ret    = -1;
-        out.nkeys  = 0;
-        out.keys   = nullptr;
-        out.ksizes = nullptr;
         margo_respond(handle, &out);
         margo_destroy(handle);
         return;
@@ -635,10 +639,6 @@ static void sdskv_list_ult(hg_handle_t handle)
 
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
-        out.ret    = -1;
-        out.nkeys  = 0;
-        out.keys   = nullptr;
-        out.ksizes = nullptr;
         margo_respond(handle, &out);
         margo_destroy(handle);
         return;
@@ -646,10 +646,6 @@ static void sdskv_list_ult(hg_handle_t handle)
 
     auto it = svr_ctx->databases.find(in.db_id);
     if(it == svr_ctx->databases.end()) {
-        out.ret   = -1;
-        out.nkeys  = 0;
-        out.keys   = nullptr;
-        out.ksizes = nullptr;
         margo_respond(handle, &out);
         margo_free_input(handle, &in);
         margo_destroy(handle);
@@ -679,7 +675,7 @@ static void sdskv_list_ult(hg_handle_t handle)
 
     return;
 }
-DEFINE_MARGO_RPC_HANDLER(sdskv_list_ult)
+DEFINE_MARGO_RPC_HANDLER(sdskv_list_keys_ult)
 
 static void sdskv_server_finalize_cb(void *data)
 {

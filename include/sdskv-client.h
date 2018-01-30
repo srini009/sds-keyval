@@ -53,7 +53,8 @@ int sdskv_erase(sdskv_provider_handle_t db,
         sdskv_database_id_t db_id, const void *key,
         hg_size_t ksize);
 
-int sdskv_list_keys(sdskv_provider_handle_t provider,
+int sdskv_list_keys(
+        sdskv_provider_handle_t provider,
         sdskv_database_id_t db_id,  // db instance
         const void *start_key,  // we want keys strictly after this start_key
         hg_size_t start_ksize,  // size of the start_key
@@ -64,7 +65,8 @@ int sdskv_list_keys(sdskv_provider_handle_t provider,
                                 //     keys for each key
         hg_size_t* max_keys);   // maximum number of keys requested
 
-int sdskv_list_keys_with_prefix(sdskv_provider_handle_t provider,
+int sdskv_list_keys_with_prefix(
+        sdskv_provider_handle_t provider,
         sdskv_database_id_t db_id,  // db instance
         const void *start_key,  // we want keys strictly after this start_key
         hg_size_t start_ksize,  // size of the start_key
@@ -76,6 +78,31 @@ int sdskv_list_keys_with_prefix(sdskv_provider_handle_t provider,
                                 // representing sizes allocated in
                                 // keys for each key
         hg_size_t* max_keys);   // maximum number of keys requested
+
+int sdskv_list_keyvals(
+        sdskv_provider_handle_t provider,
+        sdskv_database_id_t db_id,
+        const void *start_key,
+        hg_size_t start_ksize,
+        void **keys,
+        hg_size_t* ksizes,
+        void **values,
+        hg_size_t* vsizes,
+        hg_size_t* max_items);
+
+int sdskv_list_keyvals_with_prefix(
+        sdskv_provider_handle_t provider,
+        sdskv_database_id_t db_id,
+        const void *start_key,
+        hg_size_t start_ksize,
+        const void *prefix,
+        hg_size_t prefix_size,
+        void **keys,
+        hg_size_t* ksizes,
+        void **values,
+        hg_size_t* vsizes,
+        hg_size_t* max_items);
+
 
 /**
  * Shuts down a remote SDSKV service (given an address).
