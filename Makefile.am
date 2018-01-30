@@ -3,7 +3,7 @@ ACLOCAL_AMFLAGS="-Im4"
 SERVER_LIBS=@SERVER_LIBS@
 CLIENT_LiBS=@CLIENT_LIBS@
 
-AM_CPPFLAGS = -I${srcdir}/src
+AM_CPPFLAGS = -I${srcdir}/src -I${srcdir}/include
 
 bin_PROGRAMS = bin/sdskv-server-daemon 	 \
 	       bin/sdskv-shutdown 	 \
@@ -64,10 +64,14 @@ lib_libsdskv_server_la_SOURCES += src/datastore/leveldb_datastore.cc
 endif
 
 
-include_HEADERS = src/sds-keyval.h \
-		  src/sds-keyval-group.h
+include_HEADERS = include/sdskv-client.h \
+		  include/sdskv-server.h \
+		  include/sdskv-common.h
 
-noinst_HEADERS = src/datastore/datastore.h \
+noinst_HEADERS = src/sds-keyval.h \
+		 src/sds-leyval-group.h \
+		 src/sdskv-rpc-types.h \
+		 src/datastore/datastore.h \
 		 src/datastore/map_datastore.h \
 		 src/datastore/bwtree_datastore.h \
 		 src/datastore/leveldb_datastore.h \
