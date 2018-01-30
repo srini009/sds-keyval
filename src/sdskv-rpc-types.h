@@ -287,14 +287,13 @@ static inline hg_return_t hg_proc_list_out_t(hg_proc_t proc, void *data)
     ret = hg_proc_hg_size_t(proc, &out->nkeys);
     if(ret != HG_SUCCESS) return ret;
 
-    /* encode/decode the number values */
+    /* encode/decode the number of values */
     ret = hg_proc_hg_size_t(proc, &out->nvalues);
     if(ret != HG_SUCCESS) return ret;
 
-    if (out->nkeys) {
-
-	    switch(hg_proc_get_op(proc)) {
+	switch(hg_proc_get_op(proc)) {
 	    case HG_ENCODE:
+            fprintf(stderr,"In HG_ENCODE out->nkeys = %ld\n", out->nkeys);
             /* encode the size of each key */
 		    for (i=0; i<out->nkeys; i++) {
 		        ret = hg_proc_hg_size_t(proc, &(out->ksizes[i]));
@@ -305,23 +304,10 @@ static inline hg_return_t hg_proc_list_out_t(hg_proc_t proc, void *data)
 		        ret = hg_proc_raw(proc, out->keys[i], out->ksizes[i]);
 		        if(ret != HG_SUCCESS) return ret;
 		    }
-            /* encode the size of values, if present */
-            if(out->vsizes) {
-                for(i=0; i<out->nvalues; i++) {
-                    ret = hg_proc_hg_size_t(proc, &(out->vsizes[i]));
-                    if(ret != HG_SUCCESS) return ret;
-                }
-            }
-            /* encode the values, if present */
-            if(out->values) {
-                for(i=0; i<out->nvalues; i++) {
-                    ret = hg_proc_raw(proc, out->values[i], out->vsizes[i]);
-                    if(ret != HG_SUCCESS) return ret;
-                }
-            }
             break;
 
         case HG_DECODE:
+            fprintf(stderr,"In HG_DECODE out->nkeys = %ld\n", out->nkeys);
             if(out->nkeys) {
                 /* decode the size of each key */
                 out->ksizes = (hg_size_t*)malloc(out->nkeys*sizeof(*out->ksizes));
@@ -344,16 +330,45 @@ static inline hg_return_t hg_proc_list_out_t(hg_proc_t proc, void *data)
                 out->ksizes = NULL;
                 out->keys = NULL;
             }
-            if(out->nvalues) {
+            break;
+
+	    case HG_FREE:
+		    for (i=0; i<out->nkeys; i++) {
+		        free(out->keys[i]);
+		    }
+		    free(out->keys);
+		    free(out->ksizes);
+		    break;
+
+	    default:
+		    break;
+	}
+
+	switch(hg_proc_get_op(proc)) {
+	    case HG_ENCODE:
+            /* encode the size of values, if present */
+            for(i=0; i <out->nvalues; i++) {
+                ret = hg_proc_hg_size_t(proc, &(out->vsizes[i]));
+                if(ret != HG_SUCCESS) return ret;
+            }
+            /* encode the values, if present */
+            for(i=0; i < out->nvalues; i++) {
+                ret = hg_proc_raw(proc, out->values[i], out->vsizes[i]);
+                if(ret != HG_SUCCESS) return ret;
+            }
+            break;
+
+        case HG_DECODE:
+            if(out->nvalues != 0) {
                 /* decode the size of each value */
                 out->vsizes = (hg_size_t*)malloc(out->nvalues*sizeof(*out->vsizes));
-                for( i=0; i<out->nvalues; i++) {
+                for( i=0; i < out->nvalues; i++) {
                     ret = hg_proc_hg_size_t(proc, &(out->vsizes[i]));
                     if(ret != HG_SUCCESS) return ret;
                 }
-                /* decode each key */
+                /* decode each value */
                 out->values =  (kv_data_t *)malloc(out->nvalues*sizeof(kv_data_t));
-                for(i=0; i<out->nvalues; i++) {
+                for(i=0; i < out->nvalues; i++) {
                     if(out->vsizes[i] == 0) {
                         out->values[i] = NULL;
                         continue;
@@ -369,22 +384,17 @@ static inline hg_return_t hg_proc_list_out_t(hg_proc_t proc, void *data)
             break;
 
 	    case HG_FREE:
-		    for (i=0; i<out->nkeys; i++) {
-		        free(out->keys[i]);
-		    }
-            for(i=0; i<out->nvalues; i++) {
+            for(i=0; i < out->nvalues; i++) {
                 free(out->values[i]);
             }
-		    free(out->keys);
-		    free(out->ksizes);
             free(out->values);
             free(out->vsizes);
 		    break;
 
 	    default:
 		    break;
-	    }
-    }
+	}
+
     /* encode/decode the return value */
     ret = hg_proc_int32_t(proc, &out->ret);
     return ret;

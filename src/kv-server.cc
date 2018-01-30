@@ -360,7 +360,7 @@ static hg_return_t list_handler(hg_handle_t handle)
     std::vector<char> start{};
     margo_get_input(handle, &list_in);
 
-    auto keys = datastore->list(start, list_in.list_in.max_keys);
+    auto keys = datastore->list_keys(start, list_in.list_in.max_keys);
 
     list_out.list_out.nkeys = keys.size();
     /* we have a C++ vector but will serialize it before shipping over wire.

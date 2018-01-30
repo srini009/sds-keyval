@@ -14,6 +14,7 @@ struct sdskv_client {
     hg_id_t sdskv_bulk_get_id;
     hg_id_t sdskv_open_id;
     hg_id_t sdskv_list_keys_id;
+    hg_id_t sdskv_list_keyvals_id;
 
     uint64_t num_provider_handles;
 };
@@ -44,6 +45,7 @@ static int sdskv_client_register(sdskv_client_t client, margo_instance_id mid)
         margo_registered_name(mid, "sdskv_bulk_get_rpc", &client->sdskv_bulk_get_id, &flag);
         margo_registered_name(mid, "sdskv_open_rpc",     &client->sdskv_open_id,     &flag);
         margo_registered_name(mid, "sdskv_list_keys_rpc", &client->sdskv_list_keys_id, &flag);
+        margo_registered_name(mid, "sdskv_list_keyvals_rpc", &client->sdskv_list_keyvals_id, &flag);
 
     } else {
 
@@ -63,6 +65,8 @@ static int sdskv_client_register(sdskv_client_t client, margo_instance_id mid)
             MARGO_REGISTER(mid, "sdskv_open_rpc", open_in_t, open_out_t, NULL);
         client->sdskv_list_keys_id =
             MARGO_REGISTER(mid, "sdskv_list_keys_rpc", list_in_t, list_out_t, NULL);
+        client->sdskv_list_keyvals_id =
+            MARGO_REGISTER(mid, "sdskv_list_keyvals_rpc", list_in_t, list_out_t, NULL);
     }
 
     return 0;
@@ -590,20 +594,80 @@ int sdskv_list_keys(sdskv_provider_handle_t provider,
     return ret;
 }
 
-int sdskv_list_keys_with_prefix(sdskv_provider_handle_t provider,
-        sdskv_database_id_t db_id,  // db instance
-        const void *start_key,  // we want keys strictly after this start_key
-        hg_size_t start_ksize,  // size of the start_key
-        const void *prefix,     // return only keys that begin with 'prefix'
-        hg_size_t prefix_size,
-        void **keys,            // pointer to an array of void* pointers,
-        // this array has size *max_keys
-        hg_size_t* ksizes,      // pointer to an array of hg_size_t sizes 
-        // representing sizes allocated in
-        // keys for each key
-        hg_size_t* max_keys)   // maximum number of keys requested
+int sdskv_list_keyvals(
+        sdskv_provider_handle_t provider,
+        sdskv_database_id_t db_id, 
+        const void *start_key,
+        hg_size_t start_ksize,
+        void **keys,
+        hg_size_t* ksizes,
+        void** values,
+        hg_size_t* vsizes,
+        hg_size_t* max_keys)
 {
-    // TODO
+    list_in_t  in;
+    list_out_t out;
+    hg_return_t hret = HG_SUCCESS;
+    hg_handle_t handle;
+    int ret;
+    int i;
+
+    in.db_id = db_id;
+    in.start_key = (kv_data_t) start_key;
+    in.start_ksize = start_ksize;
+    in.max_keys = *max_keys;
+
+    /* create handle */
+    hret = margo_create(
+            provider->client->mid,
+            provider->addr,
+            provider->client->sdskv_list_keyvals_id,
+            &handle);
+    if(hret != HG_SUCCESS) return -1;
+
+    hret = margo_set_target_id(handle, provider->mplex_id);
+    if(hret != HG_SUCCESS) {
+        margo_destroy(handle);
+        return -1;
+    }
+
+    hret = margo_forward(handle, &in);
+    if(hret != HG_SUCCESS) {
+        margo_destroy(handle);
+        return -1;
+    }
+
+    hret = margo_get_output(handle, &out);
+    if(hret != HG_SUCCESS) {
+        margo_destroy(handle);
+        return -1;
+    }
+
+    *max_keys = out.nkeys;
+    ret = out.ret;
+
+    if(ret == 0) {
+
+        hg_size_t s;
+        for (i=0; i < out.nkeys; i++) {
+            s = ksizes[i] > out.ksizes[i] ? out.ksizes[i] : ksizes[i];
+            ksizes[i] = s;
+            memcpy(keys[i], out.keys[i], s);
+            if(s < out.ksizes[i]) ret = -1; // truncated key
+        }
+
+        for(i=0; i< out.nvalues; i++) {
+            s = vsizes[i] > out.vsizes[i] ? out.vsizes[i] : vsizes[i];
+            vsizes[i] = s;
+            memcpy(values[i], out.values[i], s);
+            if(s < out.vsizes[i]) return -1; // truncated value
+        }
+    }
+
+    margo_free_output(handle, &out);
+    margo_destroy(handle);
+
+    return ret;
 }
 
 int sdskv_shutdown_service(sdskv_client_t client, hg_addr_t addr)

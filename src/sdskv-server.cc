@@ -26,6 +26,7 @@ DECLARE_MARGO_RPC_HANDLER(sdskv_open_ult)
 DECLARE_MARGO_RPC_HANDLER(sdskv_bulk_put_ult)
 DECLARE_MARGO_RPC_HANDLER(sdskv_bulk_get_ult)
 DECLARE_MARGO_RPC_HANDLER(sdskv_list_keys_ult)
+DECLARE_MARGO_RPC_HANDLER(sdskv_list_keyvals_ult)
 DECLARE_MARGO_RPC_HANDLER(sdskv_erase_ult)
 
 static void sdskv_server_finalize_cb(void *data);
@@ -83,6 +84,10 @@ extern "C" int sdskv_provider_register(
     rpc_id = MARGO_REGISTER_MPLEX(mid, "sdskv_list_keys_rpc",
             list_in_t, list_out_t,
             sdskv_list_keys_ult, mplex_id, abt_pool);
+    margo_register_data_mplex(mid, rpc_id, mplex_id, (void*)tmp_svr_ctx, NULL);
+    rpc_id = MARGO_REGISTER_MPLEX(mid, "sdskv_list_keyvals_rpc",
+            list_in_t, list_out_t,
+            sdskv_list_keyvals_ult, mplex_id, abt_pool);
     margo_register_data_mplex(mid, rpc_id, mplex_id, (void*)tmp_svr_ctx, NULL);
     rpc_id = MARGO_REGISTER_MPLEX(mid, "sdskv_erase_rpc",
             erase_in_t, erase_out_t,
@@ -653,7 +658,7 @@ static void sdskv_list_keys_ult(hg_handle_t handle)
     }
     
     ds_bulk_t start_kdata(in.start_key, in.start_key+in.start_ksize);
-    auto keys = it->second->list(start_kdata, in.max_keys);
+    auto keys = it->second->list_keys(start_kdata, in.max_keys);
     out.nkeys = keys.size();
     /* create the array of sizes */
     std::vector<hg_size_t> sizes(out.nkeys);
@@ -676,6 +681,87 @@ static void sdskv_list_keys_ult(hg_handle_t handle)
     return;
 }
 DEFINE_MARGO_RPC_HANDLER(sdskv_list_keys_ult)
+
+static void sdskv_list_keyvals_ult(hg_handle_t handle)
+{
+
+    hg_return_t hret;
+    list_in_t in;
+    list_out_t out;
+
+    out.ret     = -1;
+    out.nkeys   = 0;
+    out.ksizes  = nullptr;
+    out.keys    = nullptr;
+    out.nvalues = 0;
+    out.vsizes  = nullptr;
+    out.values  = nullptr;
+
+    margo_instance_id mid = margo_hg_handle_get_instance(handle);
+    assert(mid);
+    const struct hg_info* info = margo_get_info(handle);
+    sdskv_provider_t svr_ctx = 
+        (sdskv_provider_t)margo_registered_data_mplex(mid, info->id, info->target_id);
+    if(!svr_ctx) {
+        fprintf(stderr, "Error: SDSKV could not find provider\n"); 
+        margo_respond(handle, &out);
+        margo_destroy(handle);
+        return;
+    }
+
+    hret = margo_get_input(handle, &in);
+    if(hret != HG_SUCCESS) {
+        margo_respond(handle, &out);
+        margo_destroy(handle);
+        return;
+    }
+
+    auto it = svr_ctx->databases.find(in.db_id);
+    if(it == svr_ctx->databases.end()) {
+        margo_respond(handle, &out);
+        margo_free_input(handle, &in);
+        margo_destroy(handle);
+        return;
+    }
+    
+    ds_bulk_t start_kdata(in.start_key, in.start_key+in.start_ksize);
+    auto keyvals = it->second->list_keyvals(start_kdata, in.max_keys);
+    out.nkeys   = keyvals.size();
+    out.nvalues = keyvals.size();
+    /* create the array of sizes */
+    std::vector<hg_size_t> sizes(out.nkeys);
+    for(unsigned i = 0; i < out.nkeys; i++) {
+        sizes[i] = keyvals[i].first.size();
+    }
+    out.ksizes = sizes.data();
+    /* create the packed data */
+    std::vector<kv_data_t> packed_keys(out.nkeys);
+    for(unsigned i = 0; i < out.nkeys; i++) {
+        packed_keys[i] = (char*)(keyvals[i].first.data());
+    }
+    out.keys = packed_keys.data();
+    /* create the array of value sizes */
+    std::vector<hg_size_t> vsizes(out.nvalues);
+    for(unsigned i = 0; i < out.nvalues; i++) {
+        vsizes[i] = keyvals[i].second.size();
+    }
+    out.vsizes = vsizes.data();
+    /* create the packed value data */
+    std::vector<kv_data_t> packed_vals(out.nvalues);
+    for(unsigned i = 0; i < out.nvalues; i++) {
+        packed_vals[i] = (char*)(keyvals[i].second.data());
+    }
+    out.values = packed_vals.data();
+
+    out.ret = 0;
+
+    margo_respond(handle, &out);
+    margo_free_input(handle, &in);
+    margo_destroy(handle); 
+
+    return;
+}
+DEFINE_MARGO_RPC_HANDLER(sdskv_list_keyvals_ult)
 
 static void sdskv_server_finalize_cb(void *data)
 {

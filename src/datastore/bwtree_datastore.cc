@@ -120,17 +120,31 @@ bool BwTreeDataStore::get(const ds_bulk_t &key, std::vector<ds_bulk_t> &data) {
   return success;
 };
 
-void BwTreeDataStore::BwTreeDataStore::set_in_memory(bool enable)
+void BwTreeDataStore::set_in_memory(bool enable)
 {};
 
-std::vector<ds_bulk_t> BwTreeDataStore::BwTreeDataStore::list(const ds_bulk_t &start, size_t count)
+std::vector<ds_bulk_t> BwTreeDataStore::list_keys(const ds_bulk_t &start, size_t count)
 {
     std::vector<ds_bulk_t> keys;
+#if 0
     auto it = _tree->Begin(start);
     while (it.IsEnd() == false) {
 	/* BUG: bwtree doesn't support "list keys" or "get a key" */
 	//keys.push_back(it.GetLeafNode());
     }
-
+#endif
     return keys;
+}
+
+std::vector<std::pair<ds_bulk_t,ds_bulk_t>> BwTreeDataStore::list_keyvals(const ds_bulk_t &start, size_t count)
+{
+    std::vector<std::pair<ds_bulk_t,ds_bulk_t>> keyvals;
+#if 0
+    auto it = _tree->Begin(start);
+    while (it.IsEnd() == false) {
+	/* BUG: bwtree doesn't support "list keys" or "get a key" */
+    }
+#endif
+
+    return keyvals;
 }

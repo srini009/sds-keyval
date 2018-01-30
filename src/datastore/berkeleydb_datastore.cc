@@ -210,25 +210,47 @@ bool BerkeleyDBDataStore::get(const ds_bulk_t &key, std::vector<ds_bulk_t> &data
   return success;
 };
 
-void BerkeleyDBDataStore::BerkeleyDBDataStore::set_in_memory(bool enable) {
+void BerkeleyDBDataStore::set_in_memory(bool enable) {
   _in_memory = enable;
 };
 
-std::vector<ds_bulk_t> BerkeleyDBDataStore::BerkeleyDBDataStore::list(const ds_bulk_t &start, size_t count)
+std::vector<ds_bulk_t> BerkeleyDBDataStore::list_keys(const ds_bulk_t &start, size_t count)
 {
     std::vector<ds_bulk_t> keys;
     Dbc * cursorp;
     Dbt key, data;
     _dbm->cursor(NULL, &cursorp, 0);
     for (size_t i=0; i< count; i++) {
-	int ret = cursorp->get(&key, &data, DB_NEXT);
-	if (ret !=0 ) break;
+        int ret = cursorp->get(&key, &data, DB_NEXT);
+        if (ret !=0 ) break;
 
-	ds_bulk_t k(key.get_size() );
-	memcpy(k.data(), key.get_data(), key.get_size() );
-	/* I hope this is a deep copy! */
-	keys.push_back(std::move(k));
+        ds_bulk_t k(key.get_size() );
+        memcpy(k.data(), key.get_data(), key.get_size() );
+        /* I hope this is a deep copy! */
+        keys.push_back(std::move(k));
     }
     cursorp->close();
     return keys;
+}
+
+std::vector<std::pair<ds_bulk_t,ds_bulk_t>> BerkeleyDBDataStore::list_keyvals(const ds_bulk_t &start_key, size_t count)
+{
+    std::vector<std::pair<ds_bulk_t,ds_bulk_t>> keyvals;
+    Dbc * cursorp;
+    Dbt key, data;
+    _dbm->cursor(NULL, &cursorp, 0);
+    for (size_t i=0; i< count; i++) {
+        int ret = cursorp->get(&key, &data, DB_NEXT);
+        if (ret !=0 ) break;
+
+        ds_bulk_t k(key.get_size());
+        ds_bulk_t v(data.get_size());
+
+        memcpy(k.data(), key.get_data(), key.get_size());
+        memcpy(v.data(), data.get_data(), data.get_size());
+
+        keyvals.push_back(std::make_pair(std::move(k), std::move(v)));
+    }
+    cursorp->close();
+    return keyvals;
 }

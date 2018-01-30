@@ -102,6 +102,7 @@ int main(int argc, char *argv[])
 
     /* **** put keys ***** */
     std::vector<std::string> keys;
+    std::map<std::string, std::string> reference;
     size_t max_value_size = 8000;
 
     for(unsigned i=0; i < num_keys; i++) {
@@ -121,6 +122,7 @@ int main(int argc, char *argv[])
             return -1;
         }
         keys.push_back(k);
+        reference[k] = v;
     }
     printf("Successfuly inserted %d keys\n", num_keys);
 
@@ -130,21 +132,27 @@ int main(int argc, char *argv[])
     auto i2 = 2*keys.size()/3;
     auto keys_after = keys[i1-1];
 
-    std::vector<std::vector<char>> result_strings(i2-i1, std::vector<char>(16+1));
-    std::vector<void*> list_result(i2-i1);
+    std::vector<std::vector<char>> key_strings(i2-i1, std::vector<char>(16+1));
+    std::vector<std::vector<char>> val_strings(i2-i1, std::vector<char>(max_value_size+1));
+    std::vector<void*> keys_addr(i2-i1);
+    std::vector<void*> vals_addr(i2-i1);
     std::vector<hg_size_t> ksizes(i2-i1, 16+1);
+    std::vector<hg_size_t> vsizes(i2-i1, max_value_size+1);
     hg_size_t max_keys = i2-i1;
 
     for(unsigned i=0; i<i2-i1; i++) {
-        list_result[i] = (void*)result_strings[i].data();
+        keys_addr[i] = (void*)key_strings[i].data();
+        vals_addr[i] = (void*)val_strings[i].data();
     }
 
-    ret = sdskv_list_keys(kvph, db_id, 
+    ret = sdskv_list_keyvals(kvph, db_id,
                 (const void*)keys_after.c_str(), keys_after.size()+1,
-                list_result.data(), ksizes.data(), &max_keys);
+                keys_addr.data(), ksizes.data(), 
+                vals_addr.data(), vsizes.data(),
+                &max_keys);
 
     if(ret != 0) {
-        fprintf(stderr, "Error: sdskv_list_keys() failed\n");
+        fprintf(stderr, "Error: sdskv_list_keyvals() failed\n");
         sdskv_shutdown_service(kvcl, svr_addr);
         sdskv_provider_handle_release(kvph);
         margo_addr_free(mid, svr_addr);
@@ -163,17 +171,19 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    /* put the returned strings in an array */
-    std::vector<std::string> res;
-    for(auto ptr : list_result) {
-        res.push_back(std::string((const char*)ptr));
-        std::cout << *res.rbegin() << std::endl;
+    /* put the returned values in an array */
+    std::vector<std::string> res_k, res_v;
+    for(auto ptr : vals_addr) {
+        res_v.push_back(std::string((const char*)ptr));
+    }
+    for(auto ptr : keys_addr) {
+        res_k.push_back(std::string((const char*)ptr));
     }
 
     /* check that the returned keys are correct */
     for(unsigned i=0; i < max_keys; i++) {
-        if(res[i] != keys[i+i1]) {
-            fprintf(stderr, "Error: returned keys don't match expected keys\n");
+        if(reference[res_k[i]] != res_v[i]) {
+            fprintf(stderr, "Error: returned values don't match expected values\n");
             sdskv_shutdown_service(kvcl, svr_addr);
             sdskv_provider_handle_release(kvph);
             margo_addr_free(mid, svr_addr);

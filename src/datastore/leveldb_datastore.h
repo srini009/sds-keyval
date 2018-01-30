@@ -20,7 +20,8 @@ public:
   virtual bool get(const ds_bulk_t &key, std::vector<ds_bulk_t> &data);
   virtual bool erase(const ds_bulk_t &key);
   virtual void set_in_memory(bool enable); // not supported, a no-op
-  virtual std::vector<ds_bulk_t> list(const ds_bulk_t &start, size_t count);
+  virtual std::vector<ds_bulk_t> list_keys(const ds_bulk_t &start, size_t count);
+  virtual std::vector<std::pair<ds_bulk_t,ds_bulk_t>> list_keyvals(const ds_bulk_t &start_key, size_t count);
 protected:
   leveldb::DB *_dbm = NULL;
 private:

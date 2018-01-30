@@ -55,19 +55,26 @@ class MapDataStore : public AbstractDataStore {
             _in_memory = enable;
         }
 
-        virtual std::vector<ds_bulk_t> list(const ds_bulk_t &start_key, size_t count) {
+        virtual std::vector<ds_bulk_t> list_keys(const ds_bulk_t &start_key, size_t count) {
             std::vector<ds_bulk_t> result;
             auto it = _map.lower_bound(start_key);
             while(it != _map.end() && it->first == start_key) {
                 it++;
             }
-            auto lastkey = start_key;
-            for(size_t i=0; it != _map.end() && i < count; it++) {
-                if(it->first != lastkey) {
-                    result.push_back(lastkey);
-                    i += 1;
-                    lastkey = it->first;
-                }
+            for(size_t i=0; it != _map.end() && i < count; it++, i++) {
+                result.push_back(it->first);
+            }
+            return result;
+        }
+
+        virtual std::vector<std::pair<ds_bulk_t,ds_bulk_t>> list_keyvals(const ds_bulk_t &start_key, size_t count) {
+            std::vector<std::pair<ds_bulk_t,ds_bulk_t>> result;
+            auto it = _map.lower_bound(start_key);
+            while(it != _map.end() && it->first == start_key) {
+                it++;
+            }
+            for(size_t i=0; it != _map.end() && i < count; it++, i++) {
+                result.push_back(*it);
             }
             return result;
         }
