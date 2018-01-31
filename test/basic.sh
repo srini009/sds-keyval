@@ -6,9 +6,11 @@ if [ -z $srcdir ]; then
 fi
 source $srcdir/test/test-util.sh
 
+find_db_name 
+
 # start a server with 2 second wait,
 # 20s timeout, and my_test_db as database
-test_start_server 2 20 my_test_db:ldb
+test_start_server 2 20 $test_db_full
 
 sleep 1
 
@@ -25,5 +27,8 @@ wait
 
 echo cleaning up $TMPBASE
 rm -rf $TMPBASE
+
+echo cleaning up $test_db_name
+rm_db
 
 exit 0

@@ -126,18 +126,21 @@ int main(int argc, char *argv[])
 
     /* **** list keys **** */
     std::sort(keys.begin(), keys.end());
+
     auto i1 = keys.size()/3;
     auto i2 = 2*keys.size()/3;
     auto keys_after = keys[i1-1];
 
-    std::vector<std::vector<char>> result_strings(i2-i1, std::vector<char>(16+1));
-    std::vector<void*> list_result(i2-i1);
-    std::vector<hg_size_t> ksizes(i2-i1, 16+1);
     hg_size_t max_keys = i2-i1;
+    std::vector<std::vector<char>> result_strings(max_keys, std::vector<char>(16+1));
+    std::vector<void*> list_result(max_keys);
+    std::vector<hg_size_t> ksizes(max_keys, 16+1);
 
-    for(unsigned i=0; i<i2-i1; i++) {
+    for(unsigned i=0; i<max_keys; i++) {
         list_result[i] = (void*)result_strings[i].data();
     }
+
+    std::cout << "Expecting " << max_keys << " keys after " << keys_after << std::endl;
 
     ret = sdskv_list_keys(kvph, db_id, 
                 (const void*)keys_after.c_str(), keys_after.size()+1,
@@ -174,6 +177,8 @@ int main(int argc, char *argv[])
     for(unsigned i=0; i < max_keys; i++) {
         if(res[i] != keys[i+i1]) {
             fprintf(stderr, "Error: returned keys don't match expected keys\n");
+            fprintf(stderr, "       key received: %s\n", res[i].c_str());
+            fprintf(stderr, "       key expected: %s\n", keys[i+i1].c_str());
             sdskv_shutdown_service(kvcl, svr_addr);
             sdskv_provider_handle_release(kvph);
             margo_addr_free(mid, svr_addr);

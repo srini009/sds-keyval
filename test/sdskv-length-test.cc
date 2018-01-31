@@ -142,6 +142,7 @@ int main(int argc, char *argv[])
         }
         if(value_size != reference[k].size()+1) {
             fprintf(stderr, "Error: sdskv_length() returned a value different from the reference\n");
+            fprintf(stderr, "       (expected %ld, got %ld)\n", reference[k].size()+1, value_size);
             sdskv_shutdown_service(kvcl, svr_addr);
             sdskv_provider_handle_release(kvph);
             margo_addr_free(mid, svr_addr);

@@ -42,3 +42,14 @@ function test_start_server ()
     svr_addr=`cat $TMPBASE/sdskv.addr`
 }
 
+function find_db_name ()
+{
+    test_db_name=${SDSKV_TEST_DB_NAME:-"/tmp/sdskv-test-db"}
+    test_db_type=${SDSKV_TEST_DB_TYPE:-"map"}
+    test_db_full="${test_db_name}:${test_db_type}"
+}
+
+function rm_db()
+{
+    rm -rf ${test_db_name}
+}
