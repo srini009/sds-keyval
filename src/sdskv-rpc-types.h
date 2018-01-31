@@ -235,7 +235,7 @@ typedef struct {
     kv_data_t start_key;
     hg_size_t start_ksize;
     hg_size_t max_keys;
-} list_in_t;
+} list_keys_in_t;
 
 typedef struct {
     hg_size_t nkeys;
@@ -245,12 +245,12 @@ typedef struct {
     kv_data_t *values;
     hg_size_t *vsizes;
     int32_t ret;
-} list_out_t;
+} list_keys_out_t;
 
-static inline hg_return_t hg_proc_list_in_t(hg_proc_t proc, void *data)
+static inline hg_return_t hg_proc_list_keys_in_t(hg_proc_t proc, void *data)
 {
     hg_return_t ret;
-    list_in_t *in = (list_in_t*)data;
+    list_keys_in_t *in = (list_keys_in_t*)data;
 
     ret = hg_proc_uint64_t(proc, &in->db_id);
     if(ret != HG_SUCCESS) return ret;
@@ -278,11 +278,11 @@ static inline hg_return_t hg_proc_list_in_t(hg_proc_t proc, void *data)
     return ret;
 }
 
-static inline hg_return_t hg_proc_list_out_t(hg_proc_t proc, void *data)
+static inline hg_return_t hg_proc_list_keys_out_t(hg_proc_t proc, void *data)
 {
     hg_return_t ret;
     unsigned int i;
-    list_out_t *out = (list_out_t*)data;
+    list_keys_out_t *out = (list_keys_out_t*)data;
     /* encode/decode the number of keys */
     ret = hg_proc_hg_size_t(proc, &out->nkeys);
     if(ret != HG_SUCCESS) return ret;
@@ -293,7 +293,6 @@ static inline hg_return_t hg_proc_list_out_t(hg_proc_t proc, void *data)
 
 	switch(hg_proc_get_op(proc)) {
 	    case HG_ENCODE:
-            fprintf(stderr,"In HG_ENCODE out->nkeys = %ld\n", out->nkeys);
             /* encode the size of each key */
 		    for (i=0; i<out->nkeys; i++) {
 		        ret = hg_proc_hg_size_t(proc, &(out->ksizes[i]));
@@ -307,7 +306,6 @@ static inline hg_return_t hg_proc_list_out_t(hg_proc_t proc, void *data)
             break;
 
         case HG_DECODE:
-            fprintf(stderr,"In HG_DECODE out->nkeys = %ld\n", out->nkeys);
             if(out->nkeys) {
                 /* decode the size of each key */
                 out->ksizes = (hg_size_t*)malloc(out->nkeys*sizeof(*out->ksizes));

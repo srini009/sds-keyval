@@ -64,9 +64,9 @@ static int sdskv_client_register(sdskv_client_t client, margo_instance_id mid)
         client->sdskv_open_id =
             MARGO_REGISTER(mid, "sdskv_open_rpc", open_in_t, open_out_t, NULL);
         client->sdskv_list_keys_id =
-            MARGO_REGISTER(mid, "sdskv_list_keys_rpc", list_in_t, list_out_t, NULL);
-        client->sdskv_list_keyvals_id =
-            MARGO_REGISTER(mid, "sdskv_list_keyvals_rpc", list_in_t, list_out_t, NULL);
+            MARGO_REGISTER(mid, "sdskv_list_keys_rpc", list_keys_in_t, list_keys_out_t, NULL);
+        //client->sdskv_list_keyvals_id =
+        //    MARGO_REGISTER(mid, "sdskv_list_keyvals_rpc", list_in_t, list_out_t, NULL);
     }
 
     return 0;
@@ -542,8 +542,8 @@ int sdskv_list_keys(sdskv_provider_handle_t provider,
         //     keys for each key
         hg_size_t* max_keys)   // maximum number of keys requested
 {
-    list_in_t  in;
-    list_out_t out;
+    list_keys_in_t  in;
+    list_keys_out_t out;
     hg_return_t hret = HG_SUCCESS;
     hg_handle_t handle;
     int ret;
@@ -593,7 +593,7 @@ int sdskv_list_keys(sdskv_provider_handle_t provider,
 
     return ret;
 }
-
+#if 0
 int sdskv_list_keyvals(
         sdskv_provider_handle_t provider,
         sdskv_database_id_t db_id, 
@@ -669,7 +669,7 @@ int sdskv_list_keyvals(
 
     return ret;
 }
-
+#endif
 int sdskv_shutdown_service(sdskv_client_t client, hg_addr_t addr)
 {
     return margo_shutdown_remote_instance(client->mid, addr);

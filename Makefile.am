@@ -11,9 +11,10 @@ bin_PROGRAMS = bin/sdskv-server-daemon 	   \
 	       test/sdskv-put-test 	   \
 	       test/sdskv-length-test 	   \
 	       test/sdskv-get-test 	   \
-	       test/sdskv-list-keys-test   \
-	       test/sdskv-list-keyvals-test \
-	       test/sdskv-erase-test
+	       test/sdskv-erase-test       \
+	       test/sdskv-list-keys-test
+
+#test/sdskv-list-keyvals-test 
 
 bin_sdskv_server_daemon_SOURCES = src/sdskv-server-daemon.c
 bin_sdskv_server_daemon_DEPENDENCIES = lib/libsdskv-server.la
@@ -94,9 +95,10 @@ TESTS = test/basic.sh 		\
        	test/put-test.sh 	\
 	test/length-test.sh 	\
 	test/get-test.sh 	\
-	test/list-keys-test.sh  \
-	test/list-keyvals-test.sh \
-	test/erase-test.sh
+	test/erase-test.sh      \
+	test/list-keys-test.sh 
+
+#	test/list-keyvals-test.sh 
 
 TESTS_ENVIRONMENT = TIMEOUT="$(TIMEOUT)" \
 		    MKTEMP="$(MKTEMP)"
@@ -121,9 +123,9 @@ test_sdskv_list_keys_test_SOURCES = test/sdskv-list-keys-test.cc
 test_sdskv_list_keys_test_DEPENDENCIES = lib/libsdskv-client.la
 test_sdskv_list_keys_test_LDFLAGS = -Llib -lsdskv-client
 
-test_sdskv_list_keyvals_test_SOURCES = test/sdskv-list-kv-test.cc
-test_sdskv_list_keyvals_test_DEPENDENCIES = lib/libsdskv-client.la
-test_sdskv_list_keyvals_test_LDFLAGS = -Llib -lsdskv-client
+#test_sdskv_list_keyvals_test_SOURCES = test/sdskv-list-kv-test.cc
+#test_sdskv_list_keyvals_test_DEPENDENCIES = lib/libsdskv-client.la
+#test_sdskv_list_keyvals_test_LDFLAGS = -Llib -lsdskv-client
 
 test_sdskv_erase_test_SOURCES = test/sdskv-erase-test.cc
 test_sdskv_erase_test_DEPENDENCIES = lib/libsdskv-client.la

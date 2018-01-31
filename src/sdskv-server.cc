@@ -82,13 +82,13 @@ extern "C" int sdskv_provider_register(
             sdskv_open_ult, mplex_id, abt_pool);
     margo_register_data_mplex(mid, rpc_id, mplex_id, (void*)tmp_svr_ctx, NULL);
     rpc_id = MARGO_REGISTER_MPLEX(mid, "sdskv_list_keys_rpc",
-            list_in_t, list_out_t,
+            list_keys_in_t, list_keys_out_t,
             sdskv_list_keys_ult, mplex_id, abt_pool);
     margo_register_data_mplex(mid, rpc_id, mplex_id, (void*)tmp_svr_ctx, NULL);
-    rpc_id = MARGO_REGISTER_MPLEX(mid, "sdskv_list_keyvals_rpc",
-            list_in_t, list_out_t,
-            sdskv_list_keyvals_ult, mplex_id, abt_pool);
-    margo_register_data_mplex(mid, rpc_id, mplex_id, (void*)tmp_svr_ctx, NULL);
+//    rpc_id = MARGO_REGISTER_MPLEX(mid, "sdskv_list_keyvals_rpc",
+//            list_in_t, list_out_t,
+//            sdskv_list_keyvals_ult, mplex_id, abt_pool);
+//    margo_register_data_mplex(mid, rpc_id, mplex_id, (void*)tmp_svr_ctx, NULL);
     rpc_id = MARGO_REGISTER_MPLEX(mid, "sdskv_erase_rpc",
             erase_in_t, erase_out_t,
             sdskv_erase_ult, mplex_id, abt_pool);
@@ -619,8 +619,8 @@ static void sdskv_list_keys_ult(hg_handle_t handle)
 {
 
     hg_return_t hret;
-    list_in_t in;
-    list_out_t out;
+    list_keys_in_t in;
+    list_keys_out_t out;
 
     out.ret     = -1;
     out.nkeys   = 0;
@@ -682,6 +682,7 @@ static void sdskv_list_keys_ult(hg_handle_t handle)
 }
 DEFINE_MARGO_RPC_HANDLER(sdskv_list_keys_ult)
 
+#if 0
 static void sdskv_list_keyvals_ult(hg_handle_t handle)
 {
 
@@ -762,6 +763,7 @@ static void sdskv_list_keyvals_ult(hg_handle_t handle)
     return;
 }
 DEFINE_MARGO_RPC_HANDLER(sdskv_list_keyvals_ult)
+#endif
 
 static void sdskv_server_finalize_cb(void *data)
 {

@@ -8,7 +8,7 @@ source $srcdir/test/test-util.sh
 
 # start a server with 2 second wait,
 # 20s timeout, and my_test_db as database
-test_start_server 2 20 my_test_db
+test_start_server 2 20 my_test_db:ldb
 
 sleep 1
 

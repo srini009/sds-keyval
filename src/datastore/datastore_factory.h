@@ -75,9 +75,9 @@ class datastore_factory {
             case KVDB_BWTREE:
                 return create_bwtree_datastore(name);
             case KVDB_LEVELDB:
-                return create_berkeleydb_datastore(name);
-            case KVDB_BERKELEYDB:
                 return create_leveldb_datastore(name);
+            case KVDB_BERKELEYDB:
+                return create_berkeleydb_datastore(name);
         }
         return nullptr;
     };
