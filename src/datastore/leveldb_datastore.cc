@@ -132,12 +132,24 @@ std::vector<ds_bulk_t> LevelDBDataStore::list_keys(const ds_bulk_t &start, size_
     std::vector<ds_bulk_t> keys;
 
     leveldb::Iterator *it = _dbm->NewIterator(leveldb::ReadOptions());
-    size_t i=0;
-    for (it->SeekToFirst(); it->Valid(); it->Next() ) {
+    leveldb::Slice start_slice(start.data(), start.size());
+
+    if (start.size() > 0) {
+	it->Seek(start_slice);
+	/* we treat 'start' the way RADOS treats it: excluding it from returned
+	 * keys. LevelDB treats start inclusively, so skip over it if we found
+	 * an exact match */
+	if ( start.size() == it->key().size() &&
+		(memcmp(it->key().data(), start.data(), start.size()) == 0))
+	    it->Next();
+    } else {
+	it->SeekToFirst();
+    }
+    /* note: iterator initialized above, not in for loop */
+    for (; it->Valid() && keys.size() < count; it->Next() ) {
         ds_bulk_t k(it->key().size());
         memcpy(k.data(), it->key().data(), it->key().size() );
-        keys.push_back(k);
-        if (i++ > count) break;
+        keys.push_back(std::move(k));
     }
     delete it;
     return keys;

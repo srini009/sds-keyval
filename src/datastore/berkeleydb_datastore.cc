@@ -99,7 +99,7 @@ void BerkeleyDBDataStore::createDatabase(std::string db_name) {
       status = _dbm->open(NULL, // txn pointer
 			  NULL, // NULL for in-memory DB
 			  NULL, // logical DB name
-			  DB_HASH, // DB type (e.g. BTREE, HASH)
+			  DB_BTREE, // DB type (e.g. BTREE, HASH)
 			  flags,
 			  0);
       if (status == 0) {
@@ -111,7 +111,7 @@ void BerkeleyDBDataStore::createDatabase(std::string db_name) {
       status = _dbm->open(NULL, // txn pointer
 			  dbname.c_str(), // file name
 			  NULL, // logical DB name
-			  DB_HASH, // DB type (e.g. BTREE, HASH)
+			  DB_BTREE, // DB type (e.g. BTREE, HASH)
 			  flags,
 			  0);
     }
@@ -219,15 +219,32 @@ std::vector<ds_bulk_t> BerkeleyDBDataStore::list_keys(const ds_bulk_t &start, si
     std::vector<ds_bulk_t> keys;
     Dbc * cursorp;
     Dbt key, data;
+    int ret;
     _dbm->cursor(NULL, &cursorp, 0);
-    for (size_t i=0; i< count; i++) {
-        int ret = cursorp->get(&key, &data, DB_NEXT);
-        if (ret !=0 ) break;
 
-        ds_bulk_t k(key.get_size() );
-        memcpy(k.data(), key.get_data(), key.get_size() );
-        /* I hope this is a deep copy! */
-        keys.push_back(std::move(k));
+    /* 'start' is like RADOS: not inclusive  */
+    if (start.size()) {
+	key.set_size(start.size());
+	key.set_data((void *)start.data());
+	ret = cursorp->get(&key, &data, DB_SET_RANGE);
+	if (ret != 0) {
+	    cursorp->close();
+	    return keys;
+	}
+	ds_bulk_t k(key.get_size() );
+	memcpy(k.data(), key.get_data(), key.get_size() );
+	/* SET_RANGE will return the smallest key greater than or equal to the
+	 * requested key, but we want strictly greater than */
+	if (k != start)
+	    keys.push_back(std::move(k));
+    }
+    while (keys.size() < count) {
+	ret = cursorp->get(&key, &data, DB_NEXT);
+	if (ret !=0 ) break;
+
+	ds_bulk_t k(key.get_size() );
+	memcpy(k.data(), key.get_data(), key.get_size() );
+	keys.push_back(std::move(k));
     }
     cursorp->close();
     return keys;

@@ -357,8 +357,9 @@ static hg_return_t list_handler(hg_handle_t handle)
     list_in_t list_in;
     list_out_t list_out;
 
-    std::vector<char> start{};
     margo_get_input(handle, &list_in);
+    ds_bulk_t start(list_in.list_in.start_key,
+	    list_in.list_in.start_key + list_in.list_in.start_ksize);
 
     auto keys = datastore->list_keys(start, list_in.list_in.max_keys);
 
