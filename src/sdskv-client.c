@@ -266,7 +266,7 @@ int sdskv_put(sdskv_provider_handle_t provider,
 
         hret = margo_bulk_create(provider->client->mid, 1, (void**)(&value), &in.bulk.vsize,
                                 HG_BULK_READ_ONLY, &in.bulk.handle);
-        if(ret != HG_SUCCESS) {
+        if(hret != HG_SUCCESS) {
             fprintf(stderr,"[SDSKV] margo_bulk_create() failed in sdskv_put()\n");
             return -1;
         }
