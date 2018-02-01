@@ -621,59 +621,125 @@ static void sdskv_list_keys_ult(hg_handle_t handle)
     hg_return_t hret;
     list_keys_in_t in;
     list_keys_out_t out;
+    hg_bulk_t ksizes_local_bulk = HG_BULK_NULL;
+    hg_bulk_t keys_local_bulk   = HG_BULK_NULL;
 
     out.ret     = -1;
     out.nkeys   = 0;
-    out.ksizes  = nullptr;
-    out.keys    = nullptr;
-    out.nvalues = 0;
-    out.vsizes  = nullptr;
-    out.values  = nullptr;
 
+    /* get the provider handling this request */
     margo_instance_id mid = margo_hg_handle_get_instance(handle);
     assert(mid);
     const struct hg_info* info = margo_get_info(handle);
     sdskv_provider_t svr_ctx = 
         (sdskv_provider_t)margo_registered_data_mplex(mid, info->id, info->target_id);
     if(!svr_ctx) {
-        fprintf(stderr, "Error: SDSKV could not find provider\n"); 
+        std::cerr << "Error: SDSKV list_keys could not find provider" << std::endl; 
         margo_respond(handle, &out);
         margo_destroy(handle);
         return;
     }
 
+    /* get the input */
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
+        std::cerr << "Error: SDSKV list_keys could not get RPC input" << std::endl;
         margo_respond(handle, &out);
         margo_destroy(handle);
         return;
     }
 
-    auto it = svr_ctx->databases.find(in.db_id);
-    if(it == svr_ctx->databases.end()) {
-        margo_respond(handle, &out);
-        margo_free_input(handle, &in);
-        margo_destroy(handle);
-        return;
-    }
-    
-    ds_bulk_t start_kdata(in.start_key, in.start_key+in.start_ksize);
-    auto keys = it->second->list_keys(start_kdata, in.max_keys);
-    out.nkeys = keys.size();
-    /* create the array of sizes */
-    std::vector<hg_size_t> sizes(out.nkeys);
-    for(unsigned i = 0; i < out.nkeys; i++) {
-        sizes[i] = keys[i].size();
-    }
-    out.ksizes = sizes.data();
-    /* create the packed data */
-    std::vector<kv_data_t> packed_keys(keys.size());
-    for(unsigned i = 0; i < out.nkeys; i++) {
-        packed_keys[i] = (char*)(keys[i].data());
-    }
-    out.keys = packed_keys.data();
-    out.ret = 0;
+    try {
 
+        /* find the database targeted */
+        auto it = svr_ctx->databases.find(in.db_id);
+        if(it == svr_ctx->databases.end()) {
+            std::cerr << "Error: SDSKV list_keys could not get database with id " << in.db_id << std::endl;
+            throw -1;
+        }
+        auto db = it->second;
+
+        /* create a bulk handle to receive and send key sizes from client */
+        std::vector<hg_size_t> ksizes(in.max_keys);
+        std::vector<void*> ksizes_addr(1);
+        ksizes_addr[0] = (void*)ksizes.data();
+        hg_size_t ksizes_bulk_size = ksizes.size()*sizeof(hg_size_t);
+        hret = margo_bulk_create(mid, 1, ksizes_addr.data(), 
+                &ksizes_bulk_size, HG_BULK_READWRITE, &ksizes_local_bulk);
+        if(hret != HG_SUCCESS) {
+            std::cerr << "Error: SDSKV list_keys could not create bulk handle (ksizes_local_bulk)" << std::endl;
+            throw -1;
+        }
+
+        /* receive the key sizes from the client */
+        hg_addr_t origin_addr = info->addr;
+        hret = margo_bulk_transfer(mid, HG_BULK_PULL, origin_addr,
+                in.ksizes_bulk_handle, 0, ksizes_local_bulk, 0, ksizes_bulk_size);
+        if(hret != HG_SUCCESS) {
+            std::cerr << "Error: SDSKV list_keys could not issue bulk transfer " 
+                << "(pull from in.ksizes_bulk_handle to ksizes_local_bulk)" << std::endl;
+            throw -1;
+        }
+
+        /* get the keys from the underlying database */    
+        ds_bulk_t start_kdata(in.start_key, in.start_key+in.start_ksize);
+        auto keys = db->list_keys(start_kdata, in.max_keys);
+        hg_size_t num_keys = std::min(keys.size(), in.max_keys);
+
+        /* create the array of actual sizes */
+        std::vector<hg_size_t> true_ksizes(num_keys);
+        hg_size_t keys_bulk_size = 0;
+        for(unsigned i = 0; i < num_keys; i++) {
+            true_ksizes[i] = keys[i].size();
+            if(true_ksizes[i] > ksizes[i]) {
+                // this key has a size that exceeds the allocated size on client
+                throw -1;
+            } else {
+                ksizes[i] = true_ksizes[i];
+                keys_bulk_size += ksizes[i];
+            }
+        }
+
+        /* create an array of addresses pointing to keys */
+        std::vector<void*> keys_addr(num_keys);
+        for(unsigned i=0; i < num_keys; i++) {
+            keys_addr[i] = (void*)(keys[i].data());
+        }
+
+        /* expose the keys for bulk transfer */
+        hret = margo_bulk_create(mid, num_keys, keys_addr.data(),
+                true_ksizes.data(), HG_BULK_READ_ONLY, &keys_local_bulk);
+        if(hret != HG_SUCCESS) {
+            std::cerr << "Error: SDSKV list_keys could not create bulk handle (keys_local_bulk)" << std::endl;
+            throw -1;
+        }
+
+        /* transfer the ksizes back to the client */
+        hret = margo_bulk_transfer(mid, HG_BULK_PUSH, origin_addr, 
+                in.ksizes_bulk_handle, 0, ksizes_local_bulk, 0, ksizes_bulk_size);
+        if(hret != HG_SUCCESS) {
+            std::cerr << "Error: SDSKV list_keys could not issue bulk transfer "
+                << "(push from ksizes_local_bulk to in.ksizes_bulk_handle)" << std::endl;
+            throw -1;
+        }
+
+        /* transfer the keys to the client */
+        hret = margo_bulk_transfer(mid, HG_BULK_PUSH, origin_addr,
+                in.keys_bulk_handle, 0, keys_local_bulk, 0, keys_bulk_size);
+        if(hret != HG_SUCCESS) {
+            std::cerr << "Error: SDSKV list_keys could not issue bulk transfer (keys_local_bulk)" << std::endl;
+            throw -1;
+        }
+
+        out.nkeys = num_keys;
+        out.ret = 0;
+
+    } catch(int exc_no) {
+        out.ret = exc_no;
+    }
+
+    margo_bulk_free(ksizes_local_bulk);
+    margo_bulk_free(keys_local_bulk);
     margo_respond(handle, &out);
     margo_free_input(handle, &in);
     margo_destroy(handle); 

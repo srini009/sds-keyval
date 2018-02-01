@@ -544,9 +544,11 @@ int sdskv_list_keys(sdskv_provider_handle_t provider,
 {
     list_keys_in_t  in;
     list_keys_out_t out;
-    hg_return_t hret = HG_SUCCESS;
-    hg_handle_t handle;
-    int ret;
+    in.keys_bulk_handle   = HG_BULK_NULL;
+    in.ksizes_bulk_handle = HG_BULK_NULL;
+    hg_return_t hret      = HG_SUCCESS;
+    hg_handle_t handle    = HG_HANDLE_NULL;
+    int ret = 0;
     int i;
 
     in.db_id = db_id;
@@ -554,40 +556,69 @@ int sdskv_list_keys(sdskv_provider_handle_t provider,
     in.start_ksize = start_ksize;
     in.max_keys = *max_keys;
 
+    /* create bulk handle to expose the segments with key sizes */
+    hg_size_t ksize_bulk_size = (*max_keys)*sizeof(*ksizes);
+    void* buf_ptr[1] = { ksizes };
+    hret = margo_bulk_create(provider->client->mid,
+                             1, buf_ptr, &ksize_bulk_size,
+                             HG_BULK_READWRITE,
+                             &in.ksizes_bulk_handle);
+    if(hret != HG_SUCCESS) {
+        ret = -1;
+        goto finish;
+    }
+
+    /* create bulk handle to expose where the keys should be placed */
+    hret = margo_bulk_create(provider->client->mid,
+                             *max_keys, keys, ksizes,
+                             HG_BULK_WRITE_ONLY,
+                             &in.keys_bulk_handle);
+    if(hret != HG_SUCCESS) {
+        ret = -1;
+        goto finish;
+    }
+
+
     /* create handle */
     hret = margo_create(
             provider->client->mid,
             provider->addr,
             provider->client->sdskv_list_keys_id,
             &handle);
-    if(hret != HG_SUCCESS) return -1;
+    if(hret != HG_SUCCESS) {
+        ret = -1;
+        goto finish;
+    }
 
+    /* set target id */
     hret = margo_set_target_id(handle, provider->mplex_id);
     if(hret != HG_SUCCESS) {
-        margo_destroy(handle);
-        return -1;
+        ret = -1;
+        goto finish;
     }
 
+    /* forward to provider */
     hret = margo_forward(handle, &in);
     if(hret != HG_SUCCESS) {
-        margo_destroy(handle);
-        return -1;
+        ret = -1;
+        goto finish;
     }
 
+    /* get the output from provider */
     hret = margo_get_output(handle, &out);
     if(hret != HG_SUCCESS) {
-        margo_destroy(handle);
-        return -1;
+        ret = -1;
+        goto finish;
     }
 
+    /* set return values */
     *max_keys = out.nkeys;
     ret = out.ret;
 
-    for (i=0; i < out.nkeys; i++) {
-        ksizes[i] = out.ksizes[i];
-        memcpy(keys[i], out.keys[i], out.ksizes[i]);
-    }
-
+finish:
+    /* free everything we created */
+    margo_bulk_free(in.ksizes_bulk_handle);
+    margo_bulk_free(in.keys_bulk_handle);
     margo_free_output(handle, &out);
     margo_destroy(handle);
 
