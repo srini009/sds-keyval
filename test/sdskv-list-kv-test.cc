@@ -103,10 +103,11 @@ int main(int argc, char *argv[])
     /* **** put keys ***** */
     std::vector<std::string> keys;
     std::map<std::string, std::string> reference;
-    size_t max_value_size = 8000;
+    size_t max_value_size = 16;
+    size_t max_key_size = 16;
 
     for(unsigned i=0; i < num_keys; i++) {
-        auto k = gen_random_string(16);
+        auto k = gen_random_string((max_key_size+(rand()%max_key_size))/2);
         // half of the entries will be put using bulk
         auto v = gen_random_string(i*max_value_size/num_keys);
         ret = sdskv_put(kvph, db_id,
@@ -123,6 +124,7 @@ int main(int argc, char *argv[])
         }
         keys.push_back(k);
         reference[k] = v;
+        std::cout << k << " ===> " << v << std::endl;
     }
     printf("Successfuly inserted %d keys\n", num_keys);
 
@@ -131,16 +133,16 @@ int main(int argc, char *argv[])
     auto i1 = keys.size()/3;
     auto i2 = 2*keys.size()/3;
     auto keys_after = keys[i1-1];
-
-    std::vector<std::vector<char>> key_strings(i2-i1, std::vector<char>(16+1));
-    std::vector<std::vector<char>> val_strings(i2-i1, std::vector<char>(max_value_size+1));
-    std::vector<void*> keys_addr(i2-i1);
-    std::vector<void*> vals_addr(i2-i1);
-    std::vector<hg_size_t> ksizes(i2-i1, 16+1);
-    std::vector<hg_size_t> vsizes(i2-i1, max_value_size+1);
     hg_size_t max_keys = i2-i1;
 
-    for(unsigned i=0; i<i2-i1; i++) {
+    std::vector<std::vector<char>> key_strings(max_keys, std::vector<char>(max_key_size+1));
+    std::vector<std::vector<char>> val_strings(max_keys, std::vector<char>(max_value_size+1));
+    std::vector<void*> keys_addr(max_keys);
+    std::vector<void*> vals_addr(max_keys);
+    std::vector<hg_size_t> ksizes(max_keys, max_key_size+1);
+    std::vector<hg_size_t> vsizes(max_keys, max_value_size+1);
+
+    for(unsigned i=0; i<max_keys; i++) {
         keys_addr[i] = (void*)key_strings[i].data();
         vals_addr[i] = (void*)val_strings[i].data();
     }
@@ -182,8 +184,26 @@ int main(int argc, char *argv[])
 
     /* check that the returned keys are correct */
     for(unsigned i=0; i < max_keys; i++) {
-        if(reference[res_k[i]] != res_v[i]) {
-            fprintf(stderr, "Error: returned values don't match expected values\n");
+        if(res_k[i] != keys[i+i1]) {
+            fprintf(stderr, "Error: returned keys don't match expected keys\n");
+            fprintf(stderr, "       key received: %s\n", res_k[i].c_str());
+            fprintf(stderr, "       key expected: %s\n", keys[i+i1].c_str());
+            sdskv_shutdown_service(kvcl, svr_addr);
+            sdskv_provider_handle_release(kvph);
+            margo_addr_free(mid, svr_addr);
+            sdskv_client_finalize(kvcl);
+            margo_finalize(mid);
+            return -1;
+        }
+    }
+
+    /* check that the returned values are correct */
+    for(unsigned i=0; i < max_keys; i++) {
+        if(reference[res_k[i]] == res_v[i]) {
+            fprintf(stderr, "value %d received matches expected value: %s\n", i, res_v[i].c_str());
+        } else {
+            fprintf(stderr, "Error: returned value %d don't match expected value\n", i);
+            fprintf(stderr, "   expected: %s\n   received: %s\n", reference[res_k[i]].c_str(), res_v[i].c_str());
             sdskv_shutdown_service(kvcl, svr_addr);
             sdskv_provider_handle_release(kvph);
             margo_addr_free(mid, svr_addr);

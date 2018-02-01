@@ -102,10 +102,11 @@ int main(int argc, char *argv[])
 
     /* **** put keys ***** */
     std::vector<std::string> keys;
-    size_t max_value_size = 8000;
+    size_t max_key_size   = 16;
+    size_t max_value_size = 16;
 
     for(unsigned i=0; i < num_keys; i++) {
-        auto k = gen_random_string(16);
+        auto k = gen_random_string((max_key_size + (rand()%max_key_size))/2);
         // half of the entries will be put using bulk
         auto v = gen_random_string(i*max_value_size/num_keys);
         ret = sdskv_put(kvph, db_id,
@@ -121,6 +122,7 @@ int main(int argc, char *argv[])
             return -1;
         }
         keys.push_back(k);
+        std::cerr << k << "\t ===> " << v << std::endl;
     }
     printf("Successfuly inserted %d keys\n", num_keys);
 
@@ -132,9 +134,9 @@ int main(int argc, char *argv[])
     auto keys_after = keys[i1-1];
 
     hg_size_t max_keys = i2-i1;
-    std::vector<std::vector<char>> result_strings(max_keys, std::vector<char>(16+1));
+    std::vector<std::vector<char>> result_strings(max_keys, std::vector<char>(max_key_size+1));
     std::vector<void*> list_result(max_keys);
-    std::vector<hg_size_t> ksizes(max_keys, 16+1);
+    std::vector<hg_size_t> ksizes(max_keys, max_key_size+1);
 
     for(unsigned i=0; i<max_keys; i++) {
         list_result[i] = (void*)result_strings[i].data();

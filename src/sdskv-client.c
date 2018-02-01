@@ -65,8 +65,8 @@ static int sdskv_client_register(sdskv_client_t client, margo_instance_id mid)
             MARGO_REGISTER(mid, "sdskv_open_rpc", open_in_t, open_out_t, NULL);
         client->sdskv_list_keys_id =
             MARGO_REGISTER(mid, "sdskv_list_keys_rpc", list_keys_in_t, list_keys_out_t, NULL);
-        //client->sdskv_list_keyvals_id =
-        //    MARGO_REGISTER(mid, "sdskv_list_keyvals_rpc", list_in_t, list_out_t, NULL);
+        client->sdskv_list_keyvals_id =
+            MARGO_REGISTER(mid, "sdskv_list_keyvals_rpc", list_keyvals_in_t, list_keyvals_out_t, NULL);
     }
 
     return 0;
@@ -619,6 +619,130 @@ finish:
     /* free everything we created */
     margo_bulk_free(in.ksizes_bulk_handle);
     margo_bulk_free(in.keys_bulk_handle);
+    margo_free_output(handle, &out);
+    margo_destroy(handle);
+
+    return ret;
+}
+
+int sdskv_list_keyvals(sdskv_provider_handle_t provider,
+        sdskv_database_id_t db_id,  // db instance
+        const void *start_key,  // we want keys strictly after this start_key
+        hg_size_t start_ksize,  // size of the start_key
+        void **keys,            // pointer to an array of void* pointers,
+                                //     this array has size *max_keys
+        hg_size_t* ksizes,      // pointer to an array of hg_size_t sizes
+                                //    representing sizes allocated in
+                                //     keys for each key
+        void **values,          // pointer to an array of void* pointers,
+                                //     this array has size *max_keys
+        hg_size_t* vsizes,      // pointer to an array of hg_size_t sizes
+                                //    representing sizes allocated in
+                                //    values for each value
+        hg_size_t* max_keys)    // maximum number of keys requested
+{
+    list_keyvals_in_t  in;
+    list_keyvals_out_t out;
+    in.keys_bulk_handle   = HG_BULK_NULL;
+    in.ksizes_bulk_handle = HG_BULK_NULL;
+    in.vals_bulk_handle   = HG_BULK_NULL;
+    in.vsizes_bulk_handle = HG_BULK_NULL;
+    hg_return_t hret      = HG_SUCCESS;
+    hg_handle_t handle    = HG_HANDLE_NULL;
+    int ret = 0;
+    int i;
+
+    in.db_id = db_id;
+    in.start_key = (kv_data_t) start_key;
+    in.start_ksize = start_ksize;
+    in.max_keys = *max_keys;
+
+    /* create bulk handle to expose the segments with key sizes */
+    hg_size_t ksize_bulk_size = (*max_keys)*sizeof(*ksizes);
+    void* ksizes_buf_ptr[1] = { ksizes };
+    hret = margo_bulk_create(provider->client->mid,
+                             1, ksizes_buf_ptr, &ksize_bulk_size,
+                             HG_BULK_READWRITE,
+                             &in.ksizes_bulk_handle);
+    if(hret != HG_SUCCESS) {
+        ret = -1;
+        goto finish;
+    }
+
+    /* create bulk handle to expose the segments with value sizes */
+    hg_size_t vsize_bulk_size = (*max_keys)*sizeof(*vsizes);
+    void* vsizes_buf_ptr[1] = { vsizes };
+    hret = margo_bulk_create(provider->client->mid,
+                             1, vsizes_buf_ptr, &ksize_bulk_size,
+                             HG_BULK_READWRITE,
+                             &in.vsizes_bulk_handle);
+    if(hret != HG_SUCCESS) {
+        ret = -1;
+        goto finish;
+    }
+
+    /* create bulk handle to expose where the keys should be placed */
+    hret = margo_bulk_create(provider->client->mid,
+                             *max_keys, keys, ksizes,
+                             HG_BULK_WRITE_ONLY,
+                             &in.keys_bulk_handle);
+    if(hret != HG_SUCCESS) {
+        ret = -1;
+        goto finish;
+    }
+
+    /* create bulk handle to expose where the keys should be placed */
+    hret = margo_bulk_create(provider->client->mid,
+                             *max_keys, values, vsizes,
+                             HG_BULK_WRITE_ONLY,
+                             &in.vals_bulk_handle);
+    if(hret != HG_SUCCESS) {
+        ret = -1;
+        goto finish;
+    }
+
+    /* create handle */
+    hret = margo_create(
+            provider->client->mid,
+            provider->addr,
+            provider->client->sdskv_list_keyvals_id,
+            &handle);
+    if(hret != HG_SUCCESS) {
+        ret = -1;
+        goto finish;
+    }
+
+    /* set target id */
+    hret = margo_set_target_id(handle, provider->mplex_id);
+    if(hret != HG_SUCCESS) {
+        ret = -1;
+        goto finish;
+    }
+
+    /* forward to provider */
+    hret = margo_forward(handle, &in);
+    if(hret != HG_SUCCESS) {
+        ret = -1;
+        goto finish;
+    }
+
+    /* get the output from provider */
+    hret = margo_get_output(handle, &out);
+    if(hret != HG_SUCCESS) {
+        ret = -1;
+        goto finish;
+    }
+
+    /* set return values */
+    *max_keys = out.nkeys;
+    ret = out.ret;
+
+finish:
+    /* free everything we created */
+    margo_bulk_free(in.ksizes_bulk_handle);
+    margo_bulk_free(in.keys_bulk_handle);
+    margo_bulk_free(in.vsizes_bulk_handle);
+    margo_bulk_free(in.vals_bulk_handle);
     margo_free_output(handle, &out);
     margo_destroy(handle);
 

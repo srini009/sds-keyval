@@ -296,6 +296,59 @@ static inline hg_return_t hg_proc_list_keys_in_t(hg_proc_t proc, void *data)
     return ret;
 }
 
+// ------------- LIST KEYVALS ------------- //
+
+typedef struct {
+    uint64_t  db_id;
+    kv_data_t start_key;
+    hg_size_t start_ksize;
+    hg_size_t max_keys;
+    hg_bulk_t ksizes_bulk_handle;
+    hg_bulk_t keys_bulk_handle;
+    hg_bulk_t vsizes_bulk_handle;
+    hg_bulk_t vals_bulk_handle;
+} list_keyvals_in_t;
+
+MERCURY_GEN_PROC(list_keyvals_out_t, ((hg_size_t)(nkeys)) ((int32_t)(ret)))
+
+static inline hg_return_t hg_proc_list_keyvals_in_t(hg_proc_t proc, void *data)
+{
+    hg_return_t ret;
+    list_keyvals_in_t *in = (list_keyvals_in_t*)data;
+
+    ret = hg_proc_uint64_t(proc, &in->db_id);
+    if(ret != HG_SUCCESS) return ret;
+
+    ret = hg_proc_hg_size_t(proc, &in->start_ksize);
+    if(ret != HG_SUCCESS) return ret;
+    if (in->start_ksize) {
+        switch(hg_proc_get_op(proc)) {
+            case HG_ENCODE:
+                ret = hg_proc_raw(proc, in->start_key, in->start_ksize);
+                if(ret != HG_SUCCESS) return ret;
+                break;
+            case HG_DECODE:
+                in->start_key = (kv_data_t)malloc(in->start_ksize);
+                ret = hg_proc_raw(proc, in->start_key, in->start_ksize);
+                if(ret != HG_SUCCESS) return ret;
+                break;
+            case HG_FREE:
+                free(in->start_key);
+            default:
+                break;
+        }
+    }
+    ret = hg_proc_hg_size_t(proc, &in->max_keys);
+    if(ret != HG_SUCCESS) return ret;
+    ret = hg_proc_hg_bulk_t(proc, &in->ksizes_bulk_handle);
+    if(ret != HG_SUCCESS) return ret;
+    ret = hg_proc_hg_bulk_t(proc, &in->keys_bulk_handle);
+    if(ret != HG_SUCCESS) return ret;
+    ret = hg_proc_hg_bulk_t(proc, &in->vsizes_bulk_handle);
+    if(ret != HG_SUCCESS) return ret;
+    ret = hg_proc_hg_bulk_t(proc, &in->vals_bulk_handle);
+    return ret;
+}
 // ------------- BULK ------------- //
 
 // for handling bulk puts/gets (e.g. for ParSplice use case)
