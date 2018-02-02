@@ -125,7 +125,10 @@ void BerkeleyDBDataStore::createDatabase(std::string db_name) {
 };
 
 void BerkeleyDBDataStore::set_comparison_function(comparator_fn less) {
-    // TODO
+    if(less) {
+        fprintf(stderr, "Error: BerkeleyDBDataStore's comparison function cannot be changed\n");
+        exit(-1);
+    }
 }
 
 bool BerkeleyDBDataStore::put(const ds_bulk_t &key, const ds_bulk_t &data) {

@@ -5,29 +5,56 @@
 
 #include "kv-config.h"
 #include <leveldb/db.h>
+#include <leveldb/comparator.h>
 #include <leveldb/env.h>
 #include "datastore/datastore.h"
 
 // may want to implement some caching for persistent stores like LevelDB
 class LevelDBDataStore : public AbstractDataStore {
-public:
-  LevelDBDataStore();
-  LevelDBDataStore(Duplicates duplicates, bool eraseOnGet, bool debug);
-  virtual ~LevelDBDataStore();
-  virtual void createDatabase(std::string db_name);
-  virtual bool put(const ds_bulk_t &key, const ds_bulk_t &data);
-  virtual bool get(const ds_bulk_t &key, ds_bulk_t &data);
-  virtual bool get(const ds_bulk_t &key, std::vector<ds_bulk_t> &data);
-  virtual bool erase(const ds_bulk_t &key);
-  virtual void set_in_memory(bool enable); // not supported, a no-op
-  virtual void set_comparison_function(comparator_fn less);
-protected:
-  virtual std::vector<ds_bulk_t> vlist_keys(const ds_bulk_t &start, size_t count, const ds_bulk_t &prefix);
-  virtual std::vector<std::pair<ds_bulk_t,ds_bulk_t>> vlist_keyvals(const ds_bulk_t &start_key, size_t count, const ds_bulk_t &prefix);
-  leveldb::DB *_dbm = NULL;
-private:
-  std::string toString(const ds_bulk_t &key);
-  ds_bulk_t fromString(const std::string &keystr);
+    private:
+
+        class LevelDBDataStoreComparator : public leveldb::Comparator {
+            private:
+                LevelDBDataStore* _store;
+
+            public:
+                LevelDBDataStoreComparator(LevelDBDataStore* store)
+                    : _store(store) {}
+
+                int Compare(const leveldb::Slice& a, const leveldb::Slice& b) const {
+                    if(_store->_less) {
+                        return _store->_less((const void*)a.data(), a.size(), (const void*)b.data(), b.size());
+                    } else {
+                        return a.compare(b);
+                    }
+                }
+
+                // Ignore the following methods for now:
+                const char* Name() const { return "LevelDBDataStoreComparator"; }
+                void FindShortestSeparator(std::string*, const leveldb::Slice&) const {}
+                void FindShortSuccessor(std::string*) const {}
+        };
+
+    public:
+        LevelDBDataStore();
+        LevelDBDataStore(Duplicates duplicates, bool eraseOnGet, bool debug);
+        virtual ~LevelDBDataStore();
+        virtual void createDatabase(std::string db_name);
+        virtual bool put(const ds_bulk_t &key, const ds_bulk_t &data);
+        virtual bool get(const ds_bulk_t &key, ds_bulk_t &data);
+        virtual bool get(const ds_bulk_t &key, std::vector<ds_bulk_t> &data);
+        virtual bool erase(const ds_bulk_t &key);
+        virtual void set_in_memory(bool enable); // not supported, a no-op
+        virtual void set_comparison_function(comparator_fn less);
+    protected:
+        virtual std::vector<ds_bulk_t> vlist_keys(const ds_bulk_t &start, size_t count, const ds_bulk_t &prefix);
+        virtual std::vector<std::pair<ds_bulk_t,ds_bulk_t>> vlist_keyvals(const ds_bulk_t &start_key, size_t count, const ds_bulk_t &prefix);
+        leveldb::DB *_dbm = NULL;
+    private:
+        std::string toString(const ds_bulk_t &key);
+        ds_bulk_t fromString(const std::string &keystr);
+        AbstractDataStore::comparator_fn _less;
+        LevelDBDataStoreComparator _keycmp;
 };
 
 #endif // ldb_datastore_h

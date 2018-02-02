@@ -9,12 +9,12 @@
 using namespace std::chrono;
 
 LevelDBDataStore::LevelDBDataStore() :
-  AbstractDataStore(Duplicates::IGNORE, false, false) {
+  AbstractDataStore(Duplicates::IGNORE, false, false), _less(nullptr), _keycmp(this) {
   _dbm = NULL;
 };
 
 LevelDBDataStore::LevelDBDataStore(Duplicates duplicates, bool eraseOnGet, bool debug) :
-  AbstractDataStore(duplicates, eraseOnGet, debug) {
+  AbstractDataStore(duplicates, eraseOnGet, debug), _less(nullptr), _keycmp(this) {
   _dbm = NULL;
 };
   
@@ -43,7 +43,7 @@ void LevelDBDataStore::createDatabase(std::string db_name) {
   if (!basepath.empty()) {
     boost::filesystem::create_directories(basepath);
   }
-
+  options.comparator = &_keycmp;
   options.create_if_missing = true;
   status = leveldb::DB::Open(options, db_name, &_dbm);
   
@@ -57,7 +57,7 @@ void LevelDBDataStore::createDatabase(std::string db_name) {
 };
 
 void LevelDBDataStore::set_comparison_function(comparator_fn less) {
-    // TODO
+   _less = less; 
 }
 
 bool LevelDBDataStore::put(const ds_bulk_t &key, const ds_bulk_t &data) {
