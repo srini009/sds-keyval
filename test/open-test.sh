@@ -28,7 +28,4 @@ wait
 echo cleaning up $TMPBASE
 rm -rf $TMPBASE
 
-echo cleaning up $test_db_name
-rm_db
-
 exit 0

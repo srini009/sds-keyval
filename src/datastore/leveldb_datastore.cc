@@ -134,28 +134,72 @@ std::vector<ds_bulk_t> LevelDBDataStore::vlist_keys(const ds_bulk_t &start, size
     leveldb::Iterator *it = _dbm->NewIterator(leveldb::ReadOptions());
     leveldb::Slice start_slice(start.data(), start.size());
 
+    int c = 0;
+
     if (start.size() > 0) {
-	it->Seek(start_slice);
-	/* we treat 'start' the way RADOS treats it: excluding it from returned
-	 * keys. LevelDB treats start inclusively, so skip over it if we found
-	 * an exact match */
-	if ( start.size() == it->key().size() &&
-		(memcmp(it->key().data(), start.data(), start.size()) == 0))
-	    it->Next();
+        it->Seek(start_slice);
+        /* we treat 'start' the way RADOS treats it: excluding it from returned
+         * keys. LevelDB treats start inclusively, so skip over it if we found
+         * an exact match */
+        if ( start.size() == it->key().size() &&
+                (memcmp(it->key().data(), start.data(), start.size()) == 0))
+            it->Next();
     } else {
-	it->SeekToFirst();
+        it->SeekToFirst();
     }
     /* note: iterator initialized above, not in for loop */
     for (; it->Valid() && keys.size() < count; it->Next() ) {
         ds_bulk_t k(it->key().size());
         memcpy(k.data(), it->key().data(), it->key().size() );
-        keys.push_back(std::move(k));
+        c = std::memcmp(prefix.data(), k.data(), prefix.size());
+        if(c == 0) {
+            keys.push_back(std::move(k));
+        } else if(c < 0) {
+            break;
+        }
     }
     delete it;
     return keys;
 }
 
-std::vector<std::pair<ds_bulk_t,ds_bulk_t>> LevelDBDataStore::vlist_keyvals(const ds_bulk_t &start_key, size_t count, const ds_bulk_t &prefix)
+std::vector<std::pair<ds_bulk_t,ds_bulk_t>> LevelDBDataStore::vlist_keyvals(const ds_bulk_t &start, size_t count, const ds_bulk_t &prefix)
+{
+    std::vector<std::pair<ds_bulk_t,ds_bulk_t>> result;
+
+    leveldb::Iterator *it = _dbm->NewIterator(leveldb::ReadOptions());
+    leveldb::Slice start_slice(start.data(), start.size());
+
+    int c = 0;
+
+    if (start.size() > 0) {
+        it->Seek(start_slice);
+        /* we treat 'start' the way RADOS treats it: excluding it from returned
+         * keys. LevelDB treats start inclusively, so skip over it if we found
+         * an exact match */
+        if ( start.size() == it->key().size() &&
+                (memcmp(it->key().data(), start.data(), start.size()) == 0))
+            it->Next();
+    } else {
+        it->SeekToFirst();
+    }
+    /* note: iterator initialized above, not in for loop */
+    for (; it->Valid() && result.size() < count; it->Next() ) {
+        ds_bulk_t k(it->key().size());
+        ds_bulk_t v(it->value().size());
+        memcpy(k.data(), it->key().data(), it->key().size());
+        memcpy(v.data(), it->value().data(), it->value().size());
+
+        c = std::memcmp(prefix.data(), k.data(), prefix.size());
+        if(c == 0) {
+            result.push_back(std::make_pair(std::move(k), std::move(v)));
+        } else if(c < 0) {
+            break;
+        }
+    }
+    delete it;
+    return result;
+}
+/*
 {
     std::vector<std::pair<ds_bulk_t,ds_bulk_t>> keyvals;
 
@@ -172,3 +216,4 @@ std::vector<std::pair<ds_bulk_t,ds_bulk_t>> LevelDBDataStore::vlist_keyvals(cons
     delete it;
     return keyvals;
 }
+*/

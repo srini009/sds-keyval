@@ -224,50 +224,94 @@ std::vector<ds_bulk_t> BerkeleyDBDataStore::vlist_keys(const ds_bulk_t &start, s
 
     /* 'start' is like RADOS: not inclusive  */
     if (start.size()) {
-	key.set_size(start.size());
-	key.set_data((void *)start.data());
-	ret = cursorp->get(&key, &data, DB_SET_RANGE);
-	if (ret != 0) {
-	    cursorp->close();
-	    return keys;
-	}
-	ds_bulk_t k(key.get_size() );
-	memcpy(k.data(), key.get_data(), key.get_size() );
+	    key.set_size(start.size());
+	    key.set_data((void *)start.data());
+	    ret = cursorp->get(&key, &data, DB_SET_RANGE);
+	    if (ret != 0) {
+	        cursorp->close();
+	        return keys;
+	    }
+    } else {
+        ret = cursorp->get(&key, &data, DB_FIRST);
+        if (ret != 0) {
+            cursorp->close();
+            return keys;
+        }
+    }
+
+	ds_bulk_t k((char*)key.get_data(), ((char*)key.get_data())+key.get_size());
 	/* SET_RANGE will return the smallest key greater than or equal to the
 	 * requested key, but we want strictly greater than */
-	if (k != start)
-	    keys.push_back(std::move(k));
+    int c = 0;
+	if (k != start) {
+        c = std::memcmp(prefix.data(), k.data(), prefix.size());
+        if(c == 0) {
+            keys.push_back(std::move(k));
+        }
     }
-    while (keys.size() < count) {
-	ret = cursorp->get(&key, &data, DB_NEXT);
-	if (ret !=0 ) break;
-
-	ds_bulk_t k(key.get_size() );
-	memcpy(k.data(), key.get_data(), key.get_size() );
-	keys.push_back(std::move(k));
+    while (keys.size() < count && c >= 0) {
+	    ret = cursorp->get(&key, &data, DB_NEXT);
+	    if (ret !=0 ) break;
+        
+        ds_bulk_t k((char*)key.get_data(), ((char*)key.get_data())+key.get_size());
+        c = std::memcmp(prefix.data(), k.data(), prefix.size());
+        if(c == 0) {
+            keys.push_back(std::move(k));
+        }
     }
     cursorp->close();
     return keys;
 }
 
-std::vector<std::pair<ds_bulk_t,ds_bulk_t>> BerkeleyDBDataStore::vlist_keyvals(const ds_bulk_t &start_key, size_t count, const ds_bulk_t &prefix)
+std::vector<std::pair<ds_bulk_t,ds_bulk_t>> BerkeleyDBDataStore::vlist_keyvals(const ds_bulk_t &start, size_t count, const ds_bulk_t &prefix)
 {
-    std::vector<std::pair<ds_bulk_t,ds_bulk_t>> keyvals;
+    std::vector<std::pair<ds_bulk_t,ds_bulk_t>> result;
     Dbc * cursorp;
     Dbt key, data;
+    int ret;
     _dbm->cursor(NULL, &cursorp, 0);
-    for (size_t i=0; i< count; i++) {
-        int ret = cursorp->get(&key, &data, DB_NEXT);
-        if (ret !=0 ) break;
 
-        ds_bulk_t k(key.get_size());
-        ds_bulk_t v(data.get_size());
+    /* 'start' is like RADOS: not inclusive  */
+    if (start.size()) {
+	    key.set_size(start.size());
+	    key.set_data((void *)start.data());
+	    ret = cursorp->get(&key, &data, DB_SET_RANGE);
+	    if (ret != 0) {
+	        cursorp->close();
+	        return result;
+	    }
+    } else {
+        ret = cursorp->get(&key, &data, DB_FIRST);
+        if (ret != 0) {
+            cursorp->close();
+            return result;
+        }
+    }
 
-        memcpy(k.data(), key.get_data(), key.get_size());
-        memcpy(v.data(), data.get_data(), data.get_size());
+	ds_bulk_t k((char*)key.get_data(), ((char*)key.get_data())+key.get_size());
+    ds_bulk_t v((char*)data.get_data(), ((char*)data.get_data())+data.get_size());
 
-        keyvals.push_back(std::make_pair(std::move(k), std::move(v)));
+	/* SET_RANGE will return the smallest key greater than or equal to the
+	 * requested key, but we want strictly greater than */
+    int c = 0;
+	if (k != start) {
+        c = std::memcmp(prefix.data(), k.data(), prefix.size());
+        if(c == 0) {
+            result.push_back(std::make_pair(std::move(k),std::move(v)));
+        }
+    }
+    while (result.size() < count && c >= 0) {
+	    ret = cursorp->get(&key, &data, DB_NEXT);
+	    if (ret !=0 ) break;
+        
+        ds_bulk_t k((char*)key.get_data(), ((char*)key.get_data())+key.get_size());
+        ds_bulk_t v((char*)data.get_data(), ((char*)data.get_data())+data.get_size());
+
+        c = std::memcmp(prefix.data(), k.data(), prefix.size());
+        if(c == 0) {
+            result.push_back(std::make_pair(std::move(k), std::move(v)));
+        }
     }
     cursorp->close();
-    return keyvals;
+    return result;
 }

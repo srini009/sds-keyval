@@ -44,12 +44,7 @@ function test_start_server ()
 
 function find_db_name ()
 {
-    test_db_name=${SDSKV_TEST_DB_NAME:-"/tmp/sdskv-test-db"}
+    test_db_name=$TMPBASE/${SDSKV_TEST_DB_NAME:-"sdskv-test-db"}
     test_db_type=${SDSKV_TEST_DB_TYPE:-"map"}
     test_db_full="${test_db_name}:${test_db_type}"
-}
-
-function rm_db()
-{
-    rm -rf ${test_db_name}
 }

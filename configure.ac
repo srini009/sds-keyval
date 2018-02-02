@@ -102,8 +102,8 @@ AC_ARG_ENABLE([leveldb],
 )
 AC_ARG_ENABLE([bwtree],
 	     AS_HELP_STRING([--enable-bwtree], [Enable BwTree as server
-			     backend.  (default is yes) ]),
-	     [bwtree_backend=${enableval}], [bwtree_backend=yes]
+			     backend.  (default is no) ]),
+	     [bwtree_backend=${enableval}], [bwtree_backend=no]
 )
 
 
@@ -129,6 +129,7 @@ fi
 
 if test "x${bwtree_backend}" == xyes ; then
 	AC_DEFINE([USE_BWTREE], 1, [use BwTree backend])
+	AC_MSG_WARN([BwTree backend is deprecated])
 	CPPFLAGS="-I${srcdir}/src/BwTree/src ${CPPFLAGS}"
 	CXXFLAGS="-pthread -std=c++11 -g -Wall -mcx16 -Wno-invalid-offsetof ${CXXFLAGS}"
 fi

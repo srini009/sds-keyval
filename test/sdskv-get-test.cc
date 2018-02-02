@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <margo.h>
+#include <iostream>
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -102,12 +103,12 @@ int main(int argc, char *argv[])
     /* **** put keys ***** */
     std::vector<std::string> keys;
     std::map<std::string, std::string> reference;
-    size_t max_value_size = 8000;
+    size_t max_value_size = 24;
 
     for(unsigned i=0; i < num_keys; i++) {
         auto k = gen_random_string(16);
         // half of the entries will be put using bulk
-        auto v = gen_random_string(i*max_value_size/num_keys);
+        auto v = gen_random_string(3+i*(max_value_size-3)/num_keys);
         ret = sdskv_put(kvph, db_id,
                 (const void *)k.data(), k.size()+1,
                 (const void *)v.data(), v.size()+1);
@@ -120,6 +121,7 @@ int main(int argc, char *argv[])
             margo_finalize(mid);
             return -1;
         }
+        std::cout << "Inserted " << k << "\t ===> " << v << std::endl;
         reference[k] = v;
         keys.push_back(k);
     }
@@ -143,6 +145,7 @@ int main(int argc, char *argv[])
             return -1;
         }
         std::string vstring((char*)(v.data()));
+        std::cout << "Got " << k << " ===> " << vstring << std::endl;
         if(vstring != reference[k]) {
             fprintf(stderr, "Error: sdskv_get() returned a value different from the reference\n");
             sdskv_shutdown_service(kvcl, svr_addr);

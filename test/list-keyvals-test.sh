@@ -16,7 +16,7 @@ sleep 1
 
 #####################
 
-run_to 20 test/sdskv-list-keyvals-test $svr_addr 1 $test_db_name 10
+run_to 20 test/sdskv-list-keyvals-test $svr_addr 1 $test_db_name 30
 if [ $? -ne 0 ]; then
     wait
     exit 1
@@ -26,8 +26,5 @@ wait
 
 echo cleaning up $TMPBASE
 rm -rf $TMPBASE
-
-echo cleaning up $test_db_name
-rm_db
 
 exit 0
