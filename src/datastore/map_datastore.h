@@ -4,19 +4,34 @@
 #define map_datastore_h
 
 #include <map>
-
 #include "kv-config.h"
 #include "bulk.h"
 #include "datastore/datastore.h"
 
 class MapDataStore : public AbstractDataStore {
+
+    private:
+
+        struct keycmp {
+            MapDataStore* _store;
+            keycmp(MapDataStore* store)
+                : _store(store) {}
+            bool operator()(const ds_bulk_t& a, const ds_bulk_t& b) const {
+                if(_store->_less)
+                    return _store->_less((const void*)a.data(),
+                            a.size(), (const void*)b.data(), b.size()) < 0;
+                else
+                    return std::less<ds_bulk_t>()(a,b);
+            }
+        };
+
     public:
 
         MapDataStore()
-            : AbstractDataStore() {}
+            : AbstractDataStore(), _less(nullptr), _map(keycmp(this)) {}
 
         MapDataStore(Duplicates duplicates, bool eraseOnGet, bool debug)
-            : AbstractDataStore(duplicates, eraseOnGet, debug) {}
+            : AbstractDataStore(duplicates, eraseOnGet, debug), _less(nullptr), _map(keycmp(this)) {}
 
         ~MapDataStore() = default;
 
@@ -53,6 +68,10 @@ class MapDataStore : public AbstractDataStore {
 
         virtual void set_in_memory(bool enable) {
             _in_memory = enable;
+        }
+
+        virtual void set_comparison_function(comparator_fn less) {
+           _less = less; 
         }
 
     protected:
@@ -106,7 +125,8 @@ class MapDataStore : public AbstractDataStore {
         }
 
     private:
-        std::map<ds_bulk_t, ds_bulk_t> _map;
+        AbstractDataStore::comparator_fn _less;
+        std::map<ds_bulk_t, ds_bulk_t, keycmp> _map;
 };
 
 #endif

@@ -42,6 +42,18 @@ function test_start_server ()
     svr_addr=`cat $TMPBASE/sdskv.addr`
 }
 
+function test_start_custom_server ()
+{
+    startwait=${1:-15}
+    maxtime=${2:-120}
+
+    run_to ${maxtime} test/sdskv-custom-server-daemon -f $TMPBASE/sdskv.addr na+sm ${@:3} &
+    # wait for server to start
+    sleep ${startwait}
+
+    svr_addr=`cat $TMPBASE/sdskv.addr`
+}
+
 function find_db_name ()
 {
     test_db_name=$TMPBASE/${SDSKV_TEST_DB_NAME:-"sdskv-test-db"}

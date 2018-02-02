@@ -124,6 +124,10 @@ void BerkeleyDBDataStore::createDatabase(std::string db_name) {
   // debugging support?
 };
 
+void BerkeleyDBDataStore::set_comparison_function(comparator_fn less) {
+    // TODO
+}
+
 bool BerkeleyDBDataStore::put(const ds_bulk_t &key, const ds_bulk_t &data) {
   int status = 0;
   bool success = false;

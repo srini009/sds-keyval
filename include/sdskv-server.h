@@ -17,8 +17,10 @@ extern "C" {
 #define SDSKV_ABT_POOL_DEFAULT ABT_POOL_NULL
 #define SDSKV_MPLEX_ID_DEFAULT 0
 #define SDSKV_PROVIDER_IGNORE NULL
+#define SDSKV_COMPARE_DEFAULT NULL
 
 typedef struct sdskv_server_context_t* sdskv_provider_t;
+typedef int (*sdskv_compare_fn)(const void*, size_t, const void*, size_t);
 
 int sdskv_provider_register(
         margo_instance_id mid,
@@ -40,6 +42,7 @@ int sdskv_provider_add_database(
         sdskv_provider_t provider,
         const char* db_name,
         sdskv_db_type_t db_type,
+        sdskv_compare_fn comp_fn,
         sdskv_database_id_t* sb_id);
 
 /**

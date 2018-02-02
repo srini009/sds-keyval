@@ -5,6 +5,7 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 #include <assert.h>
 #include <unistd.h>
 #include <margo.h>
@@ -24,6 +25,12 @@ struct options
     char *host_file;
     kv_mplex_mode_t mplex_mode;
 };
+
+int custom_key_cmp(const void* x, size_t sx, const void* y, size_t sy) {
+    const char* a = (const char*)x;
+    const char* b = (const char*)y;
+    return strncasecmp(a, b, sx < sy ? sx : sy);
+}
 
 static void usage(int argc, char **argv)
 {
@@ -181,7 +188,7 @@ int main(int argc, char **argv)
 
             sdskv_database_id_t db_id;
             ret = sdskv_provider_add_database(provider, 
-                    opts.db_names[i], opts.db_types[i], SDSKV_COMPARE_DEFAULT,
+                    opts.db_names[i], opts.db_types[i], &custom_key_cmp,
                     &db_id);
 
             if(ret != 0)
@@ -213,7 +220,7 @@ int main(int argc, char **argv)
             sdskv_database_id_t db_id;
             ret = sdskv_provider_add_database(provider, 
                     opts.db_names[i], opts.db_types[i],
-                    SDSKV_COMPARE_DEFAULT,
+                    &custom_key_cmp,
                     &db_id);
 
             if(ret != 0)

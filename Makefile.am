@@ -14,12 +14,20 @@ bin_PROGRAMS = bin/sdskv-server-daemon 	    \
 	       test/sdskv-erase-test        \
 	       test/sdskv-list-keys-test    \
 	       test/sdskv-list-keyvals-test \
-	       test/sdskv-list-keys-prefix-test 
+	       test/sdskv-list-keys-prefix-test  \
+	       test/sdskv-custom-cmp-test \
+	       test/sdskv-custom-server-daemon
+
 
 bin_sdskv_server_daemon_SOURCES = src/sdskv-server-daemon.c
 bin_sdskv_server_daemon_DEPENDENCIES = lib/libsdskv-server.la
 bin_sdskv_server_daemon_LDFLAGS = -Llib -lsdskv-server
 bin_sdskv_server_daemon_LDADD = ${LIBS} -lsdskv-server ${SERVER_LIBS}
+
+test_sdskv_custom_server_daemon_SOURCES = test/sdskv-custom-server-daemon.c
+test_sdskv_custom_server_daemon_DEPENDENCIES = lib/libsdskv-server.la
+test_sdskv_custom_server_daemon_LDFLAGS = -Llib -lsdskv-server
+test_sdskv_custom_server_daemon_LDADD = ${LIBS} -lsdskv-server ${SERVER_LIBS}
 
 bin_sdskv_shutdown_SOURCES = src/sdskv-shutdown.c
 bin_sdskv_shutdown_DEPENDENCIES = lib/libsdskv-client.la
@@ -98,7 +106,8 @@ TESTS = test/basic.sh 		\
 	test/erase-test.sh      \
 	test/list-keys-test.sh  \
 	test/list-keyvals-test.sh  \
-	test/list-keys-prefix-test.sh
+	test/list-keys-prefix-test.sh \
+	test/custom-cmp-test.sh
 
 TESTS_ENVIRONMENT = TIMEOUT="$(TIMEOUT)" \
 		    MKTEMP="$(MKTEMP)"
@@ -135,49 +144,9 @@ test_sdskv_erase_test_SOURCES = test/sdskv-erase-test.cc
 test_sdskv_erase_test_DEPENDENCIES = lib/libsdskv-client.la
 test_sdskv_erase_test_LDFLAGS = -Llib -lsdskv-client
 
-#############################################################
-## tests bellow correspond to old tests (see old-test folder)
-#############################################################
-
-#bin_PROGRAMS = test/bench-client \
-#	       test/test-client \
-#	       test/test-server
-
-#test_bench_client_SOURCES = test/bench-client.cc
-#test_bench_client_DEPENDENCIES = lib/libkvclient.la
-#test_bench_client_LDFLAGS = -Llib -lkvclient
-#test_bench_client_LDADD = ${LIBS} -lkvclient
-
-#check_PROGRAMS = test/test-client \
-#		test/test-server \
-#		test/bench-client \
-#		test/test-mpi \
-#		test/test-mpi-group
-#
-
-#TESTS = test/test-client \
-#        test/test-server \
-#	test/bench-client \
-#	test/test-mpi \
-#	test/test-mpi-group
-
-#test_test_client_SOURCES = test/test-client.cc
-#test_test_client_DEPENDENCIES = lib/libkvclient.la
-#test_test_client_LDFLAGS = -Llib -lkvclient
-
-#test_test_server_SOURCES = test/test-server.cc
-#test_test_server_DEPENDENCIES = lib/libkvserver.la
-#test_test_server_LDFLAGS = -Llib -lkvserver ${SERVER_LIBS}
-
-#test_test_mpi_SOURCES = test/test-mpi.cc
-
-
-#test_test_mpi_DEPENDENCIES = lib/libkvserver.la lib/libkvclient.la
-#test_test_mpi_LDFLAGS = -Llib -lkvclient -lkvserver ${SERVER_LIBS}
-
-#test_test_mpi_group_SOURCES = test/test-mpi-group.cc
-#test_test_mpi_group_DEPENDENCIES = lib/libkvgroupserver.la lib/libkvgroupclient.la lib/libkvserver.la lib/libkvclient.la
-#test_test_mpi_group_LDFLAGS = -Llib -lkvgroupserver -lkvgroupclient -lkvclient -lkvserver ${SERVER_LIBS} ${GROUP_LIBS}
+test_sdskv_custom_cmp_test_SOURCES = test/sdskv-custom-cmp-test.cc
+test_sdskv_custom_cmp_test_DEPENDENCIES = lib/libsdskv-client.la
+test_sdskv_custom_cmp_test_LDFLAGS = -Llib -lsdskv-client
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = maint/sdskv-server.pc \

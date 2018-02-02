@@ -13,6 +13,9 @@ enum class Duplicates : int {ALLOW, IGNORE};
 
 class AbstractDataStore {
 public:
+
+  typedef int (*comparator_fn)(const void*, size_t, const void*, size_t);
+  
   AbstractDataStore();
   AbstractDataStore(Duplicates duplicates, bool eraseOnGet, bool debug);
   virtual ~AbstractDataStore();
@@ -22,6 +25,7 @@ public:
   virtual bool get(const ds_bulk_t &key, std::vector<ds_bulk_t> &data)=0;
   virtual bool erase(const ds_bulk_t &key) = 0;
   virtual void set_in_memory(bool enable)=0; // enable/disable in-memory mode (where supported)
+  virtual void set_comparison_function(comparator_fn less)=0;
 
   std::vector<ds_bulk_t> list_keys(
           const ds_bulk_t &start_key, size_t count, const ds_bulk_t& prefix=ds_bulk_t()) {

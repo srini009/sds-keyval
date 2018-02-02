@@ -56,6 +56,10 @@ void LevelDBDataStore::createDatabase(std::string db_name) {
   // debugging support?
 };
 
+void LevelDBDataStore::set_comparison_function(comparator_fn less) {
+    // TODO
+}
+
 bool LevelDBDataStore::put(const ds_bulk_t &key, const ds_bulk_t &data) {
   leveldb::Status status;
   bool success = false;

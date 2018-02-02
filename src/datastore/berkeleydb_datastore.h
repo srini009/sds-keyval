@@ -20,6 +20,7 @@ public:
   virtual bool get(const ds_bulk_t &key, std::vector<ds_bulk_t> &data);
   virtual bool erase(const ds_bulk_t &key);
   virtual void set_in_memory(bool enable); // enable/disable in-memory mode
+  virtual void set_comparison_function(comparator_fn less);
 protected:
   virtual std::vector<ds_bulk_t> vlist_keys(const ds_bulk_t &start, size_t count, const ds_bulk_t &prefix);
   virtual std::vector<std::pair<ds_bulk_t,ds_bulk_t>> vlist_keyvals(const ds_bulk_t &start_key, size_t count, const ds_bulk_t &);

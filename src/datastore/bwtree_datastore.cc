@@ -39,6 +39,10 @@ void BwTreeDataStore::createDatabase(std::string db_name) {
   _tree->AssignGCID(0);
 };
 
+void BwTreeDataStore::set_comparison_function(comparator_fn less) {
+    // TODO
+}
+
 bool BwTreeDataStore::put(const ds_bulk_t &key, const ds_bulk_t &data) {
   std::vector<ds_bulk_t> values;
   bool success = false;

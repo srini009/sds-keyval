@@ -107,10 +107,12 @@ extern "C" int sdskv_provider_add_database(
         sdskv_provider_t provider,
         const char *db_name,
         sdskv_db_type_t db_type,
+        sdskv_compare_fn comp_fn,
         sdskv_database_id_t* db_id)
 {
     auto db = datastore_factory::create_datastore(db_type, std::string(db_name));
     if(db == nullptr) return -1;
+    db->set_comparison_function(comp_fn);
     sdskv_database_id_t id = (sdskv_database_id_t)(db);
 
     provider->name2id[std::string(db_name)] = id;
