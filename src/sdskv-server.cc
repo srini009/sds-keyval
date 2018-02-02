@@ -206,8 +206,8 @@ static void sdskv_put_ult(hg_handle_t handle)
         return;
     }
 
-    ds_bulk_t kdata(in.key, in.key+in.ksize);
-    ds_bulk_t vdata(in.value, in.value+in.vsize);
+    ds_bulk_t kdata(in.key.data, in.key.data+in.key.size);
+    ds_bulk_t vdata(in.value.data, in.value.data+in.value.size);
 
     if(it->second->put(kdata, vdata)) {
         out.ret = 0;
@@ -258,7 +258,7 @@ static void sdskv_length_ult(hg_handle_t handle)
         return;
     }
     
-    ds_bulk_t kdata(in.key, in.key+in.ksize);
+    ds_bulk_t kdata(in.key.data, in.key.data+in.key.size);
 
     ds_bulk_t vdata;
     if(it->second->get(kdata, vdata)) {
@@ -300,8 +300,8 @@ static void sdskv_get_ult(hg_handle_t handle)
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
         out.ret = -1;
-        out.value = nullptr;
-        out.vsize = 0;
+        out.value.data = nullptr;
+        out.value.size = 0;
         margo_respond(handle, &out);
         margo_destroy(handle);
         return;
@@ -310,30 +310,30 @@ static void sdskv_get_ult(hg_handle_t handle)
     auto it = svr_ctx->databases.find(in.db_id);
     if(it == svr_ctx->databases.end()) {
         out.ret = -1;
-        out.value = nullptr;
-        out.vsize = 0;
+        out.value.data = nullptr;
+        out.value.size = 0;
         margo_respond(handle, &out);
         margo_free_input(handle, &in);
         margo_destroy(handle);
         return;
     }
     
-    ds_bulk_t kdata(in.key, in.key+in.ksize);
+    ds_bulk_t kdata(in.key.data, in.key.data+in.key.size);
 
     ds_bulk_t vdata;
     if(it->second->get(kdata, vdata)) {
         if(vdata.size() <= in.vsize) {
-            out.vsize = vdata.size();
-            out.value = vdata.data();
+            out.value.size = vdata.size();
+            out.value.data = vdata.data();
             out.ret   = 0;
         } else {
-            out.vsize = 0;
-            out.value = nullptr;
+            out.value.size = 0;
+            out.value.data = nullptr;
             out.ret   = -1;
         }
     } else {
-        out.vsize = 0;
-        out.value = nullptr;
+        out.value.size = 0;
+        out.value.data = nullptr;
         out.ret   = -1;
     }
 
@@ -421,7 +421,7 @@ static void sdskv_bulk_put_ult(hg_handle_t handle)
         return;
     }
 
-    auto it = svr_ctx->databases.find(in.bulk.db_id);
+    auto it = svr_ctx->databases.find(in.db_id);
     if(it == svr_ctx->databases.end()) {
         out.ret = -1;
         margo_respond(handle, &out);
@@ -430,7 +430,7 @@ static void sdskv_bulk_put_ult(hg_handle_t handle)
         return;
     }
    
-    ds_bulk_t vdata(in.bulk.vsize);
+    ds_bulk_t vdata(in.vsize);
     void *buffer = (void*)vdata.data();
     hg_size_t size = vdata.size();
     hret = margo_bulk_create(mid, 1, (void**)&buffer, &size,
@@ -443,7 +443,7 @@ static void sdskv_bulk_put_ult(hg_handle_t handle)
         return;
     }
 
-    hret = margo_bulk_transfer(mid, HG_BULK_PULL, info->addr, in.bulk.handle, 0,
+    hret = margo_bulk_transfer(mid, HG_BULK_PULL, info->addr, in.handle, 0,
             bulk_handle, 0, vdata.size());
     if(hret != HG_SUCCESS) {
         out.ret = -1;
@@ -454,7 +454,7 @@ static void sdskv_bulk_put_ult(hg_handle_t handle)
         return;
     }
 
-    ds_bulk_t kdata(in.bulk.key, in.bulk.key+in.bulk.ksize);
+    ds_bulk_t kdata(in.key.data, in.key.data+in.key.size);
 
     auto b = it->second->put(kdata, vdata);
 
@@ -502,7 +502,7 @@ static void sdskv_bulk_get_ult(hg_handle_t handle)
         return;
     }
 
-    auto it = svr_ctx->databases.find(in.bulk.db_id);
+    auto it = svr_ctx->databases.find(in.db_id);
     if(it == svr_ctx->databases.end()) {
         out.ret = -1;
         margo_respond(handle, &out);
@@ -511,12 +511,12 @@ static void sdskv_bulk_get_ult(hg_handle_t handle)
         return;
     }
     
-    ds_bulk_t kdata(in.bulk.key, in.bulk.key+in.bulk.ksize);
+    ds_bulk_t kdata(in.key.data, in.key.data+in.key.size);
 
     ds_bulk_t vdata;
     auto b = it->second->get(kdata, vdata);
 
-    if(!b || vdata.size() > in.bulk.vsize) {
+    if(!b || vdata.size() > in.vsize) {
         out.size = 0;
         out.ret = -1;
         margo_respond(handle, &out);
@@ -538,7 +538,7 @@ static void sdskv_bulk_get_ult(hg_handle_t handle)
         return;
     }
 
-    hret = margo_bulk_transfer(mid, HG_BULK_PUSH, info->addr, in.bulk.handle, 0,
+    hret = margo_bulk_transfer(mid, HG_BULK_PUSH, info->addr, in.handle, 0,
             bulk_handle, 0, vdata.size());
     if(hret != HG_SUCCESS) {
         out.size = 0;
@@ -599,7 +599,7 @@ static void sdskv_erase_ult(hg_handle_t handle)
         return;
     }
     
-    ds_bulk_t kdata(in.key, in.key+in.ksize);
+    ds_bulk_t kdata(in.key.data, in.key.data+in.key.size);
 
     if(it->second->erase(kdata)) {
         out.ret   = 0;
@@ -686,7 +686,7 @@ static void sdskv_list_keys_ult(hg_handle_t handle)
         std::vector<hg_size_t> remote_ksizes(ksizes.begin(), ksizes.end());
 
         /* get the keys from the underlying database */    
-        ds_bulk_t start_kdata(in.start_key, in.start_key+in.start_ksize);
+        ds_bulk_t start_kdata(in.start_key.data, in.start_key.data+in.start_key.size);
         auto keys = db->list_keys(start_kdata, in.max_keys);
         hg_size_t num_keys = std::min(keys.size(), in.max_keys);
 
@@ -854,7 +854,7 @@ static void sdskv_list_keyvals_ult(hg_handle_t handle)
         std::vector<hg_size_t> remote_vsizes(vsizes.begin(), vsizes.end());
 
         /* get the keys and values from the underlying database */    
-        ds_bulk_t start_kdata(in.start_key, in.start_key+in.start_ksize);
+        ds_bulk_t start_kdata(in.start_key.data, in.start_key.data+in.start_key.size);
         auto keyvals = db->list_keyvals(start_kdata, in.max_keys);
         hg_size_t num_keys = std::min(keyvals.size(), in.max_keys);
 
@@ -980,89 +980,6 @@ static void sdskv_list_keyvals_ult(hg_handle_t handle)
     return;
 }
 DEFINE_MARGO_RPC_HANDLER(sdskv_list_keyvals_ult)
-
-#if 0
-static void sdskv_list_keyvals_ult(hg_handle_t handle)
-{
-
-    hg_return_t hret;
-    list_in_t in;
-    list_out_t out;
-
-    out.ret     = -1;
-    out.nkeys   = 0;
-    out.ksizes  = nullptr;
-    out.keys    = nullptr;
-    out.nvalues = 0;
-    out.vsizes  = nullptr;
-    out.values  = nullptr;
-
-    margo_instance_id mid = margo_hg_handle_get_instance(handle);
-    assert(mid);
-    const struct hg_info* info = margo_get_info(handle);
-    sdskv_provider_t svr_ctx = 
-        (sdskv_provider_t)margo_registered_data_mplex(mid, info->id, info->target_id);
-    if(!svr_ctx) {
-        fprintf(stderr, "Error: SDSKV could not find provider\n"); 
-        margo_respond(handle, &out);
-        margo_destroy(handle);
-        return;
-    }
-
-    hret = margo_get_input(handle, &in);
-    if(hret != HG_SUCCESS) {
-        margo_respond(handle, &out);
-        margo_destroy(handle);
-        return;
-    }
-
-    auto it = svr_ctx->databases.find(in.db_id);
-    if(it == svr_ctx->databases.end()) {
-        margo_respond(handle, &out);
-        margo_free_input(handle, &in);
-        margo_destroy(handle);
-        return;
-    }
-    
-    ds_bulk_t start_kdata(in.start_key, in.start_key+in.start_ksize);
-    auto keyvals = it->second->list_keyvals(start_kdata, in.max_keys);
-    out.nkeys   = keyvals.size();
-    out.nvalues = keyvals.size();
-    /* create the array of sizes */
-    std::vector<hg_size_t> sizes(out.nkeys);
-    for(unsigned i = 0; i < out.nkeys; i++) {
-        sizes[i] = keyvals[i].first.size();
-    }
-    out.ksizes = sizes.data();
-    /* create the packed data */
-    std::vector<kv_data_t> packed_keys(out.nkeys);
-    for(unsigned i = 0; i < out.nkeys; i++) {
-        packed_keys[i] = (char*)(keyvals[i].first.data());
-    }
-    out.keys = packed_keys.data();
-    /* create the array of value sizes */
-    std::vector<hg_size_t> vsizes(out.nvalues);
-    for(unsigned i = 0; i < out.nvalues; i++) {
-        vsizes[i] = keyvals[i].second.size();
-    }
-    out.vsizes = vsizes.data();
-    /* create the packed value data */
-    std::vector<kv_data_t> packed_vals(out.nvalues);
-    for(unsigned i = 0; i < out.nvalues; i++) {
-        packed_vals[i] = (char*)(keyvals[i].second.data());
-    }
-    out.values = packed_vals.data();
-
-    out.ret = 0;
-
-    margo_respond(handle, &out);
-    margo_free_input(handle, &in);
-    margo_destroy(handle); 
-
-    return;
-}
-DEFINE_MARGO_RPC_HANDLER(sdskv_list_keyvals_ult)
-#endif
 
 static void sdskv_server_finalize_cb(void *data)
 {
