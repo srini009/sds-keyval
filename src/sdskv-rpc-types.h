@@ -78,13 +78,16 @@ MERCURY_GEN_PROC(erase_in_t, ((uint64_t)(db_id))((kv_data_t)(key)))
 // ------------- LIST KEYS ------------- //
 MERCURY_GEN_PROC(list_keys_in_t, ((uint64_t)(db_id))\
         ((kv_data_t)(start_key))\
+        ((kv_data_t)(prefix))\
         ((hg_size_t)(max_keys))\
         ((hg_bulk_t)(ksizes_bulk_handle))\
         ((hg_bulk_t)(keys_bulk_handle)))
 MERCURY_GEN_PROC(list_keys_out_t, ((hg_size_t)(nkeys)) ((int32_t)(ret)))
+
 // ------------- LIST KEYVALS ------------- //
 MERCURY_GEN_PROC(list_keyvals_in_t, ((uint64_t)(db_id))\
         ((kv_data_t)(start_key))\
+        ((kv_data_t)(prefix))\
         ((hg_size_t)(max_keys))\
         ((hg_bulk_t)(ksizes_bulk_handle))\
         ((hg_bulk_t)(keys_bulk_handle))\

@@ -127,7 +127,7 @@ bool LevelDBDataStore::get(const ds_bulk_t &key, std::vector<ds_bulk_t> &data) {
 void LevelDBDataStore::set_in_memory(bool enable)
 {};
 
-std::vector<ds_bulk_t> LevelDBDataStore::list_keys(const ds_bulk_t &start, size_t count)
+std::vector<ds_bulk_t> LevelDBDataStore::vlist_keys(const ds_bulk_t &start, size_t count, const ds_bulk_t &prefix)
 {
     std::vector<ds_bulk_t> keys;
 
@@ -155,7 +155,7 @@ std::vector<ds_bulk_t> LevelDBDataStore::list_keys(const ds_bulk_t &start, size_
     return keys;
 }
 
-std::vector<std::pair<ds_bulk_t,ds_bulk_t>> LevelDBDataStore::list_keyvals(const ds_bulk_t &start_key, size_t count)
+std::vector<std::pair<ds_bulk_t,ds_bulk_t>> LevelDBDataStore::vlist_keyvals(const ds_bulk_t &start_key, size_t count, const ds_bulk_t &prefix)
 {
     std::vector<std::pair<ds_bulk_t,ds_bulk_t>> keyvals;
 

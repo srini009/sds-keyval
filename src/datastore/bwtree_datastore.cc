@@ -123,7 +123,7 @@ bool BwTreeDataStore::get(const ds_bulk_t &key, std::vector<ds_bulk_t> &data) {
 void BwTreeDataStore::set_in_memory(bool enable)
 {};
 
-std::vector<ds_bulk_t> BwTreeDataStore::list_keys(const ds_bulk_t &start, size_t count)
+std::vector<ds_bulk_t> BwTreeDataStore::vlist_keys(const ds_bulk_t &start, size_t count, const ds_bulk_t &prefix)
 {
     std::vector<ds_bulk_t> keys;
 #if 0
@@ -136,7 +136,7 @@ std::vector<ds_bulk_t> BwTreeDataStore::list_keys(const ds_bulk_t &start, size_t
     return keys;
 }
 
-std::vector<std::pair<ds_bulk_t,ds_bulk_t>> BwTreeDataStore::list_keyvals(const ds_bulk_t &start, size_t count)
+std::vector<std::pair<ds_bulk_t,ds_bulk_t>> BwTreeDataStore::vlist_keyvals(const ds_bulk_t &start, size_t count, const ds_bulk_t &prefix)
 {
     std::vector<std::pair<ds_bulk_t,ds_bulk_t>> keyvals;
 #if 0

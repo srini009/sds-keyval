@@ -214,7 +214,7 @@ void BerkeleyDBDataStore::set_in_memory(bool enable) {
   _in_memory = enable;
 };
 
-std::vector<ds_bulk_t> BerkeleyDBDataStore::list_keys(const ds_bulk_t &start, size_t count)
+std::vector<ds_bulk_t> BerkeleyDBDataStore::vlist_keys(const ds_bulk_t &start, size_t count, const ds_bulk_t &prefix)
 {
     std::vector<ds_bulk_t> keys;
     Dbc * cursorp;
@@ -250,7 +250,7 @@ std::vector<ds_bulk_t> BerkeleyDBDataStore::list_keys(const ds_bulk_t &start, si
     return keys;
 }
 
-std::vector<std::pair<ds_bulk_t,ds_bulk_t>> BerkeleyDBDataStore::list_keyvals(const ds_bulk_t &start_key, size_t count)
+std::vector<std::pair<ds_bulk_t,ds_bulk_t>> BerkeleyDBDataStore::vlist_keyvals(const ds_bulk_t &start_key, size_t count, const ds_bulk_t &prefix)
 {
     std::vector<std::pair<ds_bulk_t,ds_bulk_t>> keyvals;
     Dbc * cursorp;

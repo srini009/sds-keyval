@@ -542,10 +542,32 @@ int sdskv_list_keys(sdskv_provider_handle_t provider,
         //     keys for each key
         hg_size_t* max_keys)   // maximum number of keys requested
 {
+    return sdskv_list_keys_with_prefix(provider,
+            db_id,
+            start_key,
+            start_ksize,
+            NULL,
+            0,
+            keys,
+            ksizes,
+            max_keys);
+}
+
+int sdskv_list_keys_with_prefix(sdskv_provider_handle_t provider,
+        sdskv_database_id_t db_id,  // db instance
+        const void *start_key,  // we want keys strictly after this start_key
+        hg_size_t start_ksize,  // size of the start_key
+        const void *prefix,
+        hg_size_t prefix_size,
+        void **keys,            // pointer to an array of void* pointers,
+        //     this array has size *max_keys
+        hg_size_t* ksizes,      // pointer to an array of hg_size_t sizes
+        //    representing sizes allocated in
+        //     keys for each key
+        hg_size_t* max_keys)   // maximum number of keys requested
+{
     list_keys_in_t  in;
     list_keys_out_t out;
-    in.keys_bulk_handle   = HG_BULK_NULL;
-    in.ksizes_bulk_handle = HG_BULK_NULL;
     hg_return_t hret      = HG_SUCCESS;
     hg_handle_t handle    = HG_HANDLE_NULL;
     int ret = 0;
@@ -554,6 +576,10 @@ int sdskv_list_keys(sdskv_provider_handle_t provider,
     in.db_id = db_id;
     in.start_key.data = (kv_ptr_t) start_key;
     in.start_key.size = start_ksize;
+    in.prefix.data = (char*)prefix;
+    in.prefix.size = prefix_size;
+    in.keys_bulk_handle   = HG_BULK_NULL;
+    in.ksizes_bulk_handle = HG_BULK_NULL;
     in.max_keys = *max_keys;
 
     /* create bulk handle to expose the segments with key sizes */
@@ -641,12 +667,40 @@ int sdskv_list_keyvals(sdskv_provider_handle_t provider,
                                 //    values for each value
         hg_size_t* max_keys)    // maximum number of keys requested
 {
+    return sdskv_list_keyvals_with_prefix(
+            provider,
+            db_id,
+            start_key,
+            start_ksize,
+            NULL,
+            0,
+            keys,
+            ksizes,
+            values,
+            vsizes,
+            max_keys);
+}
+
+int sdskv_list_keyvals_with_prefix(sdskv_provider_handle_t provider,
+        sdskv_database_id_t db_id,  // db instance
+        const void *start_key,  // we want keys strictly after this start_key
+        hg_size_t start_ksize,  // size of the start_key
+        const void* prefix,     // prefix of returned keys
+        hg_size_t prefix_size,  // size of prefix
+        void **keys,            // pointer to an array of void* pointers,
+                                //     this array has size *max_keys
+        hg_size_t* ksizes,      // pointer to an array of hg_size_t sizes
+                                //    representing sizes allocated in
+                                //     keys for each key
+        void **values,          // pointer to an array of void* pointers,
+                                //     this array has size *max_keys
+        hg_size_t* vsizes,      // pointer to an array of hg_size_t sizes
+                                //    representing sizes allocated in
+                                //    values for each value
+        hg_size_t* max_keys)    // maximum number of keys requested
+{
     list_keyvals_in_t  in;
     list_keyvals_out_t out;
-    in.keys_bulk_handle   = HG_BULK_NULL;
-    in.ksizes_bulk_handle = HG_BULK_NULL;
-    in.vals_bulk_handle   = HG_BULK_NULL;
-    in.vsizes_bulk_handle = HG_BULK_NULL;
     hg_return_t hret      = HG_SUCCESS;
     hg_handle_t handle    = HG_HANDLE_NULL;
     int ret = 0;
@@ -655,7 +709,13 @@ int sdskv_list_keyvals(sdskv_provider_handle_t provider,
     in.db_id = db_id;
     in.start_key.data = (kv_ptr_t) start_key;
     in.start_key.size = start_ksize;
+    in.prefix.data = (char*)prefix;
+    in.prefix.size = prefix_size;
     in.max_keys = *max_keys;
+    in.keys_bulk_handle   = HG_BULK_NULL;
+    in.ksizes_bulk_handle = HG_BULK_NULL;
+    in.vals_bulk_handle   = HG_BULK_NULL;
+    in.vsizes_bulk_handle = HG_BULK_NULL;
 
     /* create bulk handle to expose the segments with key sizes */
     hg_size_t ksize_bulk_size = (*max_keys)*sizeof(*ksizes);

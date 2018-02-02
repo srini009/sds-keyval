@@ -687,7 +687,8 @@ static void sdskv_list_keys_ult(hg_handle_t handle)
 
         /* get the keys from the underlying database */    
         ds_bulk_t start_kdata(in.start_key.data, in.start_key.data+in.start_key.size);
-        auto keys = db->list_keys(start_kdata, in.max_keys);
+        ds_bulk_t prefix(in.prefix.data, in.prefix.data+in.prefix.size);
+        auto keys = db->list_keys(start_kdata, in.max_keys, prefix);
         hg_size_t num_keys = std::min(keys.size(), in.max_keys);
 
         /* create the array of actual sizes */
@@ -855,7 +856,8 @@ static void sdskv_list_keyvals_ult(hg_handle_t handle)
 
         /* get the keys and values from the underlying database */    
         ds_bulk_t start_kdata(in.start_key.data, in.start_key.data+in.start_key.size);
-        auto keyvals = db->list_keyvals(start_kdata, in.max_keys);
+        ds_bulk_t prefix(in.prefix.data, in.prefix.data+in.prefix.size);
+        auto keyvals = db->list_keyvals(start_kdata, in.max_keys, prefix);
         hg_size_t num_keys = std::min(keyvals.size(), in.max_keys);
 
         /* create the array of actual key sizes */
