@@ -60,12 +60,23 @@ class MapDataStore : public AbstractDataStore {
         virtual std::vector<ds_bulk_t> vlist_keys(
                 const ds_bulk_t &start_key, size_t count, const ds_bulk_t &prefix) {
             std::vector<ds_bulk_t> result;
-            auto it = _map.lower_bound(start_key);
-            while(it != _map.end() && it->first == start_key) {
-                it++;
+            decltype(_map.begin()) it;
+            if(start_key.size() > 0) {
+                it = _map.lower_bound(start_key);
+                while(it != _map.end() && it->first == start_key) it++;
+            } else {
+                it = _map.begin();
             }
-            for(size_t i=0; it != _map.end() && i < count; it++, i++) {
-                result.push_back(it->first);
+            while(result.size() < count && it != _map.end()) {
+                const auto& p = *it;
+                if(prefix.size() > p.first.size()) continue;
+                int c = std::memcmp(prefix.data(), p.first.data(), prefix.size());
+                if(c == 0) {
+                    result.push_back(p.first);
+                } else if(c < 0) {
+                    break; // we have exceeded prefix
+                }
+                it++;
             }
             return result;
         }
@@ -85,7 +96,7 @@ class MapDataStore : public AbstractDataStore {
                 if(prefix.size() > p.first.size()) continue;
                 int c = std::memcmp(prefix.data(), p.first.data(), prefix.size());
                 if(c == 0) {
-                    result.push_back(*it);
+                    result.push_back(p);
                 } else if(c < 0) {
                     break; // we have exceeded prefix
                 }
