@@ -3,6 +3,7 @@
 #include "berkeleydb_datastore.h"
 #include "kv-config.h"
 #include <chrono>
+#include <cstring>
 #include <iostream>
 #include <boost/filesystem.hpp>
 
@@ -21,7 +22,8 @@ BerkeleyDBDataStore::BerkeleyDBDataStore(Duplicates duplicates, bool eraseOnGet,
 };
   
 BerkeleyDBDataStore::~BerkeleyDBDataStore() {
-  delete _dbm;
+//  delete _dbm;
+  delete _wrapper;
   delete _dbenv;
 };
 
@@ -88,11 +90,14 @@ void BerkeleyDBDataStore::createDatabase(std::string db_name) {
   }
   
   if (status == 0) {
-    _dbm = new Db(_dbenv, DB_CXX_NO_EXCEPTIONS);
+    _wrapper = new DbWrapper(_dbenv, DB_CXX_NO_EXCEPTIONS);
+    _dbm = &(_wrapper->_db);
 
     if (_duplicates == Duplicates::ALLOW) {
       _dbm->set_flags(DB_DUP); // Allow duplicate keys
     }
+
+    _dbm->set_bt_compare(&(BerkeleyDBDataStore::compkeys));
   
     uint32_t flags = DB_CREATE | DB_AUTO_COMMIT | DB_THREAD; // Allow database creation
     if (_in_memory) {
@@ -125,10 +130,7 @@ void BerkeleyDBDataStore::createDatabase(std::string db_name) {
 };
 
 void BerkeleyDBDataStore::set_comparison_function(comparator_fn less) {
-    if(less) {
-        fprintf(stderr, "Error: BerkeleyDBDataStore's comparison function cannot be changed\n");
-        exit(-1);
-    }
+    _wrapper->_less = less;
 }
 
 bool BerkeleyDBDataStore::put(const ds_bulk_t &key, const ds_bulk_t &data) {
@@ -176,9 +178,10 @@ bool BerkeleyDBDataStore::get(const ds_bulk_t &key, ds_bulk_t &data) {
   data.clear();
 
   Dbt db_key((void*)&(key[0]), uint32_t(key.size()));
+  db_key.set_ulen(uint32_t(key.size()));
   Dbt db_data;
   db_key.set_flags(DB_DBT_USERMEM);
-  db_data.set_flags(DB_DBT_REALLOC);
+  db_data.set_flags(DB_DBT_MALLOC);
   status = _dbm->get(NULL, &db_key, &db_data, 0);
 
   if (status != DB_NOTFOUND && status != DB_KEYEMPTY && db_data.get_size() > 0) {
@@ -321,4 +324,19 @@ std::vector<std::pair<ds_bulk_t,ds_bulk_t>> BerkeleyDBDataStore::vlist_keyvals(c
     }
     cursorp->close();
     return result;
+}
+
+int BerkeleyDBDataStore::compkeys(Db *db, const Dbt *dbt1, const Dbt *dbt2, size_t *locp) {
+    DbWrapper* _wrapper = (DbWrapper*)(((char*)db) - offsetof(BerkeleyDBDataStore::DbWrapper, _db));
+    if(_wrapper->_less) {
+        return (_wrapper->_less)(dbt1->get_data(), dbt1->get_size(), 
+                dbt2->get_data(), dbt2->get_size());
+    } else {
+        size_t s = dbt1->get_size() > dbt2->get_size() ? dbt2->get_size() : dbt1->get_size();
+        int c = std::memcmp(dbt1->get_data(), dbt2->get_data(), s);
+        if(c != 0) return c;
+        if(dbt1->get_size() < dbt2->get_size()) return -1;
+        if(dbt1->get_size() > dbt2->get_size()) return 1;
+        return 0;
+    }
 }
