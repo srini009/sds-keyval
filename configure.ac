@@ -82,7 +82,7 @@ GROUP_LIBS="$CHPLACEMENT_LIBS $CLIENT_LIBS"
 
 # todo: proper configure checks for boost
 SERVER_LIBS="$SERVER_LIBS -lboost_filesystem -lboost_system"
-
+SERVER_DEPS=""
 # we have three possible backends for our datastore.  If none are selected,
 # then nothing will initialize the class and well that doesn't make any sense
 # anyway.  Set BwTree as a default option as it's self-contained to the tree.
@@ -117,6 +117,7 @@ if test "x${berkelydb_backend}" == xyes ; then
 			 AC_ERROR("Could not find Berkely DB STL headers"))
 	AC_DEFINE([USE_BDB], 1, [Use Berkely DB backend])
 	SERVER_LIBS="${SERVER_LIBS} -ldb_cxx -ldb_stl"
+	SERVER_DEPS="${SERVER_DEPS} berkeley-db"
 	AC_LANG_POP
 fi
 
@@ -127,6 +128,7 @@ if test "x${leveldb_backend}" == xyes ; then
 			 AC_ERROR("Could not find leveldb headers"))
 	AC_DEFINE([USE_LEVELDB], 1, [use leveldb backend])
 	SERVER_LIBS="${SERVER_LIBS} -lleveldb"
+	SERVER_DEPS="${SERVER_DEPS} leveldb"
 fi
 
 if test "x${bwtree_backend}" == xyes ; then
@@ -141,6 +143,7 @@ AM_CONDITIONAL([BUILD_LEVELDB], [test "x${leveldb_backend}" == xyes])
 AM_CONDITIONAL([BUILD_BWTREE], [test "x${bwtree_backend}" == xyes])
 
 AC_SUBST(SERVER_LIBS)
+AC_SUBST(SERVER_DEPS)
 AC_SUBST(GROUP_LIBS)
 AC_CONFIG_FILES([Makefile maint/sdskv-client.pc maint/sdskv-server.pc])
 AC_OUTPUT
