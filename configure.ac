@@ -117,7 +117,6 @@ if test "x${berkelydb_backend}" == xyes ; then
 			 AC_ERROR("Could not find Berkely DB STL headers"))
 	AC_DEFINE([USE_BDB], 1, [Use Berkely DB backend])
 	SERVER_LIBS="${SERVER_LIBS} -ldb_cxx -ldb_stl"
-	SERVER_DEPS="${SERVER_DEPS} berkeley-db"
 	AC_LANG_POP
 fi
 
