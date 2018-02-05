@@ -1,84 +1,68 @@
-# mochi service for keyvals
+# SDSKV (SDS Key/Val)
 
-- implement any old keyval in the backend
-- project key-val interface out to clients
-- server does the store/retrieve
+## Installation
 
-## Cloning
+SDSKV can easily be installed using Spack:
 
-Until RobL figures out git submodules and branch tracking, we just copied Zi Qi Wang's BwTree implementation into our tree.
+`spack install sdskeyval`
 
-## Build requirements
-- the ''mercury suite'': `mercury`, `margo`, `argobots`, `abt-snoozer`, and friends. 
-- autotools
+This will install SDSKV (and any required dependencies). 
+Available backends will be _Map_ (in-memory C++ std::map, useful for testing)
+and BwTree (deprecated). To enable the BerkeleyDB and LevelDB backends,
+ass `+bdb` and `+leveldb` respectively. For example:
 
-## Examples
+`spack install sdskeyval+bdb+leveldb`
 
-The server is pretty simple: all the RPC registration happens in `kv_server_register`, so we merely need to hang around and listen for client requests:
+## Architecture
 
-```C
-#include <sds-keyval.h>
+List most mochi services, SDSKV relies on a client/provider architecture.
+A provider, identified by its _address_ and _multiplex id_, manages one or more
+databases, referenced externally by their database id.
 
-int main(int argc, char **argv) {
-	kv_context * context = kv_server_register(argc, argv);
+## Starting a daemon
 
-	margo_wait_for_finalize(context->mid);
+SDSKV ships with a default daemon program that can setup providers and
+databases. This daemon can be started as follows:
 
-	kv_server_deregister(context);
-}
-```
+`sdskv-server-daemon [OPTIONS] <listen_addr> <db name 1>[:map|:bwt|:bdb|:ldb] <db name 2>[:map|:bwt|:bdb|:ldb] ...`
 
-Both server and client include `<sds-keyval.h>`.  The server code needs to
-link against `libkvserver` and all the other "mercury suite" dependencies.
+For example:
 
-Client side, all of the remote functionality is abstracted under the client API, aside from a server string passed to `kv_open`.
+`sdskv-server-daemon tcp://localhost:1234 foo:bdb bar`
 
-```C
-#include <sds-keyval.h>
+listen_addr is the address at which to listen; database names should be provided in the form
+_name:type_ where _type_ is _map_ (std::map), _bwt_ (BwTree), _bdb_ (Berkeley DB), or _ldb_ (LevelDB).
 
-int main(int argc, char **argv) {
-	int ret;
-	// pass client address string (e.g. "ofi+tcp://") or NULL to use default
-	// default is currently "ofi+tcp://"
-	kv_context * context = kv_client_register(NULL);
+For database that are persistent like BerkeleyDB or LevelDB, the name should be a path to the
+file where the database will be put (this file should not exist).
 
-	/* open */
-	ret = kv_open(context, argv[1], "booger");
+The following additional options are accepted:
 
-	/* put */
-	int key = 10;
-	int val = 10;
-	ret = kv_put(context, &key, sizeof(key), &val, sizeof(val));
+* `-f` provides the name of the file in which to write the address of the daemon.
+* `-m` provides the mode (providers or databases).
 
-	/* get */
-	int remote_val;
-	int vsize = sizeof(remote_val);
-	// vsize is an in/out argument
-	// in value is size of receive buffer (e.g. &remote_val)
-	// out is actual size transferred
-	// this all makes more sense with complex values of arbitrary size
-	ret = kv_get(context, &key, sizeof(key), &remote_val, &vsize);
-	printf("key: %d in: %d out: %d\n", key, val, remote_val);
+The providers mode indicates that, if multiple SDSKV databases are used (as above),
+these databases should be managed by multiple providers, accessible through 
+different multiplex ids 1, 2, ... N where N is the number of databases
+to manage. The targets mode indicates that a single provider should be used to
+manage all the databases. This provider will be accessible at multiplex id 1.
 
-	/* close */
-	ret = kv_close(context);
+## Client API
 
-	kv_client_deregister(context);
-}
-```
+The client API is available in _sdskv-client.h_.
+The codes in the _test_ folder illustrate how to use it.
 
-To compile this code, you'll need to link against `libkvclient` in addition to the "mercury suite" dependencies.
+## Provider API
 
+The server-side API is available in _sdskv-server.h_.
+The code of the daemon (_src/sdskv-server-daemon.c_) can be used as an example.
 
-## Issues
+### Custom key comparison function
 
-If you get 
-```undefined reference to `__atomic_compare_exchange_16'
-```
+It is possible to specify a custom function for comparing/sorting keys
+when creating a provider. A comparison function must have the following prototype:
 
-That suggests gcc needs a bit of help pulling in the 'libatomic' library
-.  The server uses CMU's BwTree implementaiton, which in turn relies on atomic operations.  Link server-side code with `libatomic` to address this issue.
+`int (*)(const void* key1, size_t keysize1, const void* key2, size_t keysize2)`
 
-## Notes
-The [https://github.com/wangziqi2013/BwTree](BwTree) implementation in here
-came from Zi Qi Wang's git repository.
+Its return value must be < 0 if key1 < key2, 0 if key1 = key2, > 0 if key1 > key2.
+It must define a total order of the key space.
