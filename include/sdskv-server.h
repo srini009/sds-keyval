@@ -22,6 +22,16 @@ extern "C" {
 typedef struct sdskv_server_context_t* sdskv_provider_t;
 typedef int (*sdskv_compare_fn)(const void*, size_t, const void*, size_t);
 
+/**
+ * @brief Creates a new provider.
+ *
+ * @param[in] mid Margo instance
+ * @param[in] mplex_id multiplex id
+ * @param[in] pool Argobots pool
+ * @param[out] provider provider handle
+ *
+ * @return SDSKV_SUCCESS or error code defined in sdskv-common.h
+ */
 int sdskv_provider_register(
         margo_instance_id mid,
         uint8_t mplex_id,
@@ -31,12 +41,13 @@ int sdskv_provider_register(
 /**
  * Makes the provider start managing a database.
  *
- * @param provider provider
- * @param db_name name of the database
- * @param db_type type of database
- * @param db_id resulting id identifying the database
+ * @param[in] provider provider
+ * @param[in] db_name name of the database
+ * @param[in] db_type type of database
+ * @param[in] comp_fn comparison function for the database
+ * @param[out] db_id resulting id identifying the database
  *
- * @return 0 on success, -1 on failure
+ * @return SDSKV_SUCCESS or error code defined in sdskv-common.h
  */
 int sdskv_provider_add_database(
         sdskv_provider_t provider,
@@ -46,12 +57,14 @@ int sdskv_provider_add_database(
         sdskv_database_id_t* sb_id);
 
 /**
- * Makes the provider stop managing a database.
+ * Makes the provider stop managing a database and deletes the
+ * database. This will effectively destroy the database if it is
+ * not backed up by a file.
  *
  * @param provider provider
  * @param db_id id of the database to remove
  *
- * @return 0 on success, -1 on failure
+ * @return SDSKV_SUCCESS or error code defined in sdskv-common.h
  */
 int sdskv_provider_remove_database(
         sdskv_provider_t provider,
@@ -62,7 +75,7 @@ int sdskv_provider_remove_database(
  *
  * @param provider provider
  *
- * @return 0 on success, -1 on failure
+ * @return SDSKV_SUCCESS or error code defined in sdskv-common.h
  */
 int sdskv_provider_remove_all_databases(
         sdskv_provider_t provider);
@@ -73,7 +86,7 @@ int sdskv_provider_remove_all_databases(
  * @param provider provider
  * @param num_db resulting number of databases
  *
- * @return 0 on success, -1 on failure
+ * @return SDSKV_SUCCESS or error code defined in sdskv-common.h
  */
 int sdskv_provider_count_databases(
         sdskv_provider_t provider,
@@ -85,10 +98,10 @@ int sdskv_provider_count_databases(
  * space to hold all the ids (use sdskv_provider_count_databases
  * to know how many databases are managed).
  *
- * @param provider provider
- * @param databases resulting targer ids
+ * @param[in] provider provider
+ * @param[out] databases resulting database ids
  *
- * @return 0 on success, -1 on failure
+ * @return SDSKV_SUCCESS or error code defined in sdskv-common.h
  */
 int sdskv_provider_list_databases(
         sdskv_provider_t provider,
