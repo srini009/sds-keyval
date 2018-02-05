@@ -33,6 +33,8 @@ AC_TYPE_SSIZE_T
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
 
+AX_CXX_COMPILE_STDCXX_14
+
 #pkg-config and libraries supporting that
 PKG_PROG_PKG_CONFIG
 if test "x$PKG_CONFIG" == "x"; then
@@ -131,7 +133,7 @@ if test "x${bwtree_backend}" == xyes ; then
 	AC_DEFINE([USE_BWTREE], 1, [use BwTree backend])
 	AC_MSG_WARN([BwTree backend is deprecated])
 	CPPFLAGS="-I${srcdir}/src/BwTree/src ${CPPFLAGS}"
-	CXXFLAGS="-pthread -std=c++11 -g -Wall -mcx16 -Wno-invalid-offsetof ${CXXFLAGS}"
+	CXXFLAGS="-pthread -g -Wall -mcx16 -Wno-invalid-offsetof ${CXXFLAGS}"
 fi
 
 AM_CONDITIONAL([BUILD_BDB], [test "x${berkelydb_backend}" == xyes])
