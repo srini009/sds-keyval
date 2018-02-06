@@ -119,6 +119,8 @@ extern "C" int sdskv_provider_add_database(
     provider->id2name[id] = std::string(db_name);
     provider->databases[id] = db;
 
+    *db_id = id;
+
     return SDSKV_SUCCESS;
 }
 
