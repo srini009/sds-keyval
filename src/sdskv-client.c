@@ -22,7 +22,7 @@ struct sdskv_client {
 struct sdskv_provider_handle {
     sdskv_client_t client;
     hg_addr_t      addr;
-    uint8_t        provider_id;
+    uint16_t       provider_id;
     uint64_t       refcount;
 };
 
