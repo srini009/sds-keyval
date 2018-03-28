@@ -22,7 +22,7 @@ struct sdskv_client {
 struct sdskv_provider_handle {
     sdskv_client_t client;
     hg_addr_t      addr;
-    uint8_t        mplex_id;
+    uint8_t        provider_id;
     uint64_t       refcount;
 };
 
@@ -100,7 +100,7 @@ int sdskv_client_finalize(sdskv_client_t client)
 int sdskv_provider_handle_create(
         sdskv_client_t client,
         hg_addr_t addr,
-        uint8_t mplex_id,
+        uint16_t provider_id,
         sdskv_provider_handle_t* handle)
 {
     if(client == SDSKV_CLIENT_NULL) 
@@ -117,9 +117,9 @@ int sdskv_provider_handle_create(
         return SDSKV_ERR_MERCURY;
     }
 
-    provider->client   = client;
-    provider->mplex_id = mplex_id;
-    provider->refcount = 1;
+    provider->client      = client;
+    provider->provider_id = provider_id;
+    provider->refcount    = 1;
 
     client->num_provider_handles += 1;
 
@@ -166,16 +166,9 @@ int sdskv_open(
             &handle);
     if(hret != HG_SUCCESS) return SDSKV_ERR_MERCURY;
 
-    hret = margo_set_target_id(handle, provider->mplex_id);
-
-    if(hret != HG_SUCCESS) {
-        margo_destroy(handle);
-        return SDSKV_ERR_MERCURY;
-    }
-
     in.name = (char*)db_name;
 
-    hret = margo_forward(handle, &in);
+    hret = margo_provider_forward(provider->provider_id, handle, &in);
     if(hret != HG_SUCCESS) {
         margo_destroy(handle);
         return SDSKV_ERR_MERCURY;
@@ -229,15 +222,7 @@ int sdskv_put(sdskv_provider_handle_t provider,
             return SDSKV_ERR_MERCURY;
         }
 
-        hret = margo_set_target_id(handle, provider->mplex_id);
-
-        if(hret != HG_SUCCESS) {
-            fprintf(stderr,"[SDSKV] margo_set_target_id() failed in sdskv_put()\n");
-            margo_destroy(handle);
-            return SDSKV_ERR_MERCURY;
-        }
-
-        hret = margo_forward(handle, &in);
+        hret = margo_provider_forward(provider->provider_id, handle, &in);
         if(hret != HG_SUCCESS) {
             fprintf(stderr,"[SDSKV] margo_forward() failed in sdskv_put()\n");
             margo_destroy(handle);
@@ -284,16 +269,7 @@ int sdskv_put(sdskv_provider_handle_t provider,
             return SDSKV_ERR_MERCURY;
         }
 
-        hret = margo_set_target_id(handle, provider->mplex_id);
-
-        if(hret != HG_SUCCESS) {
-            fprintf(stderr,"[SDSKV] margo_set_target_id() failed in sdskv_put()\n");
-            margo_bulk_free(in.handle);
-            margo_destroy(handle);
-            return SDSKV_ERR_MERCURY;
-        }
-
-        hret = margo_forward(handle, &in);
+        hret = margo_provider_forward(provider->provider_id, handle, &in);
         if(hret != HG_SUCCESS) {
             fprintf(stderr,"[SDSKV] margo_forward() failed in sdskv_put()\n");
             margo_bulk_free(in.handle);
@@ -350,14 +326,7 @@ int sdskv_get(sdskv_provider_handle_t provider,
                 &handle);
         if(hret != HG_SUCCESS) return SDSKV_ERR_MERCURY;
 
-        hret = margo_set_target_id(handle, provider->mplex_id);
-
-        if(hret != HG_SUCCESS) {
-            margo_destroy(handle);
-            return SDSKV_ERR_MERCURY;
-        }
-
-        hret = margo_forward(handle, &in);
+        hret = margo_provider_forward(provider->provider_id, handle, &in);
         if(hret != HG_SUCCESS) {
             margo_destroy(handle);
             return SDSKV_ERR_MERCURY;
@@ -403,14 +372,7 @@ int sdskv_get(sdskv_provider_handle_t provider,
             return SDSKV_ERR_MERCURY;
         }
 
-        hret = margo_set_target_id(handle, provider->mplex_id);
-        if(hret != HG_SUCCESS) {
-            margo_bulk_free(in.handle);
-            margo_destroy(handle);
-            return SDSKV_ERR_MERCURY;
-        }
-
-        hret = margo_forward(handle, &in);
+        hret = margo_provider_forward(provider->provider_id, handle, &in);
         if(hret != HG_SUCCESS) {
             margo_bulk_free(in.handle);
             margo_destroy(handle);
@@ -458,13 +420,7 @@ int sdskv_length(sdskv_provider_handle_t provider,
             &handle);
     if(hret != HG_SUCCESS) return SDSKV_ERR_MERCURY;
 
-    hret = margo_set_target_id(handle, provider->mplex_id);
-    if(hret != HG_SUCCESS) {
-        margo_destroy(handle);
-        return SDSKV_ERR_MERCURY;
-    }
-
-    hret = margo_forward(handle, &in);
+    hret = margo_provider_forward(provider->provider_id, handle, &in);
     if(hret != HG_SUCCESS) {
         margo_destroy(handle);
         return SDSKV_ERR_MERCURY;
@@ -507,13 +463,7 @@ int sdskv_erase(sdskv_provider_handle_t provider,
             &handle);
     if(hret != HG_SUCCESS) return SDSKV_ERR_MERCURY;
 
-    hret = margo_set_target_id(handle, provider->mplex_id);
-    if(hret != HG_SUCCESS) {
-        margo_destroy(handle);
-        return SDSKV_ERR_MERCURY;
-    }
-
-    hret = margo_forward(handle, &in);
+    hret = margo_provider_forward(provider->provider_id, handle, &in);
     if(hret != HG_SUCCESS) {
         margo_destroy(handle);
         return SDSKV_ERR_MERCURY;
@@ -617,15 +567,8 @@ int sdskv_list_keys_with_prefix(sdskv_provider_handle_t provider,
         goto finish;
     }
 
-    /* set target id */
-    hret = margo_set_target_id(handle, provider->mplex_id);
-    if(hret != HG_SUCCESS) {
-        ret = SDSKV_ERR_MERCURY;
-        goto finish;
-    }
-
     /* forward to provider */
-    hret = margo_forward(handle, &in);
+    hret = margo_provider_forward(provider->provider_id, handle, &in);
     if(hret != HG_SUCCESS) {
         ret = SDSKV_ERR_MERCURY;
         goto finish;
@@ -773,15 +716,8 @@ int sdskv_list_keyvals_with_prefix(sdskv_provider_handle_t provider,
         goto finish;
     }
 
-    /* set target id */
-    hret = margo_set_target_id(handle, provider->mplex_id);
-    if(hret != HG_SUCCESS) {
-        ret = SDSKV_ERR_MERCURY;
-        goto finish;
-    }
-
     /* forward to provider */
-    hret = margo_forward(handle, &in);
+    hret = margo_provider_forward(provider->provider_id, handle, &in);
     if(hret != HG_SUCCESS) {
         ret = SDSKV_ERR_MERCURY;
         goto finish;
