@@ -15,7 +15,7 @@ extern "C" {
 #endif
 
 #define SDSKV_ABT_POOL_DEFAULT ABT_POOL_NULL
-#define SDSKV_MPLEX_ID_DEFAULT 0
+#define SDSKV_PROVIDER_ID_DEFAULT 0
 #define SDSKV_PROVIDER_IGNORE NULL
 #define SDSKV_COMPARE_DEFAULT NULL
 
@@ -26,7 +26,7 @@ typedef int (*sdskv_compare_fn)(const void*, size_t, const void*, size_t);
  * @brief Creates a new provider.
  *
  * @param[in] mid Margo instance
- * @param[in] mplex_id multiplex id
+ * @param[in] provider_id provider id
  * @param[in] pool Argobots pool
  * @param[out] provider provider handle
  *
@@ -34,7 +34,7 @@ typedef int (*sdskv_compare_fn)(const void*, size_t, const void*, size_t);
  */
 int sdskv_provider_register(
         margo_instance_id mid,
-        uint8_t mplex_id,
+        uint16_t provider_id,
         ABT_pool pool,
         sdskv_provider_t* provider);
 

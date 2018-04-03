@@ -39,7 +39,7 @@ int sdskv_client_finalize(sdskv_client_t client);
  *
  * @param[in] client SDSKV client responsible for the provider handle
  * @param[in] addr Mercury address of the provider
- * @param[in] mplex_id Multiplex id of the provider
+ * @param[in] provider_id id of the provider
  * @param[in] handle provider handle
  *
  * @return SDSKV_SUCCESS or error code defined in sdskv-common.h
@@ -47,7 +47,7 @@ int sdskv_client_finalize(sdskv_client_t client);
 int sdskv_provider_handle_create(
         sdskv_client_t client,
         hg_addr_t addr,
-        uint8_t mplex_id,
+        uint16_t provider_id,
         sdskv_provider_handle_t* handle);
 
 /**

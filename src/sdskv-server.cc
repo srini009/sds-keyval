@@ -33,7 +33,7 @@ static void sdskv_server_finalize_cb(void *data);
 
 extern "C" int sdskv_provider_register(
         margo_instance_id mid,
-        uint8_t mplex_id,
+        uint16_t provider_id,
         ABT_pool abt_pool,
         sdskv_provider_t* provider)
 {
@@ -43,9 +43,9 @@ extern "C" int sdskv_provider_register(
     {
         hg_id_t id;
         hg_bool_t flag;
-        margo_registered_name_mplex(mid, "sdskv_put_rpc", mplex_id, &id, &flag);
+        margo_provider_registered_name(mid, "sdskv_put_rpc", provider_id, &id, &flag);
         if(flag == HG_TRUE) {
-            fprintf(stderr, "sdskv_provider_register(): a provider with the same mplex id (%d) already exists\n", mplex_id);
+            fprintf(stderr, "sdskv_provider_register(): a provider with the same provider id (%d) already exists\n", provider_id);
             return SDSKV_ERR_MERCURY;
         }
     }
@@ -57,42 +57,42 @@ extern "C" int sdskv_provider_register(
 
     /* register RPCs */
     hg_id_t rpc_id;
-    rpc_id = MARGO_REGISTER_MPLEX(mid, "sdskv_put_rpc",
+    rpc_id = MARGO_REGISTER_PROVIDER(mid, "sdskv_put_rpc",
             put_in_t, put_out_t,
-            sdskv_put_ult, mplex_id, abt_pool);
-    margo_register_data_mplex(mid, rpc_id, mplex_id, (void*)tmp_svr_ctx, NULL);
-    rpc_id = MARGO_REGISTER_MPLEX(mid, "sdskv_bulk_put_rpc",
+            sdskv_put_ult, provider_id, abt_pool);
+    margo_register_data(mid, rpc_id, (void*)tmp_svr_ctx, NULL);
+    rpc_id = MARGO_REGISTER_PROVIDER(mid, "sdskv_bulk_put_rpc",
             bulk_put_in_t, bulk_put_out_t,
-            sdskv_bulk_put_ult, mplex_id, abt_pool);
-    margo_register_data_mplex(mid, rpc_id, mplex_id, (void*)tmp_svr_ctx, NULL);
-    rpc_id = MARGO_REGISTER_MPLEX(mid, "sdskv_get_rpc",
+            sdskv_bulk_put_ult, provider_id, abt_pool);
+    margo_register_data(mid, rpc_id, (void*)tmp_svr_ctx, NULL);
+    rpc_id = MARGO_REGISTER_PROVIDER(mid, "sdskv_get_rpc",
             get_in_t, get_out_t,
-            sdskv_get_ult, mplex_id, abt_pool);
-    margo_register_data_mplex(mid, rpc_id, mplex_id, (void*)tmp_svr_ctx, NULL);
-    rpc_id = MARGO_REGISTER_MPLEX(mid, "sdskv_length_rpc",
+            sdskv_get_ult, provider_id, abt_pool);
+    margo_register_data(mid, rpc_id, (void*)tmp_svr_ctx, NULL);
+    rpc_id = MARGO_REGISTER_PROVIDER(mid, "sdskv_length_rpc",
             length_in_t, length_out_t,
-            sdskv_length_ult, mplex_id, abt_pool);
-    margo_register_data_mplex(mid, rpc_id, mplex_id, (void*)tmp_svr_ctx, NULL);
-    rpc_id = MARGO_REGISTER_MPLEX(mid, "sdskv_bulk_get_rpc",
+            sdskv_length_ult, provider_id, abt_pool);
+    margo_register_data(mid, rpc_id, (void*)tmp_svr_ctx, NULL);
+    rpc_id = MARGO_REGISTER_PROVIDER(mid, "sdskv_bulk_get_rpc",
             bulk_get_in_t, bulk_get_out_t,
-            sdskv_bulk_get_ult, mplex_id, abt_pool);
-    margo_register_data_mplex(mid, rpc_id, mplex_id, (void*)tmp_svr_ctx, NULL);
-    rpc_id = MARGO_REGISTER_MPLEX(mid, "sdskv_open_rpc",
+            sdskv_bulk_get_ult, provider_id, abt_pool);
+    margo_register_data(mid, rpc_id, (void*)tmp_svr_ctx, NULL);
+    rpc_id = MARGO_REGISTER_PROVIDER(mid, "sdskv_open_rpc",
             open_in_t, open_out_t,
-            sdskv_open_ult, mplex_id, abt_pool);
-    margo_register_data_mplex(mid, rpc_id, mplex_id, (void*)tmp_svr_ctx, NULL);
-    rpc_id = MARGO_REGISTER_MPLEX(mid, "sdskv_list_keys_rpc",
+            sdskv_open_ult, provider_id, abt_pool);
+    margo_register_data(mid, rpc_id, (void*)tmp_svr_ctx, NULL);
+    rpc_id = MARGO_REGISTER_PROVIDER(mid, "sdskv_list_keys_rpc",
             list_keys_in_t, list_keys_out_t,
-            sdskv_list_keys_ult, mplex_id, abt_pool);
-    margo_register_data_mplex(mid, rpc_id, mplex_id, (void*)tmp_svr_ctx, NULL);
-    rpc_id = MARGO_REGISTER_MPLEX(mid, "sdskv_list_keyvals_rpc",
+            sdskv_list_keys_ult, provider_id, abt_pool);
+    margo_register_data(mid, rpc_id, (void*)tmp_svr_ctx, NULL);
+    rpc_id = MARGO_REGISTER_PROVIDER(mid, "sdskv_list_keyvals_rpc",
             list_keyvals_in_t, list_keyvals_out_t,
-            sdskv_list_keyvals_ult, mplex_id, abt_pool);
-    margo_register_data_mplex(mid, rpc_id, mplex_id, (void*)tmp_svr_ctx, NULL);
-    rpc_id = MARGO_REGISTER_MPLEX(mid, "sdskv_erase_rpc",
+            sdskv_list_keyvals_ult, provider_id, abt_pool);
+    margo_register_data(mid, rpc_id, (void*)tmp_svr_ctx, NULL);
+    rpc_id = MARGO_REGISTER_PROVIDER(mid, "sdskv_erase_rpc",
             erase_in_t, erase_out_t,
-            sdskv_erase_ult, mplex_id, abt_pool);
-    margo_register_data_mplex(mid, rpc_id, mplex_id, (void*)tmp_svr_ctx, NULL);
+            sdskv_erase_ult, provider_id, abt_pool);
+    margo_register_data(mid, rpc_id, (void*)tmp_svr_ctx, NULL);
 
     /* install the bake server finalize callback */
     margo_push_finalize_callback(mid, &sdskv_server_finalize_cb, tmp_svr_ctx);
@@ -184,7 +184,7 @@ static void sdskv_put_ult(hg_handle_t handle)
     assert(mid);
     const struct hg_info* info = margo_get_info(handle);
     sdskv_provider_t svr_ctx = 
-        (sdskv_provider_t)margo_registered_data_mplex(mid, info->id, info->target_id);
+        (sdskv_provider_t)margo_registered_data(mid, info->id);
     if(!svr_ctx) {
         fprintf(stderr, "Error: SDSKV could not find provider\n"); 
         out.ret = SDSKV_ERR_UNKNOWN_PR;
@@ -236,7 +236,7 @@ static void sdskv_length_ult(hg_handle_t handle)
     assert(mid);
     const struct hg_info* info = margo_get_info(handle);
     sdskv_provider_t svr_ctx = 
-        (sdskv_provider_t)margo_registered_data_mplex(mid, info->id, info->target_id);
+        (sdskv_provider_t)margo_registered_data(mid, info->id);
     if(!svr_ctx) {
         fprintf(stderr, "Error: SDSKV could not find provider\n"); 
         out.ret = SDSKV_ERR_UNKNOWN_PR;
@@ -292,7 +292,7 @@ static void sdskv_get_ult(hg_handle_t handle)
     assert(mid);
     const struct hg_info* info = margo_get_info(handle);
     sdskv_provider_t svr_ctx = 
-        (sdskv_provider_t)margo_registered_data_mplex(mid, info->id, info->target_id);
+        (sdskv_provider_t)margo_registered_data(mid, info->id);
     if(!svr_ctx) {
         fprintf(stderr, "Error: SDSKV could not find provider\n"); 
         out.ret = SDSKV_ERR_UNKNOWN_PR;
@@ -360,7 +360,7 @@ static void sdskv_open_ult(hg_handle_t handle)
     assert(mid);
     const struct hg_info* info = margo_get_info(handle);
     sdskv_provider_t svr_ctx = 
-        (sdskv_provider_t)margo_registered_data_mplex(mid, info->id, info->target_id);
+        (sdskv_provider_t)margo_registered_data(mid, info->id);
     if(!svr_ctx) {
         fprintf(stderr, "Error: SDSKV could not find provider\n"); 
         out.ret = SDSKV_ERR_UNKNOWN_PR;
@@ -408,7 +408,7 @@ static void sdskv_bulk_put_ult(hg_handle_t handle)
     assert(mid);
     const struct hg_info* info = margo_get_info(handle);
     sdskv_provider_t svr_ctx = 
-        (sdskv_provider_t)margo_registered_data_mplex(mid, info->id, info->target_id);
+        (sdskv_provider_t)margo_registered_data(mid, info->id);
     if(!svr_ctx) {
         fprintf(stderr, "Error: SDSKV could not find provider\n"); 
         out.ret = SDSKV_ERR_UNKNOWN_PR;
@@ -495,7 +495,7 @@ static void sdskv_bulk_get_ult(hg_handle_t handle)
     assert(mid);
     const struct hg_info* info = margo_get_info(handle);
     sdskv_provider_t svr_ctx = 
-        (sdskv_provider_t)margo_registered_data_mplex(mid, info->id, info->target_id);
+        (sdskv_provider_t)margo_registered_data(mid, info->id);
     if(!svr_ctx) {
         fprintf(stderr, "Error: SDSKV could not find provider\n"); 
         out.ret = SDSKV_ERR_UNKNOWN_PR;
@@ -586,7 +586,7 @@ static void sdskv_erase_ult(hg_handle_t handle)
     assert(mid);
     const struct hg_info* info = margo_get_info(handle);
     sdskv_provider_t svr_ctx = 
-        (sdskv_provider_t)margo_registered_data_mplex(mid, info->id, info->target_id);
+        (sdskv_provider_t)margo_registered_data(mid, info->id);
     if(!svr_ctx) {
         fprintf(stderr, "Error: SDSKV could not find provider\n"); 
         out.ret = SDSKV_ERR_UNKNOWN_PR;
@@ -645,7 +645,7 @@ static void sdskv_list_keys_ult(hg_handle_t handle)
     assert(mid);
     const struct hg_info* info = margo_get_info(handle);
     sdskv_provider_t svr_ctx = 
-        (sdskv_provider_t)margo_registered_data_mplex(mid, info->id, info->target_id);
+        (sdskv_provider_t)margo_registered_data(mid, info->id);
     if(!svr_ctx) {
         std::cerr << "Error: SDSKV list_keys could not find provider" << std::endl;
         out.ret = SDSKV_ERR_UNKNOWN_PR;
@@ -799,7 +799,7 @@ static void sdskv_list_keyvals_ult(hg_handle_t handle)
     assert(mid);
     const struct hg_info* info = margo_get_info(handle);
     sdskv_provider_t svr_ctx = 
-        (sdskv_provider_t)margo_registered_data_mplex(mid, info->id, info->target_id);
+        (sdskv_provider_t)margo_registered_data(mid, info->id);
     if(!svr_ctx) {
         std::cerr << "Error: SDSKV list_keyvals could not find provider" << std::endl;
         out.ret = SDSKV_ERR_UNKNOWN_PR;
