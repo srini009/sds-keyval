@@ -13,6 +13,11 @@ ass `+bdb` and `+leveldb` respectively. For example:
 
 `spack install sdskeyval+bdb+leveldb`
 
+Note that if you are using a system boost path in spack (in your
+packages.yaml) rather than letting spack build boost, then you must
+install libboost-system-dev and libboost-filesystem-dev packages on
+your system.
+
 ## Architecture
 
 List most mochi services, SDSKV relies on a client/provider architecture.
