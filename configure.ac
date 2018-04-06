@@ -121,13 +121,18 @@ if test "x${berkelydb_backend}" == xyes ; then
 fi
 
 if test "x${leveldb_backend}" == xyes ; then
-	# spack provides a pkgconfig file for leveldb but other leveldb
-	# packages probably do not provide one
-	AC_CHECK_HEADERS([leveldb/c.h], ,
-			 AC_ERROR("Could not find leveldb headers"))
-	AC_DEFINE([USE_LEVELDB], 1, [use leveldb backend])
-	SERVER_LIBS="${SERVER_LIBS} -lleveldb"
-	SERVER_DEPS="${SERVER_DEPS} leveldb"
+        PKG_CHECK_MODULES([LEVELDB],[leveldb],[
+            SERVER_LIBS="$LEVELDB_LIBS $SERVER_LIBS"
+            CPPFLAGS="$LEVELDB_CFLAGS $CPPFLAGS"
+            CFLAGS="$LEVELDB_CFLAGS $CFLAGS"
+            SERVER_DEPS="${SERVER_DEPS} leveldb"
+        ], [
+            # fall back to conventional tests if no pkgconfig
+            AC_CHECK_HEADERS([leveldb/c.h], ,
+                             AC_ERROR("Could not find leveldb headers"))
+            AC_DEFINE([USE_LEVELDB], 1, [use leveldb backend])
+            SERVER_LIBS="${SERVER_LIBS} -lleveldb"
+        ])
 fi
 
 if test "x${bwtree_backend}" == xyes ; then
