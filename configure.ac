@@ -80,9 +80,16 @@ CFLAGS="$CHPLACEMENT_CFLAGS $CFLAGS"
 SERVER_LIBS="$CHPLAEMENT_LIBS $SERVER_LIBS"
 GROUP_LIBS="$CHPLACEMENT_LIBS $CLIENT_LIBS"
 
-# todo: proper configure checks for boost
-SERVER_LIBS="$SERVER_LIBS -lboost_filesystem -lboost_system"
+# uncertain what the lowest Boost we need is.
+# Ubuntu 14.04 has boost 1.54. Seems like a good starting point
+AX_BOOST_BASE([1.54], ,
+	      AC_MSG_ERROR([sdskeyval requires Boost but was unable to find it]))
+AX_BOOST_SYSTEM
+AX_BOOST_FILESYSTEM
+
+SERVER_LIBS="$SERVER_LIBS ${BOOST_LDFLAGS} ${BOOST_FILESYSTEM_LIB} ${BOOST_SYSTEM_LIB}"
 SERVER_DEPS=""
+
 # we have three possible backends for our datastore.  If none are selected,
 # then nothing will initialize the class and well that doesn't make any sense
 # anyway.  Set BwTree as a default option as it's self-contained to the tree.
