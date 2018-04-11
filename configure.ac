@@ -100,11 +100,6 @@ bwtree_backend=yes
 leveldb_backend=no
 berkelydb_backend=no
 
-#AC_ARG_ENABLE([berkeleydb],
-#	      AS_HELP_STRING([--enable-berkeleydb], [Select "berkeleydb" as
-#			      storage backend (default is no)]),
-#	      [berkelydb_backend=${enableval}]
-#)
 AC_ARG_ENABLE([leveldb],
 	      AS_HELP_STRING([--enable-leveldb], [Select "leveldb" as storage
 			      backend (default is no)]),
@@ -115,18 +110,6 @@ AC_ARG_ENABLE([bwtree],
 			     backend.  (default is no) ]),
 	     [bwtree_backend=${enableval}], [bwtree_backend=no]
 )
-
-
-#if test "x${berkelydb_backend}" == xyes ; then
-#	AC_LANG_PUSH([C++])
-#	AC_CHECK_HEADERS([db_cxx.h], ,
-#			 AC_ERROR("Could not find Berkely DB C++ headers"))
-#	AC_CHECK_HEADERS([dbstl_map.h],,
-#			 AC_ERROR("Could not find Berkely DB STL headers"))
-#	AC_DEFINE([USE_BDB], 1, [Use Berkely DB backend])
-#	SERVER_LIBS_EXT="${SERVER_LIBS_EXT} -ldb_cxx -ldb_stl"
-#	AC_LANG_POP
-#fi
 
 AC_ARG_WITH([berkeleydb],[AS_HELP_STRING([--with-berkeleydb@<:@=DIR@:>@],
 			[location of BerkeleyDB installation])])
@@ -140,7 +123,7 @@ if test "x${with_berkeleydb}" != "x" ; then
 	AC_CHECK_HEADERS([dbstl_map.h],,
 			AC_ERROR("Could not find Berkely DB STL headers"))
 	AC_DEFINE([USE_BDB], 1, [Use Berkely DB backend])
-	SERVER_LIBS_EXT="${SERVER_LIBS_EXT} -ldb_cxx -ldb_stl"
+	SERVER_LIBS_EXT="${SERVER_LIBS_EXT} ${with_berkeleydb}/lib -ldb_cxx -ldb_stl"
 	AC_LANG_POP
 	berkelydb_backend=yes
 fi
