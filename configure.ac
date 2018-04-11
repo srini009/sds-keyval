@@ -69,15 +69,17 @@ LIBS="$MARGO_LIBS $LIBS"
 CPPFLAGS="$MARGO_CFLAGS $CPPFLAGS"
 CFLAGS="$MARGO_CFLAGS $CFLAGS"
 
+SERVER_DEPS_PKG=""
+
 PKG_CHECK_MODULES([SSG], [ssg], [],
 		  AC_MSG_ERROR([Could not find ssg]) )
 CFLAGS="$SSG_CFLAGS $CFLAGS"
-SERVER_LIBS="$SSG_LIBS $SERVER_LIBS"
+SERVER_LIBS_PKG="$SSG_LIBS $SERVER_LIBS_PKG"
 
 PKG_CHECK_MODULES([CHPLACEMENT], [ch-placement], [],
 		  AC_MSG_ERROR([Could not find ch-placement]) )
 CFLAGS="$CHPLACEMENT_CFLAGS $CFLAGS"
-SERVER_LIBS="$CHPLAEMENT_LIBS $SERVER_LIBS"
+SERVER_LIBS_PKG="$CHPLAEMENT_LIBS $SERVER_LIBS_PKG"
 GROUP_LIBS="$CHPLACEMENT_LIBS $CLIENT_LIBS"
 
 # uncertain what the lowest Boost we need is.
@@ -87,8 +89,7 @@ AX_BOOST_BASE([1.54], ,
 AX_BOOST_SYSTEM
 AX_BOOST_FILESYSTEM
 
-SERVER_LIBS="$SERVER_LIBS ${BOOST_LDFLAGS} ${BOOST_FILESYSTEM_LIB} ${BOOST_SYSTEM_LIB}"
-SERVER_DEPS=""
+SERVER_LIBS_EXT="$SERVER_LIBS_EXT ${BOOST_LDFLAGS} ${BOOST_FILESYSTEM_LIB} ${BOOST_SYSTEM_LIB}"
 
 # we have three possible backends for our datastore.  If none are selected,
 # then nothing will initialize the class and well that doesn't make any sense
@@ -123,22 +124,22 @@ if test "x${berkelydb_backend}" == xyes ; then
 	AC_CHECK_HEADERS([dbstl_map.h],,
 			 AC_ERROR("Could not find Berkely DB STL headers"))
 	AC_DEFINE([USE_BDB], 1, [Use Berkely DB backend])
-	SERVER_LIBS="${SERVER_LIBS} -ldb_cxx -ldb_stl"
+	SERVER_LIBS_EXT="${SERVER_LIBS_EXT} -ldb_cxx -ldb_stl"
 	AC_LANG_POP
 fi
 
 if test "x${leveldb_backend}" == xyes ; then
         PKG_CHECK_MODULES([LEVELDB],[leveldb],[
-            SERVER_LIBS="$LEVELDB_LIBS $SERVER_LIBS"
+            SERVER_LIBS_PKG="$LEVELDB_LIBS $SERVER_LIBS_PKG"
             CPPFLAGS="$LEVELDB_CFLAGS $CPPFLAGS"
             CFLAGS="$LEVELDB_CFLAGS $CFLAGS"
-            SERVER_DEPS="${SERVER_DEPS} leveldb"
+            SERVER_DEPS_PKG="${SERVER_DEPS_PKG} leveldb"
         ], [
             # fall back to conventional tests if no pkgconfig
             AC_CHECK_HEADERS([leveldb/c.h], ,
                              AC_ERROR("Could not find leveldb headers"))
             AC_DEFINE([USE_LEVELDB], 1, [use leveldb backend])
-            SERVER_LIBS="${SERVER_LIBS} -lleveldb"
+	    SERVER_LIBS_EXT="${SERVER_LIBS_EXT} -lleveldb"
         ])
 fi
 
@@ -153,8 +154,12 @@ AM_CONDITIONAL([BUILD_BDB], [test "x${berkelydb_backend}" == xyes])
 AM_CONDITIONAL([BUILD_LEVELDB], [test "x${leveldb_backend}" == xyes])
 AM_CONDITIONAL([BUILD_BWTREE], [test "x${bwtree_backend}" == xyes])
 
+SERVER_LIBS="$SERVER_LIBS_PKG $SERVER_LIBS_EXT"
+
 AC_SUBST(SERVER_LIBS)
-AC_SUBST(SERVER_DEPS)
+AC_SUBST(SERVER_LIBS_PKG)
+AC_SUBST(SERVER_LIBS_EXT)
+AC_SUBST(SERVER_DEPS_PKG)
 AC_SUBST(GROUP_LIBS)
 AC_CONFIG_FILES([Makefile maint/sdskv-client.pc maint/sdskv-server.pc])
 AC_OUTPUT
