@@ -33,7 +33,7 @@ AC_TYPE_SSIZE_T
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
 
-AX_CXX_COMPILE_STDCXX(14, noext, mandatory)
+AX_CXX_COMPILE_STDCXX(11, noext, mandatory)
 
 #pkg-config and libraries supporting that
 PKG_PROG_PKG_CONFIG
