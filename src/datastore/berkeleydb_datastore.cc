@@ -27,15 +27,11 @@ BerkeleyDBDataStore::~BerkeleyDBDataStore() {
   delete _dbenv;
 };
 
-void BerkeleyDBDataStore::createDatabase(std::string db_name) {
+void BerkeleyDBDataStore::createDatabase(const std::string& db_name, const std::string& db_path) {
   int status = 0;
 
-  // db_name assumed to include the full path (e.g. /var/data/db.dat)
-  boost::filesystem::path path(db_name);
-  std::string basepath = path.parent_path().string();
-  std::string dbname = path.filename().string();
-  if (!basepath.empty()) {
-    boost::filesystem::create_directories(basepath);
+  if (!db_path.empty()) {
+    boost::filesystem::create_directories(db_path);
   }
 
   // initialize the environment
@@ -80,7 +76,7 @@ void BerkeleyDBDataStore::createDatabase(std::string db_name) {
     }
     else {
       _dbenv->set_lk_detect(DB_LOCK_MINWRITE);
-      _dbenv->open(basepath.c_str(), flags, 0644);
+      _dbenv->open(db_path.c_str(), flags, 0644);
     }
   }
   catch (DbException &e) {
@@ -114,7 +110,7 @@ void BerkeleyDBDataStore::createDatabase(std::string db_name) {
     }
     else {
       status = _dbm->open(NULL, // txn pointer
-			  dbname.c_str(), // file name
+			  db_name.c_str(), // file name
 			  NULL, // logical DB name
 			  DB_BTREE, // DB type (e.g. BTREE, HASH)
 			  flags,

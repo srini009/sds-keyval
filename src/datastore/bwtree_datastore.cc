@@ -25,7 +25,7 @@ BwTreeDataStore::~BwTreeDataStore() {
 #endif
 };
 
-void BwTreeDataStore::createDatabase(std::string db_name) {
+void BwTreeDataStore::createDatabase(const std::string& db_name, const std::string& path) {
   _tree = new BwTree<ds_bulk_t, ds_bulk_t, 
 		     ds_bulk_less, ds_bulk_equal, ds_bulk_hash,
 		     ds_bulk_equal, ds_bulk_hash>();

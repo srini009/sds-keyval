@@ -106,11 +106,13 @@ extern "C" int sdskv_provider_register(
 extern "C" int sdskv_provider_add_database(
         sdskv_provider_t provider,
         const char *db_name,
+        const char *db_path,
         sdskv_db_type_t db_type,
         sdskv_compare_fn comp_fn,
         sdskv_database_id_t* db_id)
 {
-    auto db = datastore_factory::create_datastore(db_type, std::string(db_name));
+    auto db = datastore_factory::create_datastore(db_type, 
+            std::string(db_name), std::string(db_path));
     if(db == nullptr) return SDSKV_ERR_DB_CREATE;
     db->set_comparison_function(comp_fn);
     sdskv_database_id_t id = (sdskv_database_id_t)(db);

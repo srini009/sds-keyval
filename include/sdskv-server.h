@@ -39,10 +39,13 @@ int sdskv_provider_register(
         sdskv_provider_t* provider);
 
 /**
- * Makes the provider start managing a database.
+ * Makes the provider start managing a database. The database will
+ * be created if it does not exist. Otherwise, the provider will start
+ * to manage the existing database.
  *
  * @param[in] provider provider
  * @param[in] db_name name of the database
+ * @param[in] db_path path where the persistent files of the db should be
  * @param[in] db_type type of database
  * @param[in] comp_fn comparison function for the database
  * @param[out] db_id resulting id identifying the database
@@ -52,6 +55,7 @@ int sdskv_provider_register(
 int sdskv_provider_add_database(
         sdskv_provider_t provider,
         const char* db_name,
+        const char* db_path,
         sdskv_db_type_t db_type,
         sdskv_compare_fn comp_fn,
         sdskv_database_id_t* sb_id);

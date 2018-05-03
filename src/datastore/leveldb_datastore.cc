@@ -33,19 +33,19 @@ LevelDBDataStore::~LevelDBDataStore() {
   //leveldb::Env::Shutdown(); // Riak version only
 };
 
-void LevelDBDataStore::createDatabase(std::string db_name) {
+void LevelDBDataStore::createDatabase(const std::string& db_name, const std::string& db_path) {
   leveldb::Options options;
   leveldb::Status status;
   
-  // db_name assumed to include the full path (e.g. /var/data/db.dat)
-  boost::filesystem::path p(db_name);
-  std::string basepath = p.parent_path().string();
-  if (!basepath.empty()) {
-    boost::filesystem::create_directories(basepath);
+  if (!db_path.empty()) {
+    boost::filesystem::create_directories(db_path);
   }
   options.comparator = &_keycmp;
   options.create_if_missing = true;
-  status = leveldb::DB::Open(options, db_name, &_dbm);
+  std::string fullname = db_path;
+  if(!fullname.empty()) fullname += std::string("/");
+  fullname += db_name;
+  status = leveldb::DB::Open(options, fullname, &_dbm);
   
   if (!status.ok()) {
     // error

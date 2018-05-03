@@ -39,7 +39,7 @@ class LevelDBDataStore : public AbstractDataStore {
         LevelDBDataStore();
         LevelDBDataStore(Duplicates duplicates, bool eraseOnGet, bool debug);
         virtual ~LevelDBDataStore();
-        virtual void createDatabase(std::string db_name);
+        virtual void createDatabase(const std::string& db_name, const std::string& path);
         virtual bool put(const ds_bulk_t &key, const ds_bulk_t &data);
         virtual bool get(const ds_bulk_t &key, ds_bulk_t &data);
         virtual bool get(const ds_bulk_t &key, std::vector<ds_bulk_t> &data);

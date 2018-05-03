@@ -35,7 +35,7 @@ class MapDataStore : public AbstractDataStore {
 
         ~MapDataStore() = default;
 
-        virtual void createDatabase(std::string db_name) {
+        virtual void createDatabase(const std::string& db_name, const std::string& path) {
             _map.clear();
         }
 

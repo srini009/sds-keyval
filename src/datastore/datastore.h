@@ -19,7 +19,7 @@ public:
   AbstractDataStore();
   AbstractDataStore(Duplicates duplicates, bool eraseOnGet, bool debug);
   virtual ~AbstractDataStore();
-  virtual void createDatabase(std::string db_name)=0;
+  virtual void createDatabase(const std::string& db_name, const std::string& path)=0;
   virtual bool put(const ds_bulk_t &key, const ds_bulk_t &data)=0;
   virtual bool get(const ds_bulk_t &key, ds_bulk_t &data)=0;
   virtual bool get(const ds_bulk_t &key, std::vector<ds_bulk_t> &data)=0;
