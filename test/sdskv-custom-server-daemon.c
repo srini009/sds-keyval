@@ -188,7 +188,7 @@ int main(int argc, char **argv)
 
             sdskv_database_id_t db_id;
             ret = sdskv_provider_add_database(provider, 
-                    opts.db_names[i], opts.db_types[i], &custom_key_cmp,
+                    opts.db_names[i], "", opts.db_types[i], &custom_key_cmp,
                     &db_id);
 
             if(ret != 0)
@@ -219,7 +219,7 @@ int main(int argc, char **argv)
         for(i=0; i < opts.num_db; i++) {
             sdskv_database_id_t db_id;
             ret = sdskv_provider_add_database(provider, 
-                    opts.db_names[i], opts.db_types[i],
+                    opts.db_names[i], "", opts.db_types[i],
                     &custom_key_cmp,
                     &db_id);
 

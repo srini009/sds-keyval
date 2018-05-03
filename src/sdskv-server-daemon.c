@@ -181,8 +181,8 @@ int main(int argc, char **argv)
 
             sdskv_database_id_t db_id;
             ret = sdskv_provider_add_database(provider, 
-                    opts.db_names[i], 
-                    opts.db_names[i], // use the name as path
+                    opts.db_names[i],
+                    "",
                     opts.db_types[i], SDSKV_COMPARE_DEFAULT,
                     &db_id);
 
@@ -215,7 +215,7 @@ int main(int argc, char **argv)
             sdskv_database_id_t db_id;
             ret = sdskv_provider_add_database(provider,
                     opts.db_names[i],
-                    opts.db_names[i], // use the name as path
+                    "",
                     opts.db_types[i],
                     SDSKV_COMPARE_DEFAULT,
                     &db_id);
