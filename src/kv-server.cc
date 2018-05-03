@@ -41,14 +41,13 @@ static hg_return_t open_handler(hg_handle_t handle)
         goto finish;
     }
     kv_db_type_t db_type = (kv_db_type_t)(in.db_type);
-    datastore = datastore_factory::create_datastore(db_type);
+    db_name = in_name;
+    datastore = datastore_factory::create_datastore(db_type, db_name);
     if(!datastore) {
         std::cerr << "SERVER OPEN: Could not create database (invalid database type requested)" << std::endl;
         out.ret = HG_OTHER_ERROR;
         goto finish;
     }
-    db_name = in_name;
-    datastore->createDatabase(db_name);
 #ifdef KV_DEBUG
     std::cout << "SERVER OPEN: DataStore initialized and ready for " << db_name << std::endl;
 #endif
