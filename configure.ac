@@ -100,6 +100,8 @@ bwtree_backend=yes
 leveldb_backend=no
 berkelydb_backend=no
 
+SERVER_LIBS_EXT="-lc++"
+
 AC_ARG_ENABLE([leveldb],
 	      AS_HELP_STRING([--enable-leveldb], [Select "leveldb" as storage
 			      backend (default is no)]),
