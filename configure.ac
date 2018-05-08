@@ -100,7 +100,7 @@ bwtree_backend=yes
 leveldb_backend=no
 berkelydb_backend=no
 
-SERVER_LIBS_EXT="-lstdc++"
+SERVER_LIBS_EXT=""
 
 AC_ARG_ENABLE([leveldb],
 	      AS_HELP_STRING([--enable-leveldb], [Select "leveldb" as storage
@@ -119,7 +119,7 @@ if test "x${with_berkeleydb}" != "x" ; then
 	AC_LANG_PUSH([C++])
 	CPPFLAGS="$CPPFLAGS -I${with_berkeleydb}/include"
 	CXXFLAGS="$CXXFLAGS -I${with_berkeleydb}/include"
-	LIBS="$LIBS -L${with_berkeleydb}/lib/ -ldb_cxx -ldb_stl"
+#LIBS="$LIBS -L${with_berkeleydb}/lib/ -ldb_cxx -ldb_stl"
 	AC_CHECK_HEADERS([db_cxx.h], ,
 			AC_ERROR("Could not find Berkely DB C++ headers"))
 	AC_CHECK_HEADERS([dbstl_map.h],,
@@ -157,7 +157,7 @@ AM_CONDITIONAL([BUILD_BDB], [test "x${berkelydb_backend}" == xyes])
 AM_CONDITIONAL([BUILD_LEVELDB], [test "x${leveldb_backend}" == xyes])
 AM_CONDITIONAL([BUILD_BWTREE], [test "x${bwtree_backend}" == xyes])
 
-SERVER_LIBS="$SERVER_LIBS_PKG $SERVER_LIBS_EXT"
+SERVER_LIBS="$SERVER_LIBS_PKG $SERVER_LIBS_EXT -lstdc++"
 
 AC_SUBST(SERVER_LIBS)
 AC_SUBST(SERVER_LIBS_PKG)
