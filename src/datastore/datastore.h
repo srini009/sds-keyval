@@ -6,7 +6,6 @@
 #include "kv-config.h"
 #include "bulk.h"
 
-#include <boost/functional/hash.hpp>
 #include <vector>
 
 enum class Duplicates : int {ALLOW, IGNORE};

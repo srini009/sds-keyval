@@ -3,9 +3,11 @@
 #ifndef bulk_h
 #define bulk_h
 
+#include <stddef.h>
 #include "kv-config.h"
-#include <boost/functional/hash.hpp>
+//#include <boost/functional/hash.hpp>
 #include <vector>
+#include <string>
 
 // implementation is std::vector<char> specific
 // typedef is for convenience
@@ -14,7 +16,8 @@ typedef std::vector<char> ds_bulk_t;
 struct ds_bulk_hash {
   size_t operator()(const ds_bulk_t &v) const {
     size_t hash = 0;
-    boost::hash_range(hash, v.begin(), v.end());
+    hash = std::hash<std::string>() ( std::string( v.begin(), v.end() ) );
+        //boost::hash_range(hash, v.begin(), v.end());
     return hash;
   }
 };

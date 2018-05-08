@@ -2,10 +2,10 @@
 // All rights reserved.
 #include "berkeleydb_datastore.h"
 #include "kv-config.h"
+#include <sstream>
 #include <chrono>
 #include <cstring>
 #include <iostream>
-#include <boost/filesystem.hpp>
 
 using namespace std::chrono;
 
@@ -31,7 +31,9 @@ void BerkeleyDBDataStore::createDatabase(const std::string& db_name, const std::
   int status = 0;
 
   if (!db_path.empty()) {
-    boost::filesystem::create_directories(db_path);
+    std::stringstream str_db_path("mkdir -p ");
+    str_db_path << db_path;
+    system(str_db_path.str().c_str());
   }
 
   // initialize the environment

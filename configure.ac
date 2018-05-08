@@ -84,12 +84,12 @@ SERVER_DEPS_PKG=""
 
 # uncertain what the lowest Boost we need is.
 # Ubuntu 14.04 has boost 1.54. Seems like a good starting point
-AX_BOOST_BASE([1.54], ,
-	      AC_MSG_ERROR([sdskeyval requires Boost but was unable to find it]))
-AX_BOOST_SYSTEM
-AX_BOOST_FILESYSTEM
+#AX_BOOST_BASE([1.54], ,
+#	      AC_MSG_ERROR([sdskeyval requires Boost but was unable to find it]))
+#AX_BOOST_SYSTEM
+#AX_BOOST_FILESYSTEM
 
-SERVER_LIBS_EXT="$SERVER_LIBS_EXT ${BOOST_LDFLAGS} ${BOOST_FILESYSTEM_LIB} ${BOOST_SYSTEM_LIB}"
+#SERVER_LIBS_EXT="$SERVER_LIBS_EXT ${BOOST_LDFLAGS} ${BOOST_FILESYSTEM_LIB} ${BOOST_SYSTEM_LIB}"
 
 # we have three possible backends for our datastore.  If none are selected,
 # then nothing will initialize the class and well that doesn't make any sense

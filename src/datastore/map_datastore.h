@@ -4,6 +4,7 @@
 #define map_datastore_h
 
 #include <map>
+#include <cstring>
 #include "kv-config.h"
 #include "bulk.h"
 #include "datastore/datastore.h"

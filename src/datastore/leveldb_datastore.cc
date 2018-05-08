@@ -2,9 +2,10 @@
 // All rights reserved.
 #include "leveldb_datastore.h"
 #include "kv-config.h"
+#include <cstring>
 #include <chrono>
 #include <iostream>
-#include <boost/filesystem.hpp>
+#include <sstream>
 
 using namespace std::chrono;
 
@@ -38,7 +39,9 @@ void LevelDBDataStore::createDatabase(const std::string& db_name, const std::str
   leveldb::Status status;
   
   if (!db_path.empty()) {
-    boost::filesystem::create_directories(db_path);
+      std::stringstream str_db_path("mkdir -p ");
+      str_db_path << db_path;
+      system(str_db_path.str().c_str());
   }
   options.comparator = &_keycmp;
   options.create_if_missing = true;
