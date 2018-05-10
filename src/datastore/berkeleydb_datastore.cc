@@ -1,6 +1,7 @@
 // Copyright (c) 2017, Los Alamos National Security, LLC.
 // All rights reserved.
 #include "berkeleydb_datastore.h"
+#include "fs_util.h"
 #include "kv-config.h"
 #include <sstream>
 #include <chrono>
@@ -31,9 +32,10 @@ void BerkeleyDBDataStore::createDatabase(const std::string& db_name, const std::
   int status = 0;
 
   if (!db_path.empty()) {
-    std::stringstream str_db_path("mkdir -p ");
-    str_db_path << db_path;
-    system(str_db_path.str().c_str());
+    //std::stringstream str_db_path("mkdir -p ");
+    //str_db_path << db_path;
+    //system(str_db_path.str().c_str());
+    mkdirs(db_path.c_str());
   }
 
   // initialize the environment

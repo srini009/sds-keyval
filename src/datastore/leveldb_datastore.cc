@@ -1,6 +1,7 @@
 // Copyright (c) 2017, Los Alamos National Security, LLC.
 // All rights reserved.
 #include "leveldb_datastore.h"
+#include "fs_util.h"
 #include "kv-config.h"
 #include <cstring>
 #include <chrono>
@@ -39,9 +40,10 @@ void LevelDBDataStore::createDatabase(const std::string& db_name, const std::str
   leveldb::Status status;
   
   if (!db_path.empty()) {
-      std::stringstream str_db_path("mkdir -p ");
-      str_db_path << db_path;
-      system(str_db_path.str().c_str());
+//      std::stringstream str_db_path("mkdir -p ");
+//      str_db_path << db_path;
+//      system(str_db_path.str().c_str());
+    mkdirs(db_path.c_str());
   }
   options.comparator = &_keycmp;
   options.create_if_missing = true;
