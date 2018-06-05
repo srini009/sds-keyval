@@ -40,9 +40,6 @@ void LevelDBDataStore::createDatabase(const std::string& db_name, const std::str
   leveldb::Status status;
   
   if (!db_path.empty()) {
-//      std::stringstream str_db_path("mkdir -p ");
-//      str_db_path << db_path;
-//      system(str_db_path.str().c_str());
     mkdirs(db_path.c_str());
   }
   options.comparator = &_keycmp;
@@ -87,8 +84,8 @@ bool LevelDBDataStore::put(const ds_bulk_t &key, const ds_bulk_t &data) {
   else {
     std::cerr << "LevelDBDataStore::put: Unexpected Duplicates option = " << int32_t(_duplicates) << std::endl;
   }
-  uint64_t elapsed = duration_cast<microseconds>(high_resolution_clock::now()-start).count();
-  std::cout << "LevelDBDataStore::put time = " << elapsed << " microseconds" << std::endl;
+//  uint64_t elapsed = duration_cast<microseconds>(high_resolution_clock::now()-start).count();
+//  std::cout << "LevelDBDataStore::put time = " << elapsed << " microseconds" << std::endl;
 
   return success;
 };
@@ -114,8 +111,8 @@ bool LevelDBDataStore::get(const ds_bulk_t &key, ds_bulk_t &data) {
   else if (!status.IsNotFound()) {
     std::cerr << "LevelDBDataStore::get: LevelDB error on Get = " << status.ToString() << std::endl;
   }
-  uint64_t elapsed = duration_cast<microseconds>(high_resolution_clock::now()-start).count();
-  std::cout << "LevelDBDataStore::get time = " << elapsed << " microseconds" << std::endl;
+//  uint64_t elapsed = duration_cast<microseconds>(high_resolution_clock::now()-start).count();
+//  std::cout << "LevelDBDataStore::get time = " << elapsed << " microseconds" << std::endl;
 
   return success;
 };

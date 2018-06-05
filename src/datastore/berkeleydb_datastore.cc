@@ -32,9 +32,6 @@ void BerkeleyDBDataStore::createDatabase(const std::string& db_name, const std::
   int status = 0;
 
   if (!db_path.empty()) {
-    //std::stringstream str_db_path("mkdir -p ");
-    //str_db_path << db_path;
-    //system(str_db_path.str().c_str());
     mkdirs(db_path.c_str());
   }
 
@@ -122,6 +119,7 @@ void BerkeleyDBDataStore::createDatabase(const std::string& db_name, const std::
     }
     if (status != 0) { // is this the right test for error?
       std::cerr << "BerkeleyDBDataStore::createDatabase: BerkeleyDB error on DB open" << std::endl;
+      std::cerr << "status = " << status << std::endl;
     }
   }
   assert(status == 0); // fall over
