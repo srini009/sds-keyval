@@ -14,12 +14,14 @@ BerkeleyDBDataStore::BerkeleyDBDataStore() :
   AbstractDataStore(Duplicates::IGNORE, false, false) {
   _dbm = NULL;
   _dbenv = NULL;
+  _in_memory = false;
 };
 
 BerkeleyDBDataStore::BerkeleyDBDataStore(Duplicates duplicates, bool eraseOnGet, bool debug) :
   AbstractDataStore(duplicates, eraseOnGet, debug) {
   _dbm = NULL;
   _dbenv = NULL;
+  _in_memory = false;
 };
   
 BerkeleyDBDataStore::~BerkeleyDBDataStore() {
@@ -119,6 +121,7 @@ void BerkeleyDBDataStore::createDatabase(const std::string& db_name, const std::
     }
     if (status != 0) { // is this the right test for error?
       std::cerr << "BerkeleyDBDataStore::createDatabase: BerkeleyDB error on DB open" << std::endl;
+      std::cerr << "(database name = " << db_name << ", database path = " << db_path << ")" << std::endl;
       std::cerr << "status = " << status << std::endl;
     }
   }
