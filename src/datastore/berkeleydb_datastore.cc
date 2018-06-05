@@ -185,9 +185,11 @@ bool BerkeleyDBDataStore::get(const ds_bulk_t &key, ds_bulk_t &data) {
   db_data.set_flags(DB_DBT_MALLOC);
   status = _dbm->get(NULL, &db_key, &db_data, 0);
 
-  if (status != DB_NOTFOUND && status != DB_KEYEMPTY && db_data.get_size() > 0) {
+  if (status != DB_NOTFOUND && status != DB_KEYEMPTY) {
     data.resize(db_data.get_size(), 0);
-    memcpy(&(data[0]), db_data.get_data(), db_data.get_size());
+    if(db_data.get_size() > 0) {
+        memcpy(&(data[0]), db_data.get_data(), db_data.get_size());
+    }
     free(db_data.get_data());
     success = true;
   }
