@@ -71,6 +71,10 @@ MERCURY_GEN_PROC(get_out_t, ((int32_t)(ret))\
 MERCURY_GEN_PROC(length_in_t, ((uint64_t)(db_id))((kv_data_t)(key)))
 MERCURY_GEN_PROC(length_out_t, ((hg_size_t)(size)) ((int32_t)(ret)))
 
+// ------------- EXISTS ------------- //
+MERCURY_GEN_PROC(exists_in_t, ((uint64_t)(db_id))((kv_data_t)(key)))
+MERCURY_GEN_PROC(exists_out_t, ((int32_t)(flag)) ((int32_t)(ret)))
+
 // ------------- ERASE ------------- //
 MERCURY_GEN_PROC(erase_out_t, ((int32_t)(ret)))
 MERCURY_GEN_PROC(erase_in_t, ((uint64_t)(db_id))((kv_data_t)(key)))

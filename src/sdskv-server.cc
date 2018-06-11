@@ -28,6 +28,7 @@ DECLARE_MARGO_RPC_HANDLER(sdskv_bulk_get_ult)
 DECLARE_MARGO_RPC_HANDLER(sdskv_list_keys_ult)
 DECLARE_MARGO_RPC_HANDLER(sdskv_list_keyvals_ult)
 DECLARE_MARGO_RPC_HANDLER(sdskv_erase_ult)
+DECLARE_MARGO_RPC_HANDLER(sdskv_exists_ult)
 
 static void sdskv_server_finalize_cb(void *data);
 
@@ -73,6 +74,10 @@ extern "C" int sdskv_provider_register(
             length_in_t, length_out_t,
             sdskv_length_ult, provider_id, abt_pool);
     margo_register_data(mid, rpc_id, (void*)tmp_svr_ctx, NULL);
+    rpc_id = MARGO_REGISTER_PROVIDER(mid, "sdskv_exists_rpc",
+            exists_in_t, exists_out_t,
+            sdskv_exists_ult, provider_id, abt_pool);
+    margo_register_data(mid, rpc_id, (void*)tmp_svr_ctx, NULL);
     rpc_id = MARGO_REGISTER_PROVIDER(mid, "sdskv_bulk_get_rpc",
             bulk_get_in_t, bulk_get_out_t,
             sdskv_bulk_get_ult, provider_id, abt_pool);
@@ -103,27 +108,43 @@ extern "C" int sdskv_provider_register(
     return SDSKV_SUCCESS;
 }
 
-extern "C" int sdskv_provider_add_database(
+extern "C" int sdskv_provider_attach_database(
         sdskv_provider_t provider,
-        const char *db_name,
-        const char *db_path,
-        sdskv_db_type_t db_type,
-        sdskv_compare_fn comp_fn,
+        const sdskv_config_t* config,
         sdskv_database_id_t* db_id)
 {
-    auto db = datastore_factory::create_datastore(db_type, 
-            std::string(db_name), std::string(db_path));
+    auto db = datastore_factory::open_datastore(config->db_type, 
+            std::string(config->db_name), std::string(config->db_path));
     if(db == nullptr) return SDSKV_ERR_DB_CREATE;
-    db->set_comparison_function(comp_fn);
+    db->set_comparison_function(config->db_comparison_fn);
     sdskv_database_id_t id = (sdskv_database_id_t)(db);
+    if(config->db_no_overwrite) {
+        db->set_no_overwrite();
+    }
 
-    provider->name2id[std::string(db_name)] = id;
-    provider->id2name[id] = std::string(db_name);
+    provider->name2id[std::string(config->db_name)] = id;
+    provider->id2name[id] = std::string(config->db_name);
     provider->databases[id] = db;
 
     *db_id = id;
 
     return SDSKV_SUCCESS;
+}
+
+extern "C" int sdskv_provider_add_database(
+        sdskv_provider_t provider,
+        const char* db_name,
+        const char* db_path,
+        sdskv_db_type_t db_type,
+        sdskv_compare_fn comp_fn,
+        sdskv_database_id_t* db_id) {
+    sdskv_config_t config = SDSKV_CONFIG_DEFAULT;
+    config.db_name = db_name;
+    config.db_path = db_path;
+    config.db_type = db_type;
+    config.db_comparison_fn = comp_fn;
+    return sdskv_provider_attach_database(
+            provider, &config, db_id);
 }
 
 extern "C" int sdskv_provider_remove_database(
@@ -629,6 +650,55 @@ static void sdskv_erase_ult(hg_handle_t handle)
     return;
 }
 DEFINE_MARGO_RPC_HANDLER(sdskv_erase_ult)
+
+static void sdskv_exists_ult(hg_handle_t handle)
+{
+
+    hg_return_t hret;
+    exists_in_t in;
+    exists_out_t out;
+
+    margo_instance_id mid = margo_hg_handle_get_instance(handle);
+    assert(mid);
+    const struct hg_info* info = margo_get_info(handle);
+    sdskv_provider_t svr_ctx = 
+        (sdskv_provider_t)margo_registered_data(mid, info->id);
+    if(!svr_ctx) {
+        fprintf(stderr, "Error: SDSKV could not find provider\n"); 
+        out.ret = SDSKV_ERR_UNKNOWN_PR;
+        margo_respond(handle, &out);
+        margo_destroy(handle);
+        return;
+    }
+
+    hret = margo_get_input(handle, &in);
+    if(hret != HG_SUCCESS) {
+        out.ret = SDSKV_ERR_MERCURY;
+        margo_respond(handle, &out);
+        margo_destroy(handle);
+        return;
+    }
+
+    auto it = svr_ctx->databases.find(in.db_id);
+    if(it == svr_ctx->databases.end()) {
+        out.ret = SDSKV_ERR_UNKNOWN_DB;
+        margo_respond(handle, &out);
+        margo_free_input(handle, &in);
+        margo_destroy(handle);
+        return;
+    }
+    
+    ds_bulk_t kdata(in.key.data, in.key.data+in.key.size);
+
+    out.flag = it->second->exists(kdata) ? 1 : 0;
+    out.ret  = SDSKV_SUCCESS;
+
+    margo_respond(handle, &out);
+    margo_free_input(handle, &in);
+    margo_destroy(handle); 
+    return;
+}
+DEFINE_MARGO_RPC_HANDLER(sdskv_exists_ult)
 
 static void sdskv_list_keys_ult(hg_handle_t handle)
 {

@@ -8,7 +8,7 @@ extern "C" {
 
 typedef enum sdskv_db_type_t 
 {
-    KVDB_MAP,       /* Datastore implementation using std::map   */
+    KVDB_MAP = 0,       /* Datastore implementation using std::map   */
     KVDB_BWTREE,    /* Datastore implementation using a BwTree   */
     KVDB_LEVELDB,   /* Datastore implementation using LevelDB    */
     KVDB_BERKELEYDB /* Datasotre implementation using BerkeleyDB */

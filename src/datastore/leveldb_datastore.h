@@ -39,13 +39,17 @@ class LevelDBDataStore : public AbstractDataStore {
         LevelDBDataStore();
         LevelDBDataStore(Duplicates duplicates, bool eraseOnGet, bool debug);
         virtual ~LevelDBDataStore();
-        virtual void createDatabase(const std::string& db_name, const std::string& path);
+        virtual bool openDatabase(const std::string& db_name, const std::string& path);
         virtual bool put(const ds_bulk_t &key, const ds_bulk_t &data);
         virtual bool get(const ds_bulk_t &key, ds_bulk_t &data);
         virtual bool get(const ds_bulk_t &key, std::vector<ds_bulk_t> &data);
+        virtual bool exists(const ds_bulk_t &key);
         virtual bool erase(const ds_bulk_t &key);
         virtual void set_in_memory(bool enable); // not supported, a no-op
         virtual void set_comparison_function(comparator_fn less);
+        virtual void set_no_overwrite() {
+            _no_overwrite = true;
+        }
     protected:
         virtual std::vector<ds_bulk_t> vlist_keys(const ds_bulk_t &start, size_t count, const ds_bulk_t &prefix);
         virtual std::vector<std::pair<ds_bulk_t,ds_bulk_t>> vlist_keyvals(const ds_bulk_t &start_key, size_t count, const ds_bulk_t &prefix);
@@ -55,6 +59,7 @@ class LevelDBDataStore : public AbstractDataStore {
         ds_bulk_t fromString(const std::string &keystr);
         AbstractDataStore::comparator_fn _less;
         LevelDBDataStoreComparator _keycmp;
+        bool _no_overwrite = false;
 };
 
 #endif // ldb_datastore_h

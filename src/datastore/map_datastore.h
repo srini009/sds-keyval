@@ -29,20 +29,26 @@ class MapDataStore : public AbstractDataStore {
     public:
 
         MapDataStore()
-            : AbstractDataStore(), _less(nullptr), _map(keycmp(this)) {}
+            : AbstractDataStore(), _less(nullptr), _map(keycmp(this)), _no_overwrite(false) {}
 
         MapDataStore(Duplicates duplicates, bool eraseOnGet, bool debug)
-            : AbstractDataStore(duplicates, eraseOnGet, debug), _less(nullptr), _map(keycmp(this)) {}
+            : AbstractDataStore(duplicates, eraseOnGet, debug), _less(nullptr), _map(keycmp(this)),
+            _no_overwrite(false) {}
 
         ~MapDataStore() = default;
 
-        virtual void createDatabase(const std::string& db_name, const std::string& path) {
+        virtual bool openDatabase(const std::string& db_name, const std::string& path) {
             _map.clear();
+            return true;
         }
 
         virtual bool put(const ds_bulk_t &key, const ds_bulk_t &data) {
-            if(_duplicates == Duplicates::IGNORE && _map.count(key)) {
-                return true;
+            auto x = _map.count(key);
+            if(_no_overwrite && (x != 0)) {
+                return false;
+            }
+            if(_duplicates == Duplicates::IGNORE && (x != 0)) {
+                return false;
             }
             _map.insert(std::make_pair(key,data));
             return true;
@@ -61,6 +67,10 @@ class MapDataStore : public AbstractDataStore {
             return get(key, values[0]);
         }
 
+        virtual bool exists(const ds_bulk_t& key) {
+            return _map.count(key) > 0;
+        }
+
         virtual bool erase(const ds_bulk_t &key) {
             bool b = _map.find(key) != _map.end();
             _map.erase(key);
@@ -73,6 +83,10 @@ class MapDataStore : public AbstractDataStore {
 
         virtual void set_comparison_function(comparator_fn less) {
            _less = less; 
+        }
+
+        virtual void set_no_overwrite() {
+            _no_overwrite = true;
         }
 
     protected:
@@ -128,6 +142,7 @@ class MapDataStore : public AbstractDataStore {
     private:
         AbstractDataStore::comparator_fn _less;
         std::map<ds_bulk_t, ds_bulk_t, keycmp> _map;
+        bool _no_overwrite;
 };
 
 #endif

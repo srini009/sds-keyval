@@ -24,7 +24,7 @@ BwTreeDataStore::~BwTreeDataStore() {
 #endif
 };
 
-void BwTreeDataStore::createDatabase(const std::string& db_name, const std::string& path) {
+bool BwTreeDataStore::openDatabase(const std::string& db_name, const std::string& path) {
   _tree = new BwTree<ds_bulk_t, ds_bulk_t, 
 		     ds_bulk_less, ds_bulk_equal, ds_bulk_hash,
 		     ds_bulk_equal, ds_bulk_hash>();
@@ -36,6 +36,7 @@ void BwTreeDataStore::createDatabase(const std::string& db_name, const std::stri
   }
   _tree->UpdateThreadLocal(1);
   _tree->AssignGCID(0);
+  return true;
 };
 
 void BwTreeDataStore::set_comparison_function(comparator_fn less) {
@@ -45,6 +46,10 @@ void BwTreeDataStore::set_comparison_function(comparator_fn less) {
 bool BwTreeDataStore::put(const ds_bulk_t &key, const ds_bulk_t &data) {
   std::vector<ds_bulk_t> values;
   bool success = false;
+
+  if(_no_overwrite) {
+      if(exists(key)) return false;
+  }
 
   if(!_tree) return false;
   

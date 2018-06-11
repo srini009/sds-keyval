@@ -22,6 +22,19 @@ extern "C" {
 typedef struct sdskv_server_context_t* sdskv_provider_t;
 typedef int (*sdskv_compare_fn)(const void*, size_t, const void*, size_t);
 
+typedef struct sdskv_server_context_t* sdskv_provider_t;
+typedef int (*sdskv_compare_fn)(const void*, size_t, const void*, size_t);
+
+typedef struct sdskv_config_t {
+    const char*      db_name;            // name of the database
+    const char*      db_path;            // path to the database
+    sdskv_db_type_t  db_type;            // type of database
+    sdskv_compare_fn db_comparison_fn;   // comparison function (can be NULL)
+    int              db_no_overwrite;    // prevents overwritting data if set to 1
+} sdskv_config_t;
+
+#define SDSKV_CONFIG_DEFAULT { "", "", KVDB_MAP, SDSKV_COMPARE_DEFAULT, 0 }
+
 /**
  * @brief Creates a new provider.
  *
@@ -58,6 +71,23 @@ int sdskv_provider_add_database(
         const char* db_path,
         sdskv_db_type_t db_type,
         sdskv_compare_fn comp_fn,
+        sdskv_database_id_t* sb_id)
+__attribute__((deprecated("use sdskv_provider_attach_database instead")));
+
+/**
+ * Makes the provider start managing a database. The database will
+ * be created if it does not exist. Otherwise, the provider will start
+ * to manage the existing database.
+ *
+ * @param[in] provider provider
+ * @param[in] config configuration object to use for the database
+ * @param[out] db_id resulting id identifying the database
+ *
+ * @return SDSKV_SUCCESS or error code defined in sdskv-common.h
+ */
+int sdskv_provider_attach_database(
+        sdskv_provider_t provider,
+        const sdskv_config_t* config,
         sdskv_database_id_t* sb_id);
 
 /**

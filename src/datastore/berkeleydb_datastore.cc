@@ -30,7 +30,7 @@ BerkeleyDBDataStore::~BerkeleyDBDataStore() {
   delete _dbenv;
 };
 
-void BerkeleyDBDataStore::createDatabase(const std::string& db_name, const std::string& db_path) {
+bool BerkeleyDBDataStore::openDatabase(const std::string& db_name, const std::string& db_path) {
   int status = 0;
 
   if (!db_path.empty()) {
@@ -125,9 +125,7 @@ void BerkeleyDBDataStore::createDatabase(const std::string& db_name, const std::
       std::cerr << "status = " << status << std::endl;
     }
   }
-  assert(status == 0); // fall over
-
-  // debugging support?
+  return (status == 0);
 };
 
 void BerkeleyDBDataStore::set_comparison_function(comparator_fn less) {
@@ -137,7 +135,11 @@ void BerkeleyDBDataStore::set_comparison_function(comparator_fn less) {
 bool BerkeleyDBDataStore::put(const ds_bulk_t &key, const ds_bulk_t &data) {
   int status = 0;
   bool success = false;
-  
+
+  if(_no_overwrite) {
+    if(exists(key)) return false;
+  }
+
   // IGNORE case deals with redundant puts (where key/value is the same). In BerkeleyDB a
   // redundant may overwrite previous value which is fine when key/value is the same.
   // ALLOW case deals with actual duplicates (where key is the same but value is different).
@@ -163,6 +165,12 @@ bool BerkeleyDBDataStore::put(const ds_bulk_t &key, const ds_bulk_t &data) {
 
   return success;
 };
+
+bool BerkeleyDBDataStore::exists(const ds_bulk_t &key) {
+    Dbt db_key((void*)key.data(), key.size());
+    int status = _dbm->exists(NULL, &db_key, 0);
+    return status == 0;
+}
 
 bool BerkeleyDBDataStore::erase(const ds_bulk_t &key) {
     Dbt db_key((void*)key.data(), key.size());
@@ -194,14 +202,14 @@ bool BerkeleyDBDataStore::get(const ds_bulk_t &key, ds_bulk_t &data) {
     success = true;
   }
   else {
-    std::cerr << "BerkeleyDBDataStore::get: BerkeleyDB error on Get = " << status << std::endl;
+    //std::cerr << "BerkeleyDBDataStore::get: BerkeleyDB error on Get = " << status << std::endl;
   }
   
   if (success && _eraseOnGet) {
     status = _dbm->del(NULL, &db_key, 0);
     if (status != 0) {
       success = false;
-      std::cerr << "BerkeleyDBDataStore::get: BerkeleyDB error on delete (eraseOnGet) = " << status << std::endl;
+      //std::cerr << "BerkeleyDBDataStore::get: BerkeleyDB error on delete (eraseOnGet) = " << status << std::endl;
     }
   }
 

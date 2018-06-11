@@ -9,6 +9,7 @@ struct sdskv_client {
     hg_id_t sdskv_put_id;
     hg_id_t sdskv_bulk_put_id;
     hg_id_t sdskv_get_id;
+    hg_id_t sdskv_exists_id;
     hg_id_t sdskv_erase_id;
     hg_id_t sdskv_length_id;
     hg_id_t sdskv_bulk_get_id;
@@ -41,6 +42,7 @@ static int sdskv_client_register(sdskv_client_t client, margo_instance_id mid)
         margo_registered_name(mid, "sdskv_bulk_put_rpc", &client->sdskv_bulk_put_id, &flag);
         margo_registered_name(mid, "sdskv_get_rpc",      &client->sdskv_get_id,      &flag);
         margo_registered_name(mid, "sdskv_erase_rpc",    &client->sdskv_erase_id,    &flag);
+        margo_registered_name(mid, "sdskv_exists_rpc",   &client->sdskv_exists_id,   &flag);
         margo_registered_name(mid, "sdskv_length_rpc",   &client->sdskv_length_id,   &flag);
         margo_registered_name(mid, "sdskv_bulk_get_rpc", &client->sdskv_bulk_get_id, &flag);
         margo_registered_name(mid, "sdskv_open_rpc",     &client->sdskv_open_id,     &flag);
@@ -57,6 +59,8 @@ static int sdskv_client_register(sdskv_client_t client, margo_instance_id mid)
             MARGO_REGISTER(mid, "sdskv_get_rpc", get_in_t, get_out_t, NULL);
         client->sdskv_erase_id =
             MARGO_REGISTER(mid, "sdskv_erase_rpc", erase_in_t, erase_out_t, NULL);
+        client->sdskv_exists_id =
+            MARGO_REGISTER(mid, "sdskv_exists_rpc", exists_in_t, exists_out_t, NULL);
         client->sdskv_length_id =
             MARGO_REGISTER(mid, "sdskv_length_rpc", length_in_t, length_out_t, NULL);
         client->sdskv_bulk_get_id =
@@ -393,6 +397,49 @@ int sdskv_get(sdskv_provider_handle_t provider,
         margo_bulk_free(in.handle);
     }
 
+    margo_destroy(handle);
+    return ret;
+}
+
+int sdskv_exists(sdskv_provider_handle_t provider,
+        sdskv_database_id_t db_id, const void *key,
+        hg_size_t ksize, int* flag)
+{
+    hg_return_t hret;
+    int ret;
+    hg_handle_t handle;
+
+    exists_in_t in;
+    exists_out_t out;
+
+    in.db_id    = db_id;
+    in.key.data = (kv_ptr_t)key;
+    in.key.size = ksize;
+
+    /* create handle */
+    hret = margo_create(
+            provider->client->mid,
+            provider->addr,
+            provider->client->sdskv_exists_id,
+            &handle);
+    if(hret != HG_SUCCESS) return SDSKV_ERR_MERCURY;
+
+    hret = margo_provider_forward(provider->provider_id, handle, &in);
+    if(hret != HG_SUCCESS) {
+        margo_destroy(handle);
+        return SDSKV_ERR_MERCURY;
+    }
+
+    hret = margo_get_output(handle, &out);
+    if(hret != HG_SUCCESS) {
+        margo_destroy(handle);
+        return SDSKV_ERR_MERCURY;
+    }
+
+    ret = out.ret;
+    if(ret == 0) *flag = out.flag;
+
+    margo_free_output(handle, &out);
     margo_destroy(handle);
     return ret;
 }

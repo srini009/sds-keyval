@@ -27,20 +27,24 @@ class BerkeleyDBDataStore : public AbstractDataStore {
         BerkeleyDBDataStore();
         BerkeleyDBDataStore(Duplicates duplicates, bool eraseOnGet, bool debug);
         virtual ~BerkeleyDBDataStore();
-        virtual void createDatabase(const std::string& db_name, const std::string& path);
+        virtual bool openDatabase(const std::string& db_name, const std::string& path);
         virtual bool put(const ds_bulk_t &key, const ds_bulk_t &data);
         virtual bool get(const ds_bulk_t &key, ds_bulk_t &data);
         virtual bool get(const ds_bulk_t &key, std::vector<ds_bulk_t> &data);
+        virtual bool exists(const ds_bulk_t &key);
         virtual bool erase(const ds_bulk_t &key);
         virtual void set_in_memory(bool enable); // enable/disable in-memory mode
         virtual void set_comparison_function(comparator_fn less);
+        virtual void set_no_overwrite() {
+            _no_overwrite = true;
+        }
     protected:
         virtual std::vector<ds_bulk_t> vlist_keys(const ds_bulk_t &start, size_t count, const ds_bulk_t &prefix);
         virtual std::vector<std::pair<ds_bulk_t,ds_bulk_t>> vlist_keyvals(const ds_bulk_t &start_key, size_t count, const ds_bulk_t &);
         DbEnv *_dbenv = nullptr;
         Db *_dbm = nullptr;
         DbWrapper* _wrapper = nullptr;
-
+        bool _no_overwrite = false;
 };
 
 #endif // bdb_datastore_h

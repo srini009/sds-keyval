@@ -35,7 +35,7 @@ LevelDBDataStore::~LevelDBDataStore() {
   //leveldb::Env::Shutdown(); // Riak version only
 };
 
-void LevelDBDataStore::createDatabase(const std::string& db_name, const std::string& db_path) {
+bool LevelDBDataStore::openDatabase(const std::string& db_name, const std::string& db_path) {
   leveldb::Options options;
   leveldb::Status status;
   
@@ -52,10 +52,9 @@ void LevelDBDataStore::createDatabase(const std::string& db_name, const std::str
   if (!status.ok()) {
     // error
     std::cerr << "LevelDBDataStore::createDatabase: LevelDB error on Open = " << status.ToString() << std::endl;
+    return false;
   }
-  assert(status.ok()); // fall over
-  
-  // debugging support?
+  return true;
 };
 
 void LevelDBDataStore::set_comparison_function(comparator_fn less) {
@@ -65,8 +64,12 @@ void LevelDBDataStore::set_comparison_function(comparator_fn less) {
 bool LevelDBDataStore::put(const ds_bulk_t &key, const ds_bulk_t &data) {
   leveldb::Status status;
   bool success = false;
-  
-  high_resolution_clock::time_point start = high_resolution_clock::now();
+
+  if(_no_overwrite) {
+      if(exists(key)) return false;
+  }
+
+  //high_resolution_clock::time_point start = high_resolution_clock::now();
   // IGNORE case deals with redundant puts (where key/value is the same). In LevelDB a
   // redundant put simply overwrites previous value which is fine when key/value is the same.
   if (_duplicates == Duplicates::IGNORE) {
@@ -96,11 +99,18 @@ bool LevelDBDataStore::erase(const ds_bulk_t &key) {
     return status.ok();
 }
 
+bool LevelDBDataStore::exists(const ds_bulk_t &key) {
+    leveldb::Status status;
+    std::string value;
+    status = _dbm->Get(leveldb::ReadOptions(), toString(key), &value);
+    return status.ok();
+}
+
 bool LevelDBDataStore::get(const ds_bulk_t &key, ds_bulk_t &data) {
   leveldb::Status status;
   bool success = false;
 
-  high_resolution_clock::time_point start = high_resolution_clock::now();
+  //high_resolution_clock::time_point start = high_resolution_clock::now();
   data.clear();
   std::string value;
   status = _dbm->Get(leveldb::ReadOptions(), toString(key), &value);
