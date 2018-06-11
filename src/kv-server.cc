@@ -6,7 +6,6 @@
 
 #include <mercury.h>
 #include <margo.h>
-#include <abt-snoozer.h>
 #include <abt.h>
 #include <ssg.h>
 

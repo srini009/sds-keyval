@@ -7,7 +7,6 @@
 
 #include <margo.h>
 #include <abt.h>
-#include <abt-snoozer.h>
 
 #include "sds-keyval.h"
 

@@ -2,7 +2,6 @@
 #include "keyval-internal.h"
 #include <mercury.h>
 #include <margo.h>
-#include <abt-snoozer.h>
 #include <abt.h>
 
 #include <assert.h>
