@@ -113,4 +113,56 @@ MERCURY_GEN_PROC(bulk_get_in_t, ((uint64_t)(db_id))\
         ((hg_bulk_t)(handle)))
 MERCURY_GEN_PROC(bulk_get_out_t, ((hg_size_t)(size)) ((int32_t)(ret)))
 
+// ------------- MIGRATE KEYS ----------- //
+MERCURY_GEN_PROC(migrate_keys_in_t,
+        ((uint64_t)(source_db_id))\
+        ((hg_string_t)(target_addr))\
+        ((uint16_t)(target_provider_id))\
+        ((uint64_t)(target_db_id))\
+        ((hg_size_t)(num_keys))\
+        ((hg_size_t)(bulk_size))\
+        ((hg_bulk_t)(keys_bulk))\
+        ((int32_t)(flag)))
+
+MERCURY_GEN_PROC(migrate_keys_out_t,
+        ((int32_t)(ret)))
+
+// ------------- MIGRATE KEY RANGE ----------- //
+MERCURY_GEN_PROC(migrate_key_range_in_t,
+        ((uint64_t)(source_db_id))\
+        ((hg_string_t)(target_addr))\
+        ((uint16_t)(target_provider_id))\
+        ((uint64_t)(target_db_id))\
+        ((kv_data_t)(key_lb))\
+        ((kv_data_t)(key_ub))\
+        ((int32_t)(flag)))
+
+// ------------- MIGRATE KEY PREFIXED -------- //
+MERCURY_GEN_PROC(migrate_keys_prefixed_in_t,
+        ((uint64_t)(source_db_id))\
+        ((hg_string_t)(target_addr))\
+        ((uint16_t)(target_provider_id))\
+        ((uint64_t)(target_db_id))\
+        ((kv_data_t)(key_prefix))\
+        ((int32_t)(flag)))
+
+// ------------- MIGRATE ALL KEYS ----------- //
+MERCURY_GEN_PROC(migrate_all_keys_in_t,
+        ((uint64_t)(source_db_id))\
+        ((hg_string_t)(target_addr))\
+        ((uint16_t)(target_provider_id))\
+        ((uint64_t)(target_db_id))\
+        ((int32_t)(flag)))
+
+// ------------- MIGRATE DATABASE ----------- //
+MERCURY_GEN_PROC(migrate_database_in_t,
+        ((uint64_t)(source_db_id))\
+        ((hg_string_t)(target_addr))\
+        ((uint16_t)(target_provider_id))\
+        ((int32_t)(flag)))
+
+MERCURY_GEN_PROC(migrate_database_out_t,
+        ((int32_t)(ret))\
+        ((uint64_t)(db_id)))
+
 #endif

@@ -143,7 +143,8 @@ bool LevelDBDataStore::get(const ds_bulk_t &key, std::vector<ds_bulk_t> &data) {
 void LevelDBDataStore::set_in_memory(bool enable)
 {};
 
-std::vector<ds_bulk_t> LevelDBDataStore::vlist_keys(const ds_bulk_t &start, size_t count, const ds_bulk_t &prefix)
+std::vector<ds_bulk_t> LevelDBDataStore::vlist_keys(
+        const ds_bulk_t &start, size_t count, const ds_bulk_t &prefix) const
 {
     std::vector<ds_bulk_t> keys;
 
@@ -178,7 +179,8 @@ std::vector<ds_bulk_t> LevelDBDataStore::vlist_keys(const ds_bulk_t &start, size
     return keys;
 }
 
-std::vector<std::pair<ds_bulk_t,ds_bulk_t>> LevelDBDataStore::vlist_keyvals(const ds_bulk_t &start, size_t count, const ds_bulk_t &prefix)
+std::vector<std::pair<ds_bulk_t,ds_bulk_t>> LevelDBDataStore::vlist_keyvals(
+        const ds_bulk_t &start, size_t count, const ds_bulk_t &prefix) const
 {
     std::vector<std::pair<ds_bulk_t,ds_bulk_t>> result;
 
@@ -215,21 +217,19 @@ std::vector<std::pair<ds_bulk_t,ds_bulk_t>> LevelDBDataStore::vlist_keyvals(cons
     delete it;
     return result;
 }
-/*
-{
-    std::vector<std::pair<ds_bulk_t,ds_bulk_t>> keyvals;
 
-    leveldb::Iterator *it = _dbm->NewIterator(leveldb::ReadOptions());
-    size_t i=0;
-    for (it->SeekToFirst(); it->Valid(); it->Next() ) {
-        ds_bulk_t k(it->key().size());
-        ds_bulk_t v(it->value().size());
-        memcpy(k.data(), it->key().data(), it->key().size() );
-        memcpy(v.data(), it->value().data(), it->value().size() );
-        keyvals.push_back(std::make_pair(std::move(k), std::move(v)));
-        if (i++ > count) break;
-    }
-    delete it;
-    return keyvals;
+std::vector<ds_bulk_t> LevelDBDataStore::vlist_key_range(
+        const ds_bulk_t &lower_bound, const ds_bulk_t &upper_bound, size_t max_keys) const {
+    std::vector<ds_bulk_t> result;
+    // TODO implement this function
+    throw SDSKV_OP_NOT_IMPL;
+    return result;
 }
-*/
+
+std::vector<std::pair<ds_bulk_t,ds_bulk_t>> LevelDBDataStore::vlist_keyval_range(
+        const ds_bulk_t &lower_bound, const ds_bulk_t &upper_bound, size_t max_keys) const {
+    std::vector<std::pair<ds_bulk_t,ds_bulk_t>> result;
+    // TODO implement this function
+    throw SDSKV_OP_NOT_IMPL;
+    return result;
+}
