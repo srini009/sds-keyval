@@ -17,6 +17,8 @@ check_PROGRAMS = test/sdskv-open-test              \
 		 test/sdskv-list-keyvals-test      \
 		 test/sdskv-list-keys-prefix-test  \
 		 test/sdskv-custom-cmp-test        \
+		 test/sdskv-migrate-test           \
+		 test/sdskv-multi-test             \
 		 test/sdskv-custom-server-daemon
 
 bin_sdskv_server_daemon_SOURCES = src/sdskv-server-daemon.c
@@ -105,7 +107,9 @@ TESTS = test/basic.sh 		\
 	test/list-keys-test.sh  \
 	test/list-keyvals-test.sh  \
 	test/list-keys-prefix-test.sh \
-	test/custom-cmp-test.sh
+	test/migrate-test.sh    \
+	test/custom-cmp-test.sh \
+	test/multi-test.sh
 
 TESTS_ENVIRONMENT = TIMEOUT="$(TIMEOUT)" \
 		    MKTEMP="$(MKTEMP)"
@@ -150,6 +154,14 @@ test_sdskv_custom_server_daemon_SOURCES = test/sdskv-custom-server-daemon.c
 test_sdskv_custom_server_daemon_DEPENDENCIES = lib/libsdskv-server.la
 test_sdskv_custom_server_daemon_LDFLAGS = -Llib -lsdskv-server
 test_sdskv_custom_server_daemon_LDADD = ${LIBS} -lsdskv-server ${SERVER_LIBS}
+
+test_sdskv_migrate_test_SOURCES = test/sdskv-migrate-test.cc
+test_sdskv_migrate_test_DEPENDENCIES = lib/libsdskv-client.la
+test_sdskv_migrate_test_LDFLAGS = -Llib -lsdskv-client
+
+test_sdskv_multi_test_SOURCES = test/sdskv-multi-test.cc
+test_sdskv_multi_test_DEPENDENCIES = lib/libsdskv-client.la
+test_sdskv_multi_test_LDFLAGS = -Llib -lsdskv-client
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = maint/sdskv-server.pc \

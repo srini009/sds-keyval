@@ -7,6 +7,7 @@
 #include "datastore/datastore.h"
 #include <db_cxx.h>
 #include <dbstl_map.h>
+#include "sdskv-common.h"
 
 // may want to implement some caching for persistent stores like BerkeleyDB
 class BerkeleyDBDataStore : public AbstractDataStore {
@@ -39,8 +40,14 @@ class BerkeleyDBDataStore : public AbstractDataStore {
             _no_overwrite = true;
         }
     protected:
-        virtual std::vector<ds_bulk_t> vlist_keys(const ds_bulk_t &start, size_t count, const ds_bulk_t &prefix);
-        virtual std::vector<std::pair<ds_bulk_t,ds_bulk_t>> vlist_keyvals(const ds_bulk_t &start_key, size_t count, const ds_bulk_t &);
+        virtual std::vector<ds_bulk_t> vlist_keys(
+                const ds_bulk_t &start, size_t count, const ds_bulk_t &prefix) const;
+        virtual std::vector<std::pair<ds_bulk_t,ds_bulk_t>> vlist_keyvals(
+                const ds_bulk_t &start_key, size_t count, const ds_bulk_t &) const;
+        virtual std::vector<ds_bulk_t> vlist_key_range(
+                const ds_bulk_t &lower_bound, const ds_bulk_t &upper_bound, size_t max_keys) const;
+        virtual std::vector<std::pair<ds_bulk_t,ds_bulk_t>> vlist_keyval_range(
+                const ds_bulk_t &lower_bound, const ds_bulk_t& upper_bound, size_t max_keys) const;
         DbEnv *_dbenv = nullptr;
         Db *_dbm = nullptr;
         DbWrapper* _wrapper = nullptr;

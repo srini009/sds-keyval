@@ -105,6 +105,26 @@ int sdskv_put(sdskv_provider_handle_t provider,
         const void *value, hg_size_t vsize);
 
 /**
+ * @brief Puts multiple key/value pairs into the database.
+ * This method will send all the key/value pairs in batch,
+ * thus optimizing transfers by avoiding many RPC round trips.
+ *
+ * @param provider provider handle managing the database
+ * @param db_id targeted database id
+ * @param num number of key/value pairs to put
+ * @param keys array of keys
+ * @param ksizes array of key sizes
+ * @param values array of values
+ * @param vsizes array of value sizes
+ *
+ * @return SDSKV_SUCCESS or error code defined in sdskv-common.h
+ */
+int sdskv_put_multi(sdskv_provider_handle_t provider,
+        sdskv_database_id_t db_id,
+        size_t num, const void** keys, const hg_size_t* ksizes,
+        const void** values, const hg_size_t *vsizes);
+
+/**
  * @brief Gets the value associated with a given key.
  * vsize needs to be set to the current size of the allocated
  * value buffer. After a succesful call to sdskv_get, vsize
@@ -126,6 +146,34 @@ int sdskv_get(sdskv_provider_handle_t provider,
         void *value, hg_size_t* vsize);
 
 /**
+ * @brief Gets multiple values from the database. The transfers
+ * will be performed in a single batch. The vsize array should
+ * initially contain the size of the buffer allocated to receive
+ * each value. After a successful call, this array will contain
+ * the actual sizes of the values received. Contrary to sdskv_get,
+ * this function will not produce an error if one of the keys
+ * does not exist or if an allocated buffer is too small to hold
+ * a given value: the corresponding value entry will simply not
+ * be filled and its size will be set to 0 (so users must have
+ * another way to distinguish a 0-sized value and a value for
+ * which there was an error).
+ *
+ * @param[in] provider provider handle
+ * @param[in] db_id database id
+ * @param[in] num number of keys to retrieve
+ * @param[in] keys array of keys to retrieve
+ * @param[in] ksizes size of the keys
+ * @param[out] values array of allocated memory segments to receive the keys
+ * @param[inout] vsizes sizes allocated (in) and actual sizes (out)
+ *
+ * @return SDSKV_SUCCESS or error code defined in sdskv-common.h
+ */
+int sdskv_get_multi(sdskv_provider_handle_t provider,
+        sdskv_database_id_t db_id,
+        size_t num, const void** keys, const hg_size_t* ksizes,
+        void** values, hg_size_t *vsizes);
+
+/**
  * @brief Gets the length of a value associated with a given key.
  *
  * @param[in] handle provider handle
@@ -139,6 +187,26 @@ int sdskv_get(sdskv_provider_handle_t provider,
 int sdskv_length(sdskv_provider_handle_t handle, 
         sdskv_database_id_t db_id, const void *key, 
         hg_size_t ksize, hg_size_t* vsize);
+
+/**
+ * @brief Gets the length of values associated with multiple keys.
+ * If a particular key does not exists, this function will set the length
+ * of its value to 0 (so the user needs another way to differenciate 
+ * between a key that does not exists and a 0-sized value).
+ *
+ * @param[in] handle provider handle
+ * @param[in] db_id database id
+ * @param[in] num number of keys
+ * @param[in] keys array of keys
+ * @param[in] ksizes array of key sizes
+ * @param[out] vsizes array where to put value sizes
+ *
+ * @return SDSKV_SUCCESS or error code defined in sdskv-common.h
+ */
+int sdskv_length_multi(sdskv_provider_handle_t handle,
+        sdskv_database_id_t db_id, size_t num,
+        const void** keys, const hg_size_t* ksizes,
+        hg_size_t *vsizes);
 
 /**
  * @brief Checks if the given key exists in the database.
@@ -291,6 +359,147 @@ int sdskv_list_keyvals_with_prefix(
         void **values,
         hg_size_t* vsizes,
         hg_size_t* max_items);
+
+/**
+ * @brief Migrates a set of keys/values from a source provider/database
+ * to a target provider/database.
+ *
+ * @param source_provider source provider
+ * @param source_db_id source database id
+ * @param target_addr target address
+ * @param target_provider_id target provider id
+ * @param target_db_id target database id
+ * @param num_keys number of keys
+ * @param keys array of keys
+ * @param key_sizes array of key sizes
+ * @param flag SDSKV_KEEP_ORIGINAL, or SDSKV_REMOVE_ORIGINAL
+ *
+ * @return SDSKV_SUCCESS or error code defined in sdskv-common.h
+ */
+int sdskv_migrate_keys(
+        sdskv_provider_handle_t source_provider,
+        sdskv_database_id_t source_db_id,
+        const char* target_addr,
+        uint16_t target_provider_id,
+        sdskv_database_id_t target_db_id,
+        hg_size_t num_keys,
+        const void** keys,
+        const hg_size_t* key_sizes,
+        int flag);
+
+/**
+ * @brief Migrates a single key/value from a source provider/database
+ * to a target provider/database.
+ *
+ * @param source_provider source provider
+ * @param source_db_id source database id
+ * @param target_addr target address
+ * @param target_provider_id target provider id
+ * @param target_db_id target database id
+ * @param key key to migrate
+ * @param key_size size of the key 
+ * @param flag SDSKV_KEEP_ORIGINAL, or SDSKV_REMOVE_ORIGINAL
+ *
+ * @return SDSKV_SUCCESS or error code defined in sdskv-common.h
+ */
+inline int sdskv_migrate_key(
+        sdskv_provider_handle_t source_provider,
+        sdskv_database_id_t source_db_id,
+        const char* target_addr,
+        uint16_t target_provider_id,
+        sdskv_database_id_t target_db_id,
+        const void* key,
+        hg_size_t key_size,
+        int flag)
+{
+    return sdskv_migrate_keys(
+            source_provider,
+            source_db_id,
+            target_addr,
+            target_provider_id,
+            target_db_id,
+            1,
+            &key,
+            &key_size,
+            flag);
+}
+
+/**
+ * @brief Migrates a set of keys/values from a source provider/database
+ * to a target provider/database based on a range. The range is
+ * expressed by the array key_range, which contains two elements.
+ * key_range[0] must be a lower bound lb.
+ * key_range[1] must be an upper bound ub.
+ * The set of keys migrated are within the range ]lb, ub[ (i.e. lb
+ * and ub not included).
+ *
+ * @param source_provider source provider
+ * @param source_db_id source database id
+ * @param target_addr target address
+ * @param target_provider_id target provider id
+ * @param target_db_id target database id
+ * @param key_range range of keys to migrate
+ * @param key_range_sizes size of the keys provided for the range 
+ * @param flag SDSKV_KEEP_ORIGINAL, or SDSKV_REMOVE_ORIGINAL
+ *
+ * @return SDSKV_SUCCESS or error code defined in sdskv-common.h
+ */
+int sdskv_migrate_key_range(
+        sdskv_provider_handle_t source_provider,
+        sdskv_database_id_t source_db_id,
+        const char* target_addr,
+        uint16_t target_provider_id,
+        sdskv_database_id_t target_db_id,
+        const void* key_range[],
+        const hg_size_t key_range_sizes[],
+        int flag);
+
+/**
+ * @brief Migrates a set of keys/values from a source provider/database
+ * to a target provider/database based on a prefix. 
+ * All key matching the provided prefix will be migrated.
+ *
+ * @param source_provider source provider
+ * @param source_db_id source database id
+ * @param target_addr target address
+ * @param target_provider_id target provider id
+ * @param target_db_id target database id
+ * @param key_prefix prefix of keys to migrate
+ * @param key_prefix_size size of the prefix provided 
+ * @param flag SDSKV_KEEP_ORIGINAL, or SDSKV_REMOVE_ORIGINAL
+ *
+ * @return SDSKV_SUCCESS or error code defined in sdskv-common.h
+ */
+int sdskv_migrate_keys_prefixed(
+        sdskv_provider_handle_t source_provider,
+        sdskv_database_id_t source_db_id,
+        const char* target_addr,
+        uint16_t target_provider_id,
+        sdskv_database_id_t target_db_id,
+        const void* key_prefix,
+        hg_size_t key_prefix_size,
+        int flag);
+
+/**
+ * @brief Migrates all the keys/values from a source provider/database
+ * to a target provider/database based on a prefix. 
+ *
+ * @param source_provider source provider
+ * @param source_db_id source database id
+ * @param target_addr target address
+ * @param target_provider_id target provider id
+ * @param target_db_id target database id
+ * @param flag SDSKV_KEEP_ORIGINAL, or SDSKV_REMOVE_ORIGINAL
+ *
+ * @return SDSKV_SUCCESS or error code defined in sdskv-common.h
+ */
+int sdskv_migrate_all_keys(
+        sdskv_provider_handle_t source_provider,
+        sdskv_database_id_t source_db_id,
+        const char* target_addr,
+        uint16_t target_provider_id,
+        sdskv_database_id_t target_db_id,
+        int flag);
 
 /**
  * Shuts down a remote SDSKV service (given an address).

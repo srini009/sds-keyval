@@ -131,9 +131,10 @@ bool BwTreeDataStore::get(const ds_bulk_t &key, std::vector<ds_bulk_t> &data) {
 void BwTreeDataStore::set_in_memory(bool enable)
 {};
 
-std::vector<ds_bulk_t> BwTreeDataStore::vlist_keys(const ds_bulk_t &start, size_t count, const ds_bulk_t &prefix)
+std::vector<ds_bulk_t> BwTreeDataStore::vlist_keys(const ds_bulk_t &start, size_t count, const ds_bulk_t &prefix) const
 {
     std::vector<ds_bulk_t> keys;
+    throw SDSKV_OP_NOT_IMPL;
 #if 0
     auto it = _tree->Begin(start);
     while (it.IsEnd() == false) {
@@ -144,9 +145,10 @@ std::vector<ds_bulk_t> BwTreeDataStore::vlist_keys(const ds_bulk_t &start, size_
     return keys;
 }
 
-std::vector<std::pair<ds_bulk_t,ds_bulk_t>> BwTreeDataStore::vlist_keyvals(const ds_bulk_t &start, size_t count, const ds_bulk_t &prefix)
+std::vector<std::pair<ds_bulk_t,ds_bulk_t>> BwTreeDataStore::vlist_keyvals(const ds_bulk_t &start, size_t count, const ds_bulk_t &prefix) const
 {
     std::vector<std::pair<ds_bulk_t,ds_bulk_t>> keyvals;
+    throw SDSKV_OP_NOT_IMPL;
 #if 0
     auto it = _tree->Begin(start);
     while (it.IsEnd() == false) {
@@ -155,4 +157,20 @@ std::vector<std::pair<ds_bulk_t,ds_bulk_t>> BwTreeDataStore::vlist_keyvals(const
 #endif
 
     return keyvals;
+}
+
+std::vector<ds_bulk_t> BwTreeDataStore::vlist_key_range(
+        const ds_bulk_t &lower_bound, const ds_bulk_t &upper_bound, size_t max_keys) const {
+    std::vector<ds_bulk_t> result;
+    throw SDSKV_OP_NOT_IMPL;
+    // TODO implement this function
+    return result;
+}
+
+std::vector<std::pair<ds_bulk_t,ds_bulk_t>> BwTreeDataStore::vlist_keyval_range(
+        const ds_bulk_t &lower_bound, const ds_bulk_t &upper_bound, size_t max_keys) const {
+    std::vector<std::pair<ds_bulk_t,ds_bulk_t>> result;
+    throw SDSKV_OP_NOT_IMPL;
+    // TODO implement this function
+    return result;
 }

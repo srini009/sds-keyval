@@ -7,7 +7,9 @@
 #include <leveldb/db.h>
 #include <leveldb/comparator.h>
 #include <leveldb/env.h>
+#include "sdskv-common.h"
 #include "datastore/datastore.h"
+
 
 // may want to implement some caching for persistent stores like LevelDB
 class LevelDBDataStore : public AbstractDataStore {
@@ -51,8 +53,14 @@ class LevelDBDataStore : public AbstractDataStore {
             _no_overwrite = true;
         }
     protected:
-        virtual std::vector<ds_bulk_t> vlist_keys(const ds_bulk_t &start, size_t count, const ds_bulk_t &prefix);
-        virtual std::vector<std::pair<ds_bulk_t,ds_bulk_t>> vlist_keyvals(const ds_bulk_t &start_key, size_t count, const ds_bulk_t &prefix);
+        virtual std::vector<ds_bulk_t> vlist_keys(
+                const ds_bulk_t &start, size_t count, const ds_bulk_t &prefix) const;
+        virtual std::vector<std::pair<ds_bulk_t,ds_bulk_t>> vlist_keyvals(
+                const ds_bulk_t &start_key, size_t count, const ds_bulk_t &prefix) const;
+        virtual std::vector<ds_bulk_t> vlist_key_range(
+                const ds_bulk_t &lower_bound, const ds_bulk_t &upper_bound, size_t max_keys) const;
+        virtual std::vector<std::pair<ds_bulk_t,ds_bulk_t>> vlist_keyval_range(
+                const ds_bulk_t &lower_bound, const ds_bulk_t& upper_bound, size_t max_keys) const;
         leveldb::DB *_dbm = NULL;
     private:
         std::string toString(const ds_bulk_t &key);

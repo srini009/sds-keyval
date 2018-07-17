@@ -92,12 +92,11 @@ class MapDataStore : public AbstractDataStore {
     protected:
 
         virtual std::vector<ds_bulk_t> vlist_keys(
-                const ds_bulk_t &start_key, size_t count, const ds_bulk_t &prefix) {
+                const ds_bulk_t &start_key, size_t count, const ds_bulk_t &prefix) const {
             std::vector<ds_bulk_t> result;
             decltype(_map.begin()) it;
             if(start_key.size() > 0) {
-                it = _map.lower_bound(start_key);
-                while(it != _map.end() && it->first == start_key) it++;
+                it = _map.upper_bound(start_key);
             } else {
                 it = _map.begin();
             }
@@ -116,12 +115,11 @@ class MapDataStore : public AbstractDataStore {
         }
 
         virtual std::vector<std::pair<ds_bulk_t,ds_bulk_t>> vlist_keyvals(
-                const ds_bulk_t &start_key, size_t count, const ds_bulk_t &prefix) {
+                const ds_bulk_t &start_key, size_t count, const ds_bulk_t &prefix) const {
             std::vector<std::pair<ds_bulk_t,ds_bulk_t>> result;
             decltype(_map.begin()) it;
             if(start_key.size() > 0) {
-                it = _map.lower_bound(start_key);
-                while(it != _map.end() && it->first == start_key) it++;
+                it = _map.upper_bound(start_key);
             } else {
                 it = _map.begin();
             }
@@ -135,6 +133,51 @@ class MapDataStore : public AbstractDataStore {
                     break; // we have exceeded prefix
                 }
                 it++;
+            }
+            return result;
+        }
+
+        virtual std::vector<ds_bulk_t> vlist_key_range(
+                const ds_bulk_t &lower_bound, const ds_bulk_t &upper_bound, size_t max_keys) const {
+            std::vector<ds_bulk_t> result;
+            decltype(_map.begin()) it, ub;
+            // get the first element that goes immediately after lower_bound
+            it = _map.upper_bound(lower_bound);
+            if(it == _map.end()) {
+                return result;
+            }
+            // get the element that goes immediately before upper bound
+            ub = _map.lower_bound(upper_bound);
+            if(ub->first != upper_bound) ub++;
+
+            while(it != ub) {
+                result.push_back(it->second);
+                it++;
+                if(max_keys != 0 && result.size() == max_keys)
+                    break;
+            }
+
+            return result;
+        }
+
+        virtual std::vector<std::pair<ds_bulk_t,ds_bulk_t>> vlist_keyval_range(
+                const ds_bulk_t &lower_bound, const ds_bulk_t& upper_bound, size_t max_keys) const {
+            std::vector<std::pair<ds_bulk_t,ds_bulk_t>> result;
+            decltype(_map.begin()) it, ub;
+            // get the first element that goes immediately after lower_bound
+            it = _map.upper_bound(lower_bound);
+            if(it == _map.end()) {
+                return result;
+            }
+            // get the element that goes immediately before upper bound
+            ub = _map.lower_bound(upper_bound);
+            if(ub->first != upper_bound) ub++;
+
+            while(it != ub) {
+                result.emplace_back(it->first,it->second);
+                it++;
+                if(max_keys != 0 && result.size() == max_keys)
+                    break;
             }
             return result;
         }

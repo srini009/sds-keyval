@@ -235,7 +235,8 @@ void BerkeleyDBDataStore::set_in_memory(bool enable) {
   _in_memory = enable;
 };
 
-std::vector<ds_bulk_t> BerkeleyDBDataStore::vlist_keys(const ds_bulk_t &start, size_t count, const ds_bulk_t &prefix)
+std::vector<ds_bulk_t> BerkeleyDBDataStore::vlist_keys(
+        const ds_bulk_t &start, size_t count, const ds_bulk_t &prefix) const
 {
     std::vector<ds_bulk_t> keys;
     Dbc * cursorp;
@@ -284,7 +285,8 @@ std::vector<ds_bulk_t> BerkeleyDBDataStore::vlist_keys(const ds_bulk_t &start, s
     return keys;
 }
 
-std::vector<std::pair<ds_bulk_t,ds_bulk_t>> BerkeleyDBDataStore::vlist_keyvals(const ds_bulk_t &start, size_t count, const ds_bulk_t &prefix)
+std::vector<std::pair<ds_bulk_t,ds_bulk_t>> BerkeleyDBDataStore::vlist_keyvals(
+        const ds_bulk_t &start, size_t count, const ds_bulk_t &prefix) const
 {
     std::vector<std::pair<ds_bulk_t,ds_bulk_t>> result;
     Dbc * cursorp;
@@ -334,6 +336,22 @@ std::vector<std::pair<ds_bulk_t,ds_bulk_t>> BerkeleyDBDataStore::vlist_keyvals(c
         }
     }
     cursorp->close();
+    return result;
+}
+
+std::vector<ds_bulk_t> BerkeleyDBDataStore::vlist_key_range(
+        const ds_bulk_t &lower_bound, const ds_bulk_t &upper_bound, size_t max_keys) const {
+    std::vector<ds_bulk_t> result;
+    // TODO implement this function
+    throw SDSKV_OP_NOT_IMPL;
+    return result;
+}
+
+std::vector<std::pair<ds_bulk_t,ds_bulk_t>> BerkeleyDBDataStore::vlist_keyval_range(
+        const ds_bulk_t &lower_bound, const ds_bulk_t &upper_bound, size_t max_keys) const {
+    std::vector<std::pair<ds_bulk_t,ds_bulk_t>> result;
+    // TODO implement this function
+    throw SDSKV_OP_NOT_IMPL;
     return result;
 }
 

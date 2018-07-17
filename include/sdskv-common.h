@@ -17,6 +17,9 @@ typedef enum sdskv_db_type_t
 typedef uint64_t sdskv_database_id_t;
 #define SDSKV_DATABASE_ID_INVALID 0
 
+#define SDSKV_KEEP_ORIGINAL    1 /* for migration operations, keep original */
+#define SDSKV_REMOVE_ORIGINAL  2 /* for migration operations, remove the origin after migrating */
+
 #define SDSKV_SUCCESS          0 /* Success */
 #define SDSKV_ERR_ALLOCATION  -1 /* Error allocating something */
 #define SDSKV_ERR_INVALID_ARG -2 /* An argument is invalid */
@@ -29,6 +32,8 @@ typedef uint64_t sdskv_database_id_t;
 #define SDSKV_ERR_UNKNOWN_KEY -9 /* Key requested does not exist */
 #define SDSKV_ERR_SIZE        -10 /* Client did not allocate enough for the requested data */
 #define SDSKV_ERR_ERASE       -11 /* Could not erase the given key */
+#define SDSKV_ERR_MIGRATION   -12 /* Error during data migration */
+#define SDSKV_OP_NOT_IMPL     -13 /* Operation not implemented for this backend */
 
 #if defined(__cplusplus)
 }
