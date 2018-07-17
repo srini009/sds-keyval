@@ -113,6 +113,35 @@ MERCURY_GEN_PROC(bulk_get_in_t, ((uint64_t)(db_id))\
         ((hg_bulk_t)(handle)))
 MERCURY_GEN_PROC(bulk_get_out_t, ((hg_size_t)(size)) ((int32_t)(ret)))
 
+// ------------- PUT MULTI ------------- //
+MERCURY_GEN_PROC(put_multi_in_t, \
+        ((uint64_t)(db_id))\
+        ((hg_size_t)(num_keys))\
+        ((hg_bulk_t)(keys_bulk_handle))\
+        ((hg_size_t)(keys_bulk_size))\
+        ((hg_bulk_t)(vals_bulk_handle))\
+        ((hg_size_t)(vals_bulk_size)))
+MERCURY_GEN_PROC(put_multi_out_t, ((int32_t)(ret)))
+
+// ------------- GET MULTI ------------- //
+MERCURY_GEN_PROC(get_multi_in_t, \
+        ((uint64_t)(db_id))\
+        ((hg_size_t)(num_keys))\
+        ((hg_bulk_t)(keys_bulk_handle))\
+        ((hg_size_t)(keys_bulk_size))\
+        ((hg_bulk_t)(vals_bulk_handle))\
+        ((hg_size_t)(vals_bulk_size)))
+MERCURY_GEN_PROC(get_multi_out_t, ((int32_t)(ret)))
+
+// ------------- LENGTH MULTI ------------- //
+MERCURY_GEN_PROC(length_multi_in_t, \
+        ((uint64_t)(db_id))\
+        ((hg_size_t)(num_keys))\
+        ((hg_bulk_t)(keys_bulk_handle))\
+        ((hg_size_t)(keys_bulk_size))\
+        ((hg_bulk_t)(vals_size_bulk_handle)))
+MERCURY_GEN_PROC(length_multi_out_t, ((int32_t)(ret)))
+
 // ------------- MIGRATE KEYS ----------- //
 MERCURY_GEN_PROC(migrate_keys_in_t,
         ((uint64_t)(source_db_id))\
@@ -154,15 +183,5 @@ MERCURY_GEN_PROC(migrate_all_keys_in_t,
         ((uint64_t)(target_db_id))\
         ((int32_t)(flag)))
 
-// ------------- MIGRATE DATABASE ----------- //
-MERCURY_GEN_PROC(migrate_database_in_t,
-        ((uint64_t)(source_db_id))\
-        ((hg_string_t)(target_addr))\
-        ((uint16_t)(target_provider_id))\
-        ((int32_t)(flag)))
-
-MERCURY_GEN_PROC(migrate_database_out_t,
-        ((int32_t)(ret))\
-        ((uint64_t)(db_id)))
 
 #endif
