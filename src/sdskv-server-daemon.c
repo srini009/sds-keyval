@@ -180,15 +180,18 @@ int main(int argc, char **argv)
             }
 
             sdskv_database_id_t db_id;
-            ret = sdskv_provider_add_database(provider, 
-                    opts.db_names[i],
-                    "",
-                    opts.db_types[i], SDSKV_COMPARE_DEFAULT,
-                    &db_id);
+            sdskv_config_t db_config = { 
+                .db_name = opts.db_names[i],
+                .db_path = "",
+                .db_type = opts.db_types[i],
+                .db_comparison_fn = SDSKV_COMPARE_DEFAULT,
+                .db_no_overwrite = 0
+            };
+            ret = sdskv_provider_attach_database(provider, &db_config, &db_id);
 
             if(ret != 0)
             {
-                fprintf(stderr, "Error: bake_provider_add_database()\n");
+                fprintf(stderr, "Error: bake_provider_attach_database()\n");
                 margo_finalize(mid);
                 return(-1);
             }
@@ -213,16 +216,18 @@ int main(int argc, char **argv)
 
         for(i=0; i < opts.num_db; i++) {
             sdskv_database_id_t db_id;
-            ret = sdskv_provider_add_database(provider,
-                    opts.db_names[i],
-                    "",
-                    opts.db_types[i],
-                    SDSKV_COMPARE_DEFAULT,
-                    &db_id);
+            sdskv_config_t db_config = {
+                .db_name = opts.db_names[i],
+                .db_path = "",
+                .db_type = opts.db_types[i],
+                .db_comparison_fn = SDSKV_COMPARE_DEFAULT,
+                .db_no_overwrite = 0
+            };
+            ret = sdskv_provider_attach_database(provider, &db_config, &db_id);
 
             if(ret != 0)
             {
-                fprintf(stderr, "Error: sdskv_provider_add_database()\n");
+                fprintf(stderr, "Error: sdskv_provider_attach_database()\n");
                 margo_finalize(mid);                                    
                 return(-1);
             }

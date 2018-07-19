@@ -142,6 +142,14 @@ MERCURY_GEN_PROC(length_multi_in_t, \
         ((hg_bulk_t)(vals_size_bulk_handle)))
 MERCURY_GEN_PROC(length_multi_out_t, ((int32_t)(ret)))
 
+// ------------- LENGTH MULTI ------------- //
+MERCURY_GEN_PROC(erase_multi_in_t, \
+        ((uint64_t)(db_id))\
+        ((hg_size_t)(num_keys))\
+        ((hg_bulk_t)(keys_bulk_handle))\
+        ((hg_size_t)(keys_bulk_size)))
+MERCURY_GEN_PROC(erase_multi_out_t, ((int32_t)(ret)))
+
 // ------------- MIGRATE KEYS ----------- //
 MERCURY_GEN_PROC(migrate_keys_in_t,
         ((uint64_t)(source_db_id))\

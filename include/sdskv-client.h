@@ -121,8 +121,8 @@ int sdskv_put(sdskv_provider_handle_t provider,
  */
 int sdskv_put_multi(sdskv_provider_handle_t provider,
         sdskv_database_id_t db_id,
-        size_t num, const void** keys, const hg_size_t* ksizes,
-        const void** values, const hg_size_t *vsizes);
+        size_t num, const void* const* keys, const hg_size_t* ksizes,
+        const void* const* values, const hg_size_t *vsizes);
 
 /**
  * @brief Gets the value associated with a given key.
@@ -170,7 +170,7 @@ int sdskv_get(sdskv_provider_handle_t provider,
  */
 int sdskv_get_multi(sdskv_provider_handle_t provider,
         sdskv_database_id_t db_id,
-        size_t num, const void** keys, const hg_size_t* ksizes,
+        size_t num, const void* const* keys, const hg_size_t* ksizes,
         void** values, hg_size_t *vsizes);
 
 /**
@@ -205,7 +205,7 @@ int sdskv_length(sdskv_provider_handle_t handle,
  */
 int sdskv_length_multi(sdskv_provider_handle_t handle,
         sdskv_database_id_t db_id, size_t num,
-        const void** keys, const hg_size_t* ksizes,
+        const void* const* keys, const hg_size_t* ksizes,
         hg_size_t *vsizes);
 
 /**
@@ -235,6 +235,22 @@ int sdskv_exists(sdskv_provider_handle_t handle,
 int sdskv_erase(sdskv_provider_handle_t handle,
         sdskv_database_id_t db_id, const void *key,
         hg_size_t ksize);
+
+/**
+ * @brief Erases all the key/value pairs pointed to by the given keys.
+ *
+ * @param handle provider handle
+ * @param db_id database id
+ * @param num_keys number of keys
+ * @param keys array of keys
+ * @param ksizes array of key sizes
+ *
+ * @return SDSKV_SUCCESS or error code defined in sdskv-common.h
+ */
+int sdskv_erase_multi(sdskv_provider_handle_t handle,
+        sdskv_database_id_t db_id, size_t num_keys,
+        const void* const* keys,
+        const hg_size_t* ksizes);
 
 /**
  * Lists at most max_keys keys starting strictly after start_key,
