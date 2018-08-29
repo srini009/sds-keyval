@@ -184,7 +184,7 @@ int main(int argc, char **argv)
                 .db_name = opts.db_names[i],
                 .db_path = "",
                 .db_type = opts.db_types[i],
-                .db_comparison_fn = SDSKV_COMPARE_DEFAULT,
+                .db_comp_fn_name = SDSKV_COMPARE_DEFAULT,
                 .db_no_overwrite = 0
             };
             ret = sdskv_provider_attach_database(provider, &db_config, &db_id);
@@ -220,7 +220,7 @@ int main(int argc, char **argv)
                 .db_name = opts.db_names[i],
                 .db_path = "",
                 .db_type = opts.db_types[i],
-                .db_comparison_fn = SDSKV_COMPARE_DEFAULT,
+                .db_comp_fn_name = SDSKV_COMPARE_DEFAULT,
                 .db_no_overwrite = 0
             };
             ret = sdskv_provider_attach_database(provider, &db_config, &db_id);

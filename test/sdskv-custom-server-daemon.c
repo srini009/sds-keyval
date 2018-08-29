@@ -186,10 +186,24 @@ int main(int argc, char **argv)
                 return(-1);
             }
 
+            ret = sdskv_provider_add_comparison_function(provider,
+                    "my_custom_comp_function",
+                    custom_key_cmp);
+            if(ret != SDSKV_SUCCESS) {
+                fprintf(stderr, "Error: sdskv_provider_add_comparison_function()\n");
+                margo_finalize(mid);
+                return(-1);
+            }
+
             sdskv_database_id_t db_id;
-            ret = sdskv_provider_add_database(provider, 
-                    opts.db_names[i], "", opts.db_types[i], &custom_key_cmp,
-                    &db_id);
+            sdskv_config_t db_config = {
+                .db_name = opts.db_names[i],
+                .db_path = "",
+                .db_type = opts.db_types[i],
+                .db_comp_fn_name = "my_custom_comp_function",
+                .db_no_overwrite = 0
+            };
+            ret = sdskv_provider_attach_database(provider, &db_config, &db_id);
 
             if(ret != 0)
             {
@@ -216,12 +230,25 @@ int main(int argc, char **argv)
             return(-1);
         }
 
+        ret = sdskv_provider_add_comparison_function(provider,
+                "my_custom_comp_function",
+                custom_key_cmp);
+        if(ret != SDSKV_SUCCESS) {
+            fprintf(stderr, "Error: sdskv_provider_add_comparison_function()\n");
+            margo_finalize(mid);
+            return(-1);
+        }
+
         for(i=0; i < opts.num_db; i++) {
             sdskv_database_id_t db_id;
-            ret = sdskv_provider_add_database(provider, 
-                    opts.db_names[i], "", opts.db_types[i],
-                    &custom_key_cmp,
-                    &db_id);
+            sdskv_config_t db_config = {
+                .db_name = opts.db_names[i],
+                .db_path = "",
+                .db_type = opts.db_types[i],
+                .db_comp_fn_name = "my_custom_comp_function",
+                .db_no_overwrite = 0
+            };
+            ret = sdskv_provider_attach_database(provider, &db_config, &db_id);
 
             if(ret != 0)
             {

@@ -17,6 +17,7 @@ struct sdskv_server_context_t
     std::unordered_map<sdskv_database_id_t, AbstractDataStore*> databases;
     std::map<std::string, sdskv_database_id_t> name2id;
     std::map<sdskv_database_id_t, std::string> id2name;
+    std::map<std::string, sdskv_compare_fn> compfunctions;
 
     hg_id_t sdskv_put_id;
     hg_id_t sdskv_put_multi_id;
@@ -199,15 +200,38 @@ extern "C" int sdskv_provider_register(
     return SDSKV_SUCCESS;
 }
 
+int sdskv_provider_add_comparison_function(
+        sdskv_provider_t provider,
+        const char* function_name,
+        sdskv_compare_fn comp_fn) 
+{
+    if(provider->compfunctions.find(std::string(function_name))
+        != provider->compfunctions.end())
+        return SDSKV_ERR_COMP_FUNC;
+    provider->compfunctions[std::string(function_name)] = comp_fn;
+    return SDSKV_SUCCESS;
+}
+
 extern "C" int sdskv_provider_attach_database(
         sdskv_provider_t provider,
         const sdskv_config_t* config,
         sdskv_database_id_t* db_id)
 {
+    sdskv_compare_fn comp_fn = NULL;
+    if(config->db_comp_fn_name) {
+        std::string k(config->db_comp_fn_name);
+        auto it = provider->compfunctions.find(k);
+        if(it == provider->compfunctions.end())
+            return SDSKV_ERR_COMP_FUNC;
+        comp_fn = it->second;
+    }
+
     auto db = datastore_factory::open_datastore(config->db_type, 
             std::string(config->db_name), std::string(config->db_path));
     if(db == nullptr) return SDSKV_ERR_DB_CREATE;
-    db->set_comparison_function(config->db_comparison_fn);
+    if(comp_fn) {
+        db->set_comparison_function(comp_fn);
+    }
     sdskv_database_id_t id = (sdskv_database_id_t)(db);
     if(config->db_no_overwrite) {
         db->set_no_overwrite();
@@ -220,22 +244,6 @@ extern "C" int sdskv_provider_attach_database(
     *db_id = id;
 
     return SDSKV_SUCCESS;
-}
-
-extern "C" int sdskv_provider_add_database(
-        sdskv_provider_t provider,
-        const char* db_name,
-        const char* db_path,
-        sdskv_db_type_t db_type,
-        sdskv_compare_fn comp_fn,
-        sdskv_database_id_t* db_id) {
-    sdskv_config_t config = SDSKV_CONFIG_DEFAULT;
-    config.db_name = db_name;
-    config.db_path = db_path;
-    config.db_type = db_type;
-    config.db_comparison_fn = comp_fn;
-    return sdskv_provider_attach_database(
-            provider, &config, db_id);
 }
 
 extern "C" int sdskv_provider_remove_database(

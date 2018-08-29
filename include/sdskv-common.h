@@ -34,6 +34,7 @@ typedef uint64_t sdskv_database_id_t;
 #define SDSKV_ERR_ERASE       -11 /* Could not erase the given key */
 #define SDSKV_ERR_MIGRATION   -12 /* Error during data migration */
 #define SDSKV_OP_NOT_IMPL     -13 /* Operation not implemented for this backend */
+#define SDSKV_ERR_COMP_FUNC   -14 /* Comparison function does not exist */
 
 #if defined(__cplusplus)
 }

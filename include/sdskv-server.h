@@ -22,15 +22,12 @@ extern "C" {
 typedef struct sdskv_server_context_t* sdskv_provider_t;
 typedef int (*sdskv_compare_fn)(const void*, size_t, const void*, size_t);
 
-typedef struct sdskv_server_context_t* sdskv_provider_t;
-typedef int (*sdskv_compare_fn)(const void*, size_t, const void*, size_t);
-
 typedef struct sdskv_config_t {
-    const char*      db_name;            // name of the database
-    const char*      db_path;            // path to the database
-    sdskv_db_type_t  db_type;            // type of database
-    sdskv_compare_fn db_comparison_fn;   // comparison function (can be NULL)
-    int              db_no_overwrite;    // prevents overwritting data if set to 1
+    const char*      db_name;         // name of the database
+    const char*      db_path;         // path to the database
+    sdskv_db_type_t  db_type;         // type of database
+    const char*      db_comp_fn_name; // name of registered comparison function (can be NULL)
+    int              db_no_overwrite; // prevents overwritting data if set to 1
 } sdskv_config_t;
 
 #define SDSKV_CONFIG_DEFAULT { "", "", KVDB_MAP, SDSKV_COMPARE_DEFAULT, 0 }
@@ -50,6 +47,20 @@ int sdskv_provider_register(
         uint16_t provider_id,
         ABT_pool pool,
         sdskv_provider_t* provider);
+
+/**
+ * @brief Registers a comparison function for databases to use.
+ *
+ * @param provider provider
+ * @param function_name name of the comparison function
+ * @param comp_fn pointer to the comparison function
+ *
+ * @return SDSKV_SUCCESS or error code defined in sdskv-common.h
+ */
+int sdskv_provider_add_comparison_function(
+        sdskv_provider_t provider,
+        const char* function_name,
+        sdskv_compare_fn comp_fn);
 
 /**
  * Makes the provider start managing a database. The database will
