@@ -2138,7 +2138,10 @@ static int sdskv_post_migration_callback(remi_fileset_t fileset, void* uargs)
         config.db_type = KVDB_BERKELEYDB;
     else if(db_type == "leveldb")
         config.db_type = KVDB_LEVELDB;
-    config.db_comp_fn_name = comp_fn.c_str();
+    if(comp_fn.size() != 0) 
+        config.db_comp_fn_name = comp_fn.c_str();
+    else
+        config.db_comp_fn_name = NULL;
     if(md._metadata.find("no_overwrite") != md._metadata.end())
         config.db_no_overwrite = 1;
     else
