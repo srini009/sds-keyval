@@ -2106,8 +2106,10 @@ static int sdskv_pre_migration_callback(remi_fileset_t fileset, void* uargs)
         return -103;
     }
     // (4) check that the comparison function exists
-    if(provider->compfunctions.find(comp_fn) == provider->compfunctions.end()) {
-        return -104;
+    if(comp_fn.size() != 0) {
+        if(provider->compfunctions.find(comp_fn) == provider->compfunctions.end()) {
+            return -104;
+        }
     }
     // all is fine
     return 0;
