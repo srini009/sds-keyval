@@ -48,10 +48,11 @@ class LevelDBDataStore : public AbstractDataStore {
         virtual bool exists(const ds_bulk_t &key);
         virtual bool erase(const ds_bulk_t &key);
         virtual void set_in_memory(bool enable); // not supported, a no-op
-        virtual void set_comparison_function(comparator_fn less);
+        virtual void set_comparison_function(const std::string& name, comparator_fn less);
         virtual void set_no_overwrite() {
             _no_overwrite = true;
         }
+        remi_fileset_t create_and_populate_fileset() const;
     protected:
         virtual std::vector<ds_bulk_t> vlist_keys(
                 const ds_bulk_t &start, size_t count, const ds_bulk_t &prefix) const;
@@ -67,7 +68,6 @@ class LevelDBDataStore : public AbstractDataStore {
         ds_bulk_t fromString(const std::string &keystr);
         AbstractDataStore::comparator_fn _less;
         LevelDBDataStoreComparator _keycmp;
-        bool _no_overwrite = false;
 };
 
 #endif // ldb_datastore_h

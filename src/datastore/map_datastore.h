@@ -29,15 +29,17 @@ class MapDataStore : public AbstractDataStore {
     public:
 
         MapDataStore()
-            : AbstractDataStore(), _less(nullptr), _map(keycmp(this)), _no_overwrite(false) {}
+            : AbstractDataStore(), _less(nullptr), _map(keycmp(this)) {}
 
         MapDataStore(Duplicates duplicates, bool eraseOnGet, bool debug)
-            : AbstractDataStore(duplicates, eraseOnGet, debug), _less(nullptr), _map(keycmp(this)),
-            _no_overwrite(false) {}
+            : AbstractDataStore(duplicates, eraseOnGet, debug), _less(nullptr), _map(keycmp(this))
+            {}
 
         ~MapDataStore() = default;
 
         virtual bool openDatabase(const std::string& db_name, const std::string& path) {
+            _name = db_name;
+            _path = path;
             _map.clear();
             return true;
         }
@@ -81,12 +83,17 @@ class MapDataStore : public AbstractDataStore {
             _in_memory = enable;
         }
 
-        virtual void set_comparison_function(comparator_fn less) {
+        virtual void set_comparison_function(const std::string& name, comparator_fn less) {
+           _comp_fun_name = name;
            _less = less; 
         }
 
         virtual void set_no_overwrite() {
             _no_overwrite = true;
+        }
+
+        remi_fileset_t create_and_populate_fileset() const {
+            return REMI_FILESET_NULL;
         }
 
     protected:
@@ -185,7 +192,6 @@ class MapDataStore : public AbstractDataStore {
     private:
         AbstractDataStore::comparator_fn _less;
         std::map<ds_bulk_t, ds_bulk_t, keycmp> _map;
-        bool _no_overwrite;
 };
 
 #endif

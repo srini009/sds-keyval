@@ -7,6 +7,8 @@
 #include <map>
 #include <iostream>
 #include <unordered_map>
+#include <remi/remi-client.h>
+#include <remi/remi-server.h>
 #define SDSKV
 #include "datastore/datastore_factory.h"
 #include "sdskv-rpc-types.h"
@@ -18,6 +20,8 @@ struct sdskv_server_context_t
     std::map<std::string, sdskv_database_id_t> name2id;
     std::map<sdskv_database_id_t, std::string> id2name;
     std::map<std::string, sdskv_compare_fn> compfunctions;
+    remi_client_t   remi_client;
+    remi_provider_t remi_provider;
 
     hg_id_t sdskv_put_id;
     hg_id_t sdskv_put_multi_id;
@@ -71,8 +75,13 @@ DECLARE_MARGO_RPC_HANDLER(sdskv_migrate_keys_ult)
 DECLARE_MARGO_RPC_HANDLER(sdskv_migrate_key_range_ult)
 DECLARE_MARGO_RPC_HANDLER(sdskv_migrate_keys_prefixed_ult)
 DECLARE_MARGO_RPC_HANDLER(sdskv_migrate_all_keys_ult)
+DECLARE_MARGO_RPC_HANDLER(sdskv_migrate_database_ult)
 
 static void sdskv_server_finalize_cb(void *data);
+
+static int sdskv_pre_migration_callback(remi_fileset_t fileset, void* uargs);
+
+static int sdskv_post_migration_callback(remi_fileset_t fileset, void* uargs);
 
 extern "C" int sdskv_provider_register(
         margo_instance_id mid,
@@ -90,6 +99,16 @@ extern "C" int sdskv_provider_register(
         if(flag == HG_TRUE) {
             fprintf(stderr, "sdskv_provider_register(): a provider with the same provider id (%d) already exists\n", provider_id);
             return SDSKV_ERR_MERCURY;
+        }
+    }
+
+    /* check if a REMI provider exists with the same provider id */
+    {
+        int flag;
+        remi_provider_registered(mid, provider_id, &flag, NULL, NULL);
+        if(flag) {
+            fprintf(stderr, "sdskv_provider_register(): a REMI provider with the same (%d) already exists\n", provider_id);
+            return SDSKV_ERR_REMI;
         }
     }
 
@@ -191,8 +210,32 @@ extern "C" int sdskv_provider_register(
             sdskv_migrate_all_keys_ult, provider_id, abt_pool);
     tmp_svr_ctx->sdskv_migrate_all_keys_id = rpc_id;
     margo_register_data(mid, rpc_id, (void*)tmp_svr_ctx, NULL);
+    rpc_id = MARGO_REGISTER_PROVIDER(mid, "sdskv_migrate_database_rpc",
+            migrate_database_in_t, migrate_database_out_t,
+            sdskv_migrate_database_ult, provider_id, abt_pool);
+    tmp_svr_ctx->sdskv_migrate_database_id = rpc_id;
+    margo_register_data(mid, rpc_id, (void*)tmp_svr_ctx, NULL);
+
     /* install the bake server finalize callback */
     margo_push_finalize_callback(mid, &sdskv_server_finalize_cb, tmp_svr_ctx);
+
+    /* register a REMI client */
+    int ret = remi_client_init(mid, &(tmp_svr_ctx->remi_client));
+    if(ret != REMI_SUCCESS) {
+        return SDSKV_ERR_REMI;
+    }
+
+    /* register a REMI provider */
+    ret = remi_provider_register(mid, provider_id, abt_pool, &(tmp_svr_ctx->remi_provider));
+    if(ret != REMI_SUCCESS) {
+        return SDSKV_ERR_REMI;
+    }
+    ret = remi_provider_register_migration_class(tmp_svr_ctx->remi_provider,
+            "bake", sdskv_pre_migration_callback,
+            sdskv_post_migration_callback, NULL, tmp_svr_ctx);
+    if(ret != REMI_SUCCESS) {
+        return SDSKV_ERR_REMI;
+    }
 
     if(provider != SDSKV_PROVIDER_IGNORE)
         *provider = tmp_svr_ctx;
@@ -230,7 +273,7 @@ extern "C" int sdskv_provider_attach_database(
             std::string(config->db_name), std::string(config->db_path));
     if(db == nullptr) return SDSKV_ERR_DB_CREATE;
     if(comp_fn) {
-        db->set_comparison_function(comp_fn);
+        db->set_comparison_function(config->db_comp_fn_name, comp_fn);
     }
     sdskv_database_id_t id = (sdskv_database_id_t)(db);
     if(config->db_no_overwrite) {
@@ -1934,6 +1977,91 @@ static void sdskv_migrate_all_keys_ult(hg_handle_t handle)
 }
 DEFINE_MARGO_RPC_HANDLER(sdskv_migrate_all_keys_ult)
 
+static void sdskv_migrate_database_ult(hg_handle_t handle)
+{
+    migrate_database_in_t in;
+    in.dest_remi_addr = NULL;
+    in.dest_root = NULL;
+    migrate_database_out_t out;
+    hg_addr_t dest_addr = HG_ADDR_NULL;
+    hg_return_t hret;
+    margo_instance_id mid;
+    int ret;
+    remi_provider_handle_t remi_ph = REMI_PROVIDER_HANDLE_NULL;
+    remi_fileset_t local_fileset = REMI_FILESET_NULL;
+
+    memset(&out, 0, sizeof(out));
+
+    do {
+
+        mid = margo_hg_handle_get_instance(handle);
+        assert(mid);
+        const struct hg_info* info = margo_get_info(handle);
+        sdskv_provider_t svr_ctx = static_cast<sdskv_provider_t>(margo_registered_data(mid, info->id));
+        if(!svr_ctx) {
+            out.ret = SDSKV_ERR_UNKNOWN_PR;
+            break;
+        }
+
+        hret = margo_get_input(handle, &in);
+        if(hret != HG_SUCCESS)
+        {
+            out.ret = SDSKV_ERR_MERCURY;
+            break;
+        }
+        // find the database that needs to be migrated
+        auto it = svr_ctx->databases.find(in.source_db_id);
+        if(it == svr_ctx->databases.end()) {
+            out.ret = SDSKV_ERR_UNKNOWN_DB;
+            break;
+        }
+        auto database = it->second;
+
+        /* lookup the address of the destination REMI provider */
+        hret = margo_addr_lookup(mid, in.dest_remi_addr, &dest_addr);
+        if(hret != HG_SUCCESS) {
+            out.ret = SDSKV_ERR_MERCURY;
+            break;
+        }
+
+        /* use the REMI client to create a REMI provider handle */
+        ret = remi_provider_handle_create(svr_ctx->remi_client,
+                dest_addr, in.dest_remi_provider_id, &remi_ph);
+        if(ret != REMI_SUCCESS) {
+            out.ret = SDSKV_ERR_REMI;
+            break;
+        }
+
+        /* create a fileset */
+        remi_fileset_t fileset = database->create_and_populate_fileset();
+        if(fileset == REMI_FILESET_NULL) {
+            out.ret = SDSKV_OP_NOT_IMPL;
+            break;
+        }
+        /* issue the migration */
+        int status = 0;
+        ret = remi_fileset_migrate(remi_ph, local_fileset, in.dest_root, in.remove_src, &status);
+        if(ret != REMI_SUCCESS) {
+            out.ret = SDSKV_ERR_REMI;
+            break;
+        }
+        /* remove the target from the list of managed targets */
+        sdskv_provider_remove_database(svr_ctx, in.source_db_id);
+
+        out.ret = SDSKV_SUCCESS;
+    } while(false);
+
+    remi_fileset_free(local_fileset);
+    remi_provider_handle_release(remi_ph);
+    margo_addr_free(mid, dest_addr);
+    margo_free_input(handle, &in);
+    margo_respond(handle, &out);
+    margo_destroy(handle);
+
+    return;
+}
+DEFINE_MARGO_RPC_HANDLER(sdskv_migrate_database_ult)
+
 static void sdskv_server_finalize_cb(void *data)
 {
     sdskv_provider_t svr_ctx = (sdskv_provider_t)data;
@@ -1946,3 +2074,82 @@ static void sdskv_server_finalize_cb(void *data)
     return;
 }
 
+struct migration_metadata {
+    std::unordered_map<std::string,std::string> _metadata;
+};
+
+static void get_metadata(const char* key, const char* value, void* uargs) {
+    auto md = static_cast<migration_metadata*>(uargs);
+    md->_metadata[key] = value;
+}
+
+static int sdskv_pre_migration_callback(remi_fileset_t fileset, void* uargs)
+{
+    sdskv_provider_t provider = (sdskv_provider_t)uargs;
+    migration_metadata md;
+    remi_fileset_foreach_metadata(fileset, get_metadata, static_cast<void*>(&md));
+    // (1) check the metadata
+    if(md._metadata.find("database_type") == md._metadata.end()
+    || md._metadata.find("database_name") == md._metadata.end()
+    || md._metadata.find("comparison_function") == md._metadata.end()) {
+        return -1;
+    }
+    std::string db_name = md._metadata["database_name"];
+    std::string db_type = md._metadata["database_type"];
+    std::string comp_fn = md._metadata["comparison_function"];
+    // (2) check that there isn't a database with the same name
+    if(provider->name2id.find(db_name) != provider->name2id.end()) {
+        return -1;
+    }
+    // (3) check that the type of database is ok to migrate
+    if(db_type != "berkeleydb" && db_type != "leveldb") {
+        return -1;
+    }
+    // (4) check that the comparison function exists
+    if(provider->compfunctions.find(comp_fn) == provider->compfunctions.end()) {
+        return -1;
+    }
+    // all is fine
+    return 0;
+}
+
+static int sdskv_post_migration_callback(remi_fileset_t fileset, void* uargs)
+{
+    sdskv_provider_t provider = (sdskv_provider_t)uargs;
+    migration_metadata md;
+    remi_fileset_foreach_metadata(fileset, get_metadata, static_cast<void*>(&md));
+    // (1) check the metadata
+    if(md._metadata.find("database_type") == md._metadata.end()
+    || md._metadata.find("database_name") == md._metadata.end()
+    || md._metadata.find("comparison_function") == md._metadata.end()) {
+        return -1;
+    }
+    std::string db_name = md._metadata["database_name"];
+    std::string db_type = md._metadata["database_type"];
+    std::string comp_fn = md._metadata["comparison_function"];
+
+    std::vector<char> db_root;
+    size_t root_size = 0;
+    remi_fileset_get_root(fileset, NULL, &root_size);
+    db_root.resize(root_size+1);
+    remi_fileset_get_root(fileset, db_root.data(), &root_size);
+
+    sdskv_config_t config;
+    config.db_name = db_name.c_str();
+    config.db_path = db_root.data();
+    if(db_type == "berkeleydb")
+        config.db_type = KVDB_BERKELEYDB;
+    else if(db_type == "leveldb")
+        config.db_type = KVDB_LEVELDB;
+    config.db_comp_fn_name = comp_fn.c_str();
+    if(md._metadata.find("no_overwrite") != md._metadata.end())
+        config.db_no_overwrite = 1;
+    else
+        config.db_no_overwrite = 0;
+    
+    sdskv_database_id_t db_id;
+    int ret = sdskv_provider_attach_database(provider, &config, &db_id);
+    if(ret != SDSKV_SUCCESS)
+       return -1;
+    return 0;
+}

@@ -33,6 +33,9 @@ BerkeleyDBDataStore::~BerkeleyDBDataStore() {
 bool BerkeleyDBDataStore::openDatabase(const std::string& db_name, const std::string& db_path) {
   int status = 0;
 
+  _name = db_name;
+  _path = db_path;
+
   if (!db_path.empty()) {
     mkdirs(db_path.c_str());
   }
@@ -128,7 +131,8 @@ bool BerkeleyDBDataStore::openDatabase(const std::string& db_name, const std::st
   return (status == 0);
 };
 
-void BerkeleyDBDataStore::set_comparison_function(comparator_fn less) {
+void BerkeleyDBDataStore::set_comparison_function(const std::string& name, comparator_fn less) {
+    _comp_fun_name = name;
     _wrapper->_less = less;
 }
 
@@ -368,4 +372,21 @@ int BerkeleyDBDataStore::compkeys(Db *db, const Dbt *dbt1, const Dbt *dbt2, size
         if(dbt1->get_size() > dbt2->get_size()) return 1;
         return 0;
     }
+}
+
+remi_fileset_t BerkeleyDBDataStore::create_and_populate_fileset() const {
+    remi_fileset_t fileset = REMI_FILESET_NULL;
+    std::string local_root = _path;
+    int ret;
+    if(_path[_path.size()-1] != '/')
+        local_root += "/";
+    remi_fileset_create("sdskv", local_root.c_str(), &fileset);
+    remi_fileset_register_file(fileset, _name.c_str());
+    remi_fileset_register_metadata(fileset, "database_type", "berkeleydb");
+    remi_fileset_register_metadata(fileset, "comparison_function", _comp_fun_name.c_str());
+    remi_fileset_register_metadata(fileset, "database_name", _name.c_str());
+    if(_no_overwrite) {
+        remi_fileset_register_metadata(fileset, "no_overwrite", "");
+    }
+    return fileset;
 }

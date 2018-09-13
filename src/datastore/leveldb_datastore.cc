@@ -36,6 +36,9 @@ LevelDBDataStore::~LevelDBDataStore() {
 };
 
 bool LevelDBDataStore::openDatabase(const std::string& db_name, const std::string& db_path) {
+    _name = db_name;
+    _path = db_path;
+
   leveldb::Options options;
   leveldb::Status status;
   
@@ -57,7 +60,8 @@ bool LevelDBDataStore::openDatabase(const std::string& db_name, const std::strin
   return true;
 };
 
-void LevelDBDataStore::set_comparison_function(comparator_fn less) {
+void LevelDBDataStore::set_comparison_function(const std::string& name, comparator_fn less) {
+    _comp_fun_name = name;
    _less = less; 
 }
 
@@ -232,4 +236,21 @@ std::vector<std::pair<ds_bulk_t,ds_bulk_t>> LevelDBDataStore::vlist_keyval_range
     // TODO implement this function
     throw SDSKV_OP_NOT_IMPL;
     return result;
+}
+
+remi_fileset_t LevelDBDataStore::create_and_populate_fileset() const {
+    remi_fileset_t fileset = REMI_FILESET_NULL;
+    std::string local_root = _path;
+    int ret;
+    if(_path[_path.size()-1] != '/')
+        local_root += "/";
+    remi_fileset_create("sdskv", local_root.c_str(), &fileset);
+    remi_fileset_register_directory(fileset, (_name+"/").c_str());
+    remi_fileset_register_metadata(fileset, "database_type", "leveldb");
+    remi_fileset_register_metadata(fileset, "comparison_function", _comp_fun_name.c_str()); 
+    remi_fileset_register_metadata(fileset, "database_name", _name.c_str());
+    if(_no_overwrite) {
+        remi_fileset_register_metadata(fileset, "no_overwrite", "");
+    }
+    return fileset;
 }
