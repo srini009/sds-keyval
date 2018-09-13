@@ -17,8 +17,8 @@ typedef enum sdskv_db_type_t
 typedef uint64_t sdskv_database_id_t;
 #define SDSKV_DATABASE_ID_INVALID 0
 
-#define SDSKV_KEEP_ORIGINAL    1 /* for migration operations, keep original */
-#define SDSKV_REMOVE_ORIGINAL  2 /* for migration operations, remove the origin after migrating */
+#define SDSKV_KEEP_ORIGINAL    0 /* for migration operations, keep original */
+#define SDSKV_REMOVE_ORIGINAL  1 /* for migration operations, remove the origin after migrating */
 
 #define SDSKV_SUCCESS          0 /* Success */
 #define SDSKV_ERR_ALLOCATION  -1 /* Error allocating something */

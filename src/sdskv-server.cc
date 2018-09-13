@@ -2042,7 +2042,7 @@ static void sdskv_migrate_database_ult(hg_handle_t handle)
         int status = 0;
         ret = remi_fileset_migrate(remi_ph, local_fileset, in.dest_root, in.remove_src, &status);
         if(ret != REMI_SUCCESS) {
-            out.ret = SDSKV_ERR_REMI;
+            out.ret = status;
             break;
         }
         /* remove the target from the list of managed targets */
@@ -2092,22 +2092,22 @@ static int sdskv_pre_migration_callback(remi_fileset_t fileset, void* uargs)
     if(md._metadata.find("database_type") == md._metadata.end()
     || md._metadata.find("database_name") == md._metadata.end()
     || md._metadata.find("comparison_function") == md._metadata.end()) {
-        return -1;
+        return -101;
     }
     std::string db_name = md._metadata["database_name"];
     std::string db_type = md._metadata["database_type"];
     std::string comp_fn = md._metadata["comparison_function"];
     // (2) check that there isn't a database with the same name
     if(provider->name2id.find(db_name) != provider->name2id.end()) {
-        return -1;
+        return -102;
     }
     // (3) check that the type of database is ok to migrate
     if(db_type != "berkeleydb" && db_type != "leveldb") {
-        return -1;
+        return -103;
     }
     // (4) check that the comparison function exists
     if(provider->compfunctions.find(comp_fn) == provider->compfunctions.end()) {
-        return -1;
+        return -104;
     }
     // all is fine
     return 0;
@@ -2118,12 +2118,7 @@ static int sdskv_post_migration_callback(remi_fileset_t fileset, void* uargs)
     sdskv_provider_t provider = (sdskv_provider_t)uargs;
     migration_metadata md;
     remi_fileset_foreach_metadata(fileset, get_metadata, static_cast<void*>(&md));
-    // (1) check the metadata
-    if(md._metadata.find("database_type") == md._metadata.end()
-    || md._metadata.find("database_name") == md._metadata.end()
-    || md._metadata.find("comparison_function") == md._metadata.end()) {
-        return -1;
-    }
+
     std::string db_name = md._metadata["database_name"];
     std::string db_type = md._metadata["database_type"];
     std::string comp_fn = md._metadata["comparison_function"];
@@ -2150,6 +2145,6 @@ static int sdskv_post_migration_callback(remi_fileset_t fileset, void* uargs)
     sdskv_database_id_t db_id;
     int ret = sdskv_provider_attach_database(provider, &config, &db_id);
     if(ret != SDSKV_SUCCESS)
-       return -1;
+       return -106;
     return 0;
 }
