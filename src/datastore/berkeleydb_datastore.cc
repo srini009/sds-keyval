@@ -386,6 +386,7 @@ remi_fileset_t BerkeleyDBDataStore::create_and_populate_fileset() const {
         local_root += "/";
     remi_fileset_create("sdskv", local_root.c_str(), &fileset);
     remi_fileset_register_file(fileset, _name.c_str());
+    remi_fileset_register_file(fileset, "log.0000000001");
     remi_fileset_register_metadata(fileset, "database_type", "berkeleydb");
     remi_fileset_register_metadata(fileset, "comparison_function", _comp_fun_name.c_str());
     remi_fileset_register_metadata(fileset, "database_name", _name.c_str());
