@@ -35,6 +35,10 @@ LevelDBDataStore::~LevelDBDataStore() {
   //leveldb::Env::Shutdown(); // Riak version only
 };
 
+void LevelDBDataStore::sync() {
+
+}
+
 bool LevelDBDataStore::openDatabase(const std::string& db_name, const std::string& db_path) {
     _name = db_name;
     _path = db_path;

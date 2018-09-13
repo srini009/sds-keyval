@@ -28,6 +28,7 @@ class AbstractDataStore {
         virtual void set_in_memory(bool enable)=0; // enable/disable in-memory mode (where supported)
         virtual void set_comparison_function(const std::string& name, comparator_fn less)=0;
         virtual void set_no_overwrite()=0;
+        virtual void sync() = 0;
         virtual remi_fileset_t create_and_populate_fileset() const = 0;
 
         const std::string& get_path() const {

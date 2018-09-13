@@ -2016,7 +2016,7 @@ static void sdskv_migrate_database_ult(hg_handle_t handle)
             break;
         }
         auto database = it->second;
-
+        database->sync();
         /* lookup the address of the destination REMI provider */
         hret = margo_addr_lookup(mid, in.dest_remi_addr, &dest_addr);
         if(hret != HG_SUCCESS) {

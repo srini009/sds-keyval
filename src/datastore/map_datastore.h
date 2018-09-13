@@ -44,6 +44,8 @@ class MapDataStore : public AbstractDataStore {
             return true;
         }
 
+        virtual void sync() {}
+
         virtual bool put(const ds_bulk_t &key, const ds_bulk_t &data) {
             auto x = _map.count(key);
             if(_no_overwrite && (x != 0)) {

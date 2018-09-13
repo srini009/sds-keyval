@@ -180,7 +180,11 @@ bool BerkeleyDBDataStore::erase(const ds_bulk_t &key) {
     Dbt db_key((void*)key.data(), key.size());
     int status = _dbm->del(NULL, &db_key, 0);
     return status == 0;
-} 
+}
+
+void BerkeleyDBDataStore::sync() {
+    _dbm->sync(0);
+}
 
 // In the case where Duplicates::ALLOW, this will return the first
 // value found using key.
