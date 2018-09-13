@@ -231,7 +231,7 @@ extern "C" int sdskv_provider_register(
         return SDSKV_ERR_REMI;
     }
     ret = remi_provider_register_migration_class(tmp_svr_ctx->remi_provider,
-            "bake", sdskv_pre_migration_callback,
+            "sdskv", sdskv_pre_migration_callback,
             sdskv_post_migration_callback, NULL, tmp_svr_ctx);
     if(ret != REMI_SUCCESS) {
         return SDSKV_ERR_REMI;
@@ -2033,8 +2033,8 @@ static void sdskv_migrate_database_ult(hg_handle_t handle)
         }
 
         /* create a fileset */
-        remi_fileset_t fileset = database->create_and_populate_fileset();
-        if(fileset == REMI_FILESET_NULL) {
+        local_fileset = database->create_and_populate_fileset();
+        if(local_fileset == REMI_FILESET_NULL) {
             out.ret = SDSKV_OP_NOT_IMPL;
             break;
         }
