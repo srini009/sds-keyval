@@ -25,6 +25,7 @@ struct sdskv_client {
     hg_id_t sdskv_migrate_key_range_id;
     hg_id_t sdskv_migrate_keys_prefixed_id;
     hg_id_t sdskv_migrate_all_keys_id;
+    hg_id_t sdskv_migrate_database_id;
 
     uint64_t num_provider_handles;
 };
@@ -65,6 +66,7 @@ static int sdskv_client_register(sdskv_client_t client, margo_instance_id mid)
         margo_registered_name(mid, "sdskv_migrate_key_range_rpc",     &client->sdskv_migrate_key_range_id,     &flag);
         margo_registered_name(mid, "sdskv_migrate_keys_prefixed_rpc", &client->sdskv_migrate_keys_prefixed_id, &flag);
         margo_registered_name(mid, "sdskv_migrate_all_keys_rpc",      &client->sdskv_migrate_all_keys_id,      &flag);
+        margo_registered_name(mid, "sdskv_migrate_database_rpc",      &client->sdskv_migrate_database_id,      &flag);
 
     } else {
 
@@ -104,6 +106,8 @@ static int sdskv_client_register(sdskv_client_t client, margo_instance_id mid)
             MARGO_REGISTER(mid, "sdskv_migrate_keys_prefixed_rpc", migrate_keys_prefixed_in_t, migrate_keys_out_t, NULL);
         client->sdskv_migrate_all_keys_id = 
             MARGO_REGISTER(mid, "sdskv_migrate_all_keys_rpc", migrate_all_keys_in_t, migrate_keys_out_t, NULL);
+        client->sdskv_migrate_database_id =
+            MARGO_REGISTER(mid, "sdskv_migrate_database_rpc", migrate_database_in_t, migrate_database_out_t, NULL);
     }
 
     return SDSKV_SUCCESS;
@@ -1450,6 +1454,51 @@ finish:
     return ret;
 }
 
+int sdskv_migrate_database(
+        sdskv_provider_handle_t source,
+        sdskv_database_id_t source_db_id,
+        const char* dest_addr,
+        uint16_t dest_provider_id,
+        const char* dest_root,
+        int flag)
+{
+    hg_return_t hret;
+    hg_handle_t handle;
+    migrate_database_in_t in;
+    migrate_database_out_t out;
+    int ret;
+
+    in.source_db_id = source_db_id;
+    in.remove_src = flag;
+    in.dest_remi_addr = dest_addr;
+    in.dest_remi_provider_id = dest_provider_id;
+    in.dest_root = dest_root;
+
+    hret = margo_create(source->client->mid, source->addr,
+            source->client->sdskv_migrate_database_id, &handle);
+    if(hret != HG_SUCCESS)
+        return SDSKV_ERR_MERCURY;
+
+    hret = margo_provider_forward(source->provider_id, handle, &in);
+    if(hret != HG_SUCCESS)
+    {
+        margo_destroy(handle);
+        return SDSKV_ERR_MERCURY;
+    }
+
+    hret = margo_get_output(handle, &out);
+    if(hret != HG_SUCCESS)
+    {
+        margo_destroy(handle);
+        return SDSKV_ERR_MERCURY;
+    }
+
+    ret = out.ret;
+
+    margo_free_output(handle, &out);
+    margo_destroy(handle);
+    return ret;
+}
 
 int sdskv_shutdown_service(sdskv_client_t client, hg_addr_t addr)
 {

@@ -5,6 +5,7 @@
 
 #include "kv-config.h"
 #include "bulk.h"
+#include "remi/remi-common.h"
 
 #include <vector>
 
@@ -25,8 +26,22 @@ class AbstractDataStore {
         virtual bool exists(const ds_bulk_t &key) = 0;
         virtual bool erase(const ds_bulk_t &key) = 0;
         virtual void set_in_memory(bool enable)=0; // enable/disable in-memory mode (where supported)
-        virtual void set_comparison_function(comparator_fn less)=0;
+        virtual void set_comparison_function(const std::string& name, comparator_fn less)=0;
         virtual void set_no_overwrite()=0;
+        virtual void sync() = 0;
+        virtual remi_fileset_t create_and_populate_fileset() const = 0;
+
+        const std::string& get_path() const {
+            return _path;
+        }
+
+        const std::string& get_name() const {
+            return _name;
+        }
+
+        const std::string& get_comparison_function_name() const {
+            return _comp_fun_name;
+        }
 
         std::vector<ds_bulk_t> list_keys(
                 const ds_bulk_t &start_key, size_t count, const ds_bulk_t& prefix=ds_bulk_t()) const {
@@ -49,7 +64,11 @@ class AbstractDataStore {
         }
 
     protected:
+        std::string _path;
+        std::string _name;
+        std::string _comp_fun_name;
         Duplicates _duplicates;
+        bool _no_overwrite = false;
         bool _eraseOnGet;
         bool _debug;
         bool _in_memory;

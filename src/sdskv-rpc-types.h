@@ -191,5 +191,15 @@ MERCURY_GEN_PROC(migrate_all_keys_in_t,
         ((uint64_t)(target_db_id))\
         ((int32_t)(flag)))
 
+// ------------- MIGRATE DATABASE ---------- //
+MERCURY_GEN_PROC(migrate_database_in_t,
+        ((uint64_t)(source_db_id))\
+        ((int32_t)(remove_src))\
+        ((hg_const_string_t)(dest_remi_addr))\
+        ((uint16_t)(dest_remi_provider_id))\
+        ((hg_const_string_t)(dest_root)))
+
+MERCURY_GEN_PROC(migrate_database_out_t,
+        ((int32_t)(ret)))
 
 #endif

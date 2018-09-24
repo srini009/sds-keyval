@@ -35,10 +35,12 @@ class BerkeleyDBDataStore : public AbstractDataStore {
         virtual bool exists(const ds_bulk_t &key);
         virtual bool erase(const ds_bulk_t &key);
         virtual void set_in_memory(bool enable); // enable/disable in-memory mode
-        virtual void set_comparison_function(comparator_fn less);
+        virtual void set_comparison_function(const std::string& name, comparator_fn less);
         virtual void set_no_overwrite() {
             _no_overwrite = true;
         }
+        virtual void sync();
+        remi_fileset_t create_and_populate_fileset() const;
     protected:
         virtual std::vector<ds_bulk_t> vlist_keys(
                 const ds_bulk_t &start, size_t count, const ds_bulk_t &prefix) const;
@@ -51,7 +53,6 @@ class BerkeleyDBDataStore : public AbstractDataStore {
         DbEnv *_dbenv = nullptr;
         Db *_dbm = nullptr;
         DbWrapper* _wrapper = nullptr;
-        bool _no_overwrite = false;
 };
 
 #endif // bdb_datastore_h

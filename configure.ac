@@ -153,6 +153,12 @@ if test "x${bwtree_backend}" == xyes ; then
 	CXXFLAGS="-pthread -g -Wall -mcx16 -Wno-invalid-offsetof ${CXXFLAGS}"
 fi
 
+PKG_CHECK_MODULES([REMI],[remi],[],
+		[AC_MSG_ERROR([Could not find working remi installation!])])
+LIBS="$REMI_LIBS $LIBS"
+CPPFLAGS="$REMI_CFLAGS $CPPFLAGS"
+CFLAGS="$REMI_CFLAGS $CFLAGS"
+
 AM_CONDITIONAL([BUILD_BDB], [test "x${berkelydb_backend}" == xyes])
 AM_CONDITIONAL([BUILD_LEVELDB], [test "x${leveldb_backend}" == xyes])
 AM_CONDITIONAL([BUILD_BWTREE], [test "x${bwtree_backend}" == xyes])

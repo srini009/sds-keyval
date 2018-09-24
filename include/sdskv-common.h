@@ -17,8 +17,8 @@ typedef enum sdskv_db_type_t
 typedef uint64_t sdskv_database_id_t;
 #define SDSKV_DATABASE_ID_INVALID 0
 
-#define SDSKV_KEEP_ORIGINAL    1 /* for migration operations, keep original */
-#define SDSKV_REMOVE_ORIGINAL  2 /* for migration operations, remove the origin after migrating */
+#define SDSKV_KEEP_ORIGINAL    0 /* for migration operations, keep original */
+#define SDSKV_REMOVE_ORIGINAL  1 /* for migration operations, remove the origin after migrating */
 
 #define SDSKV_SUCCESS          0 /* Success */
 #define SDSKV_ERR_ALLOCATION  -1 /* Error allocating something */
@@ -35,6 +35,8 @@ typedef uint64_t sdskv_database_id_t;
 #define SDSKV_ERR_MIGRATION   -12 /* Error during data migration */
 #define SDSKV_OP_NOT_IMPL     -13 /* Operation not implemented for this backend */
 #define SDSKV_ERR_COMP_FUNC   -14 /* Comparison function does not exist */
+#define SDSKV_ERR_REMI        -15 /* REMI-related error */
+#define SDSKV_ERR_ARGOBOTS    -16 /* Argobots related error */
 
 #if defined(__cplusplus)
 }

@@ -518,6 +518,29 @@ int sdskv_migrate_all_keys(
         int flag);
 
 /**
+ * @brief Migrate an entire database to a target destination provider.
+ * Note that the database will not have the same id at the destination
+ * so the user should call sdskv_open to re-open the database at its
+ * destination.
+ *
+ * @param[in] source Source provider.
+ * @param[in] source_db_id Source provider id.
+ * @param[in] dest_addr Address of the destination provider.
+ * @param[in] dest_provider_id Provider id of the destination provider.
+ * @param[in] dest_root Root path at the destination.
+ * @param[in] flag SDSKV_KEEP_ORIGINAL, or SDSKV_REMOVE_ORIGINAL
+ *
+ * @return SDSKV_SUCCESS or error code defined in sdskv-common.h
+ */
+int sdskv_migrate_database(
+        sdskv_provider_handle_t source,
+        sdskv_database_id_t source_db_id,
+        const char* dest_addr,
+        uint16_t dest_provider_id,
+        const char* dest_root,
+        int flag);
+
+/**
  * Shuts down a remote SDSKV service (given an address).
  * This will shutdown all the providers on the target address.
  * 
