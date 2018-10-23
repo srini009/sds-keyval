@@ -110,7 +110,7 @@ extern "C" int sdskv_provider_register(
     /* check if a REMI provider exists with the same provider id */
     {
         int flag;
-        remi_provider_registered(mid, provider_id, &flag, NULL, NULL);
+        remi_provider_registered(mid, provider_id, &flag, NULL, NULL, NULL);
         if(flag) {
             fprintf(stderr, "sdskv_provider_register(): a REMI provider with the same (%d) already exists\n", provider_id);
             return SDSKV_ERR_REMI;
@@ -232,14 +232,16 @@ extern "C" int sdskv_provider_register(
     margo_register_data(mid, rpc_id, (void*)tmp_svr_ctx, NULL);
 
     /* register a REMI client */
-    ret = remi_client_init(mid, &(tmp_svr_ctx->remi_client));
+    // TODO use an ABT-IO instance
+    ret = remi_client_init(mid, ABT_IO_INSTANCE_NULL, &(tmp_svr_ctx->remi_client));
     if(ret != REMI_SUCCESS) {
         sdskv_server_finalize_cb(tmp_svr_ctx);
         return SDSKV_ERR_REMI;
     }
 
     /* register a REMI provider */
-    ret = remi_provider_register(mid, provider_id, abt_pool, &(tmp_svr_ctx->remi_provider));
+    // TODO use an ABT-IO instance
+    ret = remi_provider_register(mid, ABT_IO_INSTANCE_NULL, provider_id, abt_pool, &(tmp_svr_ctx->remi_provider));
     if(ret != REMI_SUCCESS) {
         sdskv_server_finalize_cb(tmp_svr_ctx);
         return SDSKV_ERR_REMI;
@@ -2124,7 +2126,7 @@ static void sdskv_migrate_database_ult(hg_handle_t handle)
         }
         /* issue the migration */
         int status = 0;
-        ret = remi_fileset_migrate(remi_ph, local_fileset, in.dest_root, in.remove_src, &status);
+        ret = remi_fileset_migrate(remi_ph, local_fileset, in.dest_root, in.remove_src, REMI_USE_ABTIO, &status);
         if(ret != REMI_SUCCESS) {
             out.ret = status;
             break;
