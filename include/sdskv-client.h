@@ -418,7 +418,7 @@ int sdskv_migrate_keys(
  *
  * @return SDSKV_SUCCESS or error code defined in sdskv-common.h
  */
-inline int sdskv_migrate_key(
+static inline int sdskv_migrate_key(
         sdskv_provider_handle_t source_provider,
         sdskv_database_id_t source_db_id,
         const char* target_addr,
