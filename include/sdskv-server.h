@@ -129,6 +129,20 @@ int sdskv_provider_list_databases(
         sdskv_provider_t provider,
         sdskv_database_id_t* databases);
 
+/**
+ * @brief Computes the database size.
+ *
+ * @param[in] provider provider.
+ * @param[in] database_id Database id.
+ * @param[out] size Resulting size.
+ *
+ * @return SDSKV_SUCCESS or error code defined in sdskv-common.h
+ */
+int sdskv_provider_compute_database_size(
+        sdskv_provider_t provider,
+        sdskv_database_id_t database_id,
+        size_t* size);
+
 #ifdef __cplusplus
 }
 #endif

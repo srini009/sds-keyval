@@ -2244,3 +2244,30 @@ static int sdskv_post_migration_callback(remi_fileset_t fileset, void* uargs)
        return -106;
     return 0;
 }
+
+int sdskv_provider_compute_database_size(
+        sdskv_provider_t provider,
+        sdskv_database_id_t database_id,
+        size_t* size)
+{
+    int ret;
+    // find the database
+    auto it = provider->databases.find(database_id);
+    if(it == provider->databases.end()) {
+        return SDSKV_ERR_UNKNOWN_DB;
+    }
+    auto database = it->second;
+    database->sync();
+
+    /* create a fileset */
+    remi_fileset_t fileset = database->create_and_populate_fileset();
+    if(fileset == REMI_FILESET_NULL) {
+        return SDSKV_OP_NOT_IMPL;
+    }
+    /* issue the migration */
+    ret = remi_fileset_compute_size(fileset, 0, size);
+    if(ret != REMI_SUCCESS) {
+        return SDSKV_ERR_REMI;
+    }
+    return SDSKV_SUCCESS;
+}
