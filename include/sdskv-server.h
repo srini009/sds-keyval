@@ -32,6 +32,9 @@ typedef struct sdskv_config_t {
 
 #define SDSKV_CONFIG_DEFAULT { "", "", KVDB_MAP, SDSKV_COMPARE_DEFAULT, 0 }
 
+typedef void (*sdskv_pre_migration_callback_fn)(sdskv_provider_t, const sdskv_config_t*, void*);
+typedef void (*sdskv_post_migration_callback_fn)(sdskv_provider_t, const sdskv_config_t*, sdskv_database_id_t, void*);
+
 /**
  * @brief Creates a new provider.
  *
@@ -142,6 +145,23 @@ int sdskv_provider_compute_database_size(
         sdskv_provider_t provider,
         sdskv_database_id_t database_id,
         size_t* size);
+
+/**
+ * @brief Register custom migration callbacks to call before and
+ * after a database is migrated to this provider.
+ *
+ * @param provider Provider in which to register the callbacks.
+ * @param pre_cb Pre-migration callback.
+ * @param post_cb Post-migration callback.
+ * @param uargs User arguments.
+ *
+ * @return SDSKV_SUCCESS or error code defined in sdskv-common.h
+ */
+int sdskv_provider_set_migration_callbacks(
+        sdskv_provider_t provider,
+        sdskv_pre_migration_callback_fn pre_cb,
+        sdskv_post_migration_callback_fn  post_cb,
+        void* uargs);
 
 #ifdef __cplusplus
 }
