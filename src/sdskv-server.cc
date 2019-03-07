@@ -306,6 +306,9 @@ extern "C" int sdskv_provider_attach_database(
         db->set_no_overwrite();
     }
 
+    ABT_rwlock_wrlock(provider->lock);
+    auto r = at_exit([provider]() { ABT_rwlock_unlock(provider->lock); });
+
     provider->name2id[std::string(config->db_name)] = id;
     provider->id2name[id] = std::string(config->db_name);
     provider->databases[id] = db;
