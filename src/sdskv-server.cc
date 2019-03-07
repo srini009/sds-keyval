@@ -356,6 +356,8 @@ extern "C" int sdskv_provider_count_databases(
         sdskv_provider_t provider,
         uint64_t* num_db)
 {
+    ABT_rwlock_rdlock(provider->lock);
+    auto r = at_exit([provider]() { ABT_rwlock_unlock(provider->lock); });
     *num_db = provider->databases.size();
     return SDSKV_SUCCESS;
 }
@@ -381,11 +383,15 @@ extern "C" int sdskv_provider_compute_database_size(
 {
     int ret;
     // find the database
+    ABT_rwlock_rdlock(provider->lock);
     auto it = provider->databases.find(database_id);
     if(it == provider->databases.end()) {
+        ABT_rwlock_unlock(provider->lock);
         return SDSKV_ERR_UNKNOWN_DB;
     }
     auto database = it->second;
+    ABT_rwlock_unlock(provider->lock);
+
     database->sync();
 
     /* create a fileset */
@@ -432,9 +438,6 @@ static void sdskv_put_ult(hg_handle_t handle)
         return;
     }
 
-    ABT_rwlock_rdlock(svr_ctx->lock);
-    auto r = at_exit([svr_ctx]() { ABT_rwlock_unlock(svr_ctx->lock); });
-    
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
         out.ret = SDSKV_ERR_MERCURY;
@@ -443,19 +446,23 @@ static void sdskv_put_ult(hg_handle_t handle)
         return;
     }
 
+    ABT_rwlock_rdlock(svr_ctx->lock);
     auto it = svr_ctx->databases.find(in.db_id);
     if(it == svr_ctx->databases.end()) {
+        ABT_rwlock_unlock(svr_ctx->lock);
         out.ret = SDSKV_ERR_UNKNOWN_DB;
         margo_respond(handle, &out);
         margo_free_input(handle, &in);
         margo_destroy(handle);
         return;
     }
+    auto db = it->second;
+    ABT_rwlock_unlock(svr_ctx->lock);
 
     ds_bulk_t kdata(in.key.data, in.key.data+in.key.size);
     ds_bulk_t vdata(in.value.data, in.value.data+in.value.size);
 
-    if(it->second->put(kdata, vdata)) {
+    if(db->put(kdata, vdata)) {
         out.ret = SDSKV_SUCCESS;
     } else {
         out.ret = SDSKV_ERR_PUT;
@@ -491,8 +498,6 @@ static void sdskv_put_multi_ult(hg_handle_t handle)
         return;
     }
 
-    ABT_rwlock_rdlock(svr_ctx->lock);
-    auto unlock = at_exit([svr_ctx]() { ABT_rwlock_unlock(svr_ctx->lock); });
 
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
@@ -501,11 +506,15 @@ static void sdskv_put_multi_ult(hg_handle_t handle)
     }
     auto r3 = at_exit([&handle,&in]() { margo_free_input(handle, &in); });
 
+    ABT_rwlock_rdlock(svr_ctx->lock);
     auto it = svr_ctx->databases.find(in.db_id);
     if(it == svr_ctx->databases.end()) {
+        ABT_rwlock_unlock(svr_ctx->lock); 
         out.ret = SDSKV_ERR_UNKNOWN_DB;
         return;
     }
+    auto db = it->second;
+    ABT_rwlock_unlock(svr_ctx->lock);
 
     // allocate a buffer to receive the keys and a buffer to receive the values
     local_keys_buffer.resize(in.keys_bulk_size);
@@ -558,7 +567,7 @@ static void sdskv_put_multi_ult(hg_handle_t handle)
     for(unsigned i=0; i < in.num_keys; i++) {
         ds_bulk_t kdata(local_keys_buffer.data()+keys_offset, local_keys_buffer.data()+keys_offset+key_sizes[i]);
         ds_bulk_t vdata(local_vals_buffer.data()+vals_offset, local_vals_buffer.data()+vals_offset+val_sizes[i]);
-        it->second->put(kdata, vdata);
+        db->put(kdata, vdata);
         keys_offset += key_sizes[i];
         vals_offset += val_sizes[i];
     }
@@ -586,9 +595,6 @@ static void sdskv_length_ult(hg_handle_t handle)
         return;
     }
 
-    ABT_rwlock_rdlock(svr_ctx->lock);
-    auto unlock = at_exit([svr_ctx]() { ABT_rwlock_unlock(svr_ctx->lock); });
-
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
         out.ret = SDSKV_ERR_MERCURY;
@@ -597,19 +603,23 @@ static void sdskv_length_ult(hg_handle_t handle)
         return;
     }
 
+    ABT_rwlock_rdlock(svr_ctx->lock);
     auto it = svr_ctx->databases.find(in.db_id);
     if(it == svr_ctx->databases.end()) {
+        ABT_rwlock_unlock(svr_ctx->lock);
         out.ret = SDSKV_ERR_UNKNOWN_DB;
         margo_respond(handle, &out);
         margo_free_input(handle, &in);
         margo_destroy(handle);
         return;
     }
+    auto db = it->second;
+    ABT_rwlock_unlock(svr_ctx->lock);
     
     ds_bulk_t kdata(in.key.data, in.key.data+in.key.size);
 
     ds_bulk_t vdata;
-    if(it->second->get(kdata, vdata)) {
+    if(db->get(kdata, vdata)) {
         out.size = vdata.size();
         out.ret  = SDSKV_SUCCESS;
     } else {
@@ -645,9 +655,6 @@ static void sdskv_get_ult(hg_handle_t handle)
         return;
     }
 
-    ABT_rwlock_rdlock(svr_ctx->lock);
-    auto unlock = at_exit([svr_ctx]() { ABT_rwlock_unlock(svr_ctx->lock); });
-
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
         out.ret = SDSKV_ERR_MERCURY;
@@ -658,8 +665,10 @@ static void sdskv_get_ult(hg_handle_t handle)
         return;
     }
 
+    ABT_rwlock_rdlock(svr_ctx->lock);
     auto it = svr_ctx->databases.find(in.db_id);
     if(it == svr_ctx->databases.end()) {
+        ABT_rwlock_unlock(svr_ctx->lock);
         out.ret = SDSKV_ERR_UNKNOWN_DB;
         out.value.data = nullptr;
         out.value.size = 0;
@@ -668,11 +677,13 @@ static void sdskv_get_ult(hg_handle_t handle)
         margo_destroy(handle);
         return;
     }
+    auto db = it->second;
+    ABT_rwlock_unlock(svr_ctx->lock);
     
     ds_bulk_t kdata(in.key.data, in.key.data+in.key.size);
 
     ds_bulk_t vdata;
-    if(it->second->get(kdata, vdata)) {
+    if(db->get(kdata, vdata)) {
         if(vdata.size() <= in.vsize) {
             out.value.size = vdata.size();
             out.value.data = vdata.data();
@@ -721,9 +732,6 @@ static void sdskv_get_multi_ult(hg_handle_t handle)
         return;
     }
 
-    ABT_rwlock_rdlock(svr_ctx->lock);
-    auto unlock = at_exit([svr_ctx]() { ABT_rwlock_unlock(svr_ctx->lock); });
-
     /* deserialize input */
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
@@ -733,11 +741,15 @@ static void sdskv_get_multi_ult(hg_handle_t handle)
     auto r3 = at_exit([&handle,&in]() { margo_free_input(handle, &in); });
 
     /* find the target database */
+    ABT_rwlock_rdlock(svr_ctx->lock);
     auto it = svr_ctx->databases.find(in.db_id);
     if(it == svr_ctx->databases.end()) {
+        ABT_rwlock_unlock(svr_ctx->lock);
         out.ret = SDSKV_ERR_UNKNOWN_DB;
         return;
     }
+    auto db = it->second;
+    ABT_rwlock_unlock(svr_ctx->lock);
 
     /* allocate buffers to receive the keys */
     local_keys_buffer.resize(in.keys_bulk_size);
@@ -797,7 +809,7 @@ static void sdskv_get_multi_ult(hg_handle_t handle)
         ds_bulk_t kdata(packed_keys, packed_keys+key_sizes[i]);
         ds_bulk_t vdata;
         size_t client_allocated_value_size = val_sizes[i];
-        if(it->second->get(kdata, vdata)) {
+        if(db->get(kdata, vdata)) {
             if(vdata.size() > val_sizes[i]) {
                 val_sizes[i] = 0;
             } else {
@@ -848,9 +860,6 @@ static void sdskv_length_multi_ult(hg_handle_t handle)
         return;
     }
 
-    ABT_rwlock_rdlock(svr_ctx->lock);
-    auto unlock = at_exit([svr_ctx]() { ABT_rwlock_unlock(svr_ctx->lock); });
-
     /* deserialize input */
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
@@ -860,11 +869,15 @@ static void sdskv_length_multi_ult(hg_handle_t handle)
     auto r3 = at_exit([&handle,&in]() { margo_free_input(handle, &in); });
 
     /* find the target database */
+    ABT_rwlock_rdlock(svr_ctx->lock);
     auto it = svr_ctx->databases.find(in.db_id);
     if(it == svr_ctx->databases.end()) {
+        ABT_rwlock_unlock(svr_ctx->lock);
         out.ret = SDSKV_ERR_UNKNOWN_DB;
         return;
     }
+    auto db = it->second;
+    ABT_rwlock_unlock(svr_ctx->lock);
 
     /* allocate buffers to receive the keys */
     local_keys_buffer.resize(in.keys_bulk_size);
@@ -912,7 +925,7 @@ static void sdskv_length_multi_ult(hg_handle_t handle)
     for(unsigned i=0; i < in.num_keys; i++) {
         ds_bulk_t kdata(packed_keys, packed_keys+key_sizes[i]);
         ds_bulk_t vdata;
-        if(it->second->get(kdata, vdata)) {
+        if(db->get(kdata, vdata)) {
             local_vals_size_buffer[i] = vdata.size();
         } else {
             local_vals_size_buffer[i] = 0;
@@ -952,9 +965,6 @@ static void sdskv_open_ult(hg_handle_t handle)
         return;
     }
 
-    ABT_rwlock_rdlock(svr_ctx->lock);
-    auto unlock = at_exit([svr_ctx]() { ABT_rwlock_unlock(svr_ctx->lock); });
-
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
         out.ret = SDSKV_ERR_MERCURY;
@@ -963,16 +973,20 @@ static void sdskv_open_ult(hg_handle_t handle)
         return;
     }
 
+    ABT_rwlock_rdlock(svr_ctx->lock);
     auto it = svr_ctx->name2id.find(std::string(in.name));
     if(it == svr_ctx->name2id.end()) {
+        ABT_rwlock_unlock(svr_ctx->lock);
         out.ret = SDSKV_ERR_DB_NAME;
         margo_respond(handle, &out);
         margo_free_input(handle, &in);
         margo_destroy(handle);
         return;
     }
+    auto db = it->second;
+    ABT_rwlock_unlock(svr_ctx->lock);
 
-    out.db_id = it->second;
+    out.db_id = db;
     out.ret  = SDSKV_SUCCESS;
 
     margo_respond(handle, &out);
@@ -1003,9 +1017,6 @@ static void sdskv_bulk_put_ult(hg_handle_t handle)
         return;
     }
 
-    ABT_rwlock_rdlock(svr_ctx->lock);
-    auto unlock = at_exit([svr_ctx]() { ABT_rwlock_unlock(svr_ctx->lock); });
-
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
         out.ret = SDSKV_ERR_MERCURY;
@@ -1014,14 +1025,18 @@ static void sdskv_bulk_put_ult(hg_handle_t handle)
         return;
     }
 
+    ABT_rwlock_rdlock(svr_ctx->lock);
     auto it = svr_ctx->databases.find(in.db_id);
     if(it == svr_ctx->databases.end()) {
+        ABT_rwlock_unlock(svr_ctx->lock);
         out.ret = SDSKV_ERR_UNKNOWN_DB;
         margo_respond(handle, &out);
         margo_free_input(handle, &in);
         margo_destroy(handle);
         return;
     }
+    auto db = it->second;
+    ABT_rwlock_unlock(svr_ctx->lock);
 
     ds_bulk_t vdata(in.vsize);
 
@@ -1056,7 +1071,7 @@ static void sdskv_bulk_put_ult(hg_handle_t handle)
 
     ds_bulk_t kdata(in.key.data, in.key.data+in.key.size);
 
-    auto b = it->second->put(kdata, vdata);
+    auto b = db->put(kdata, vdata);
 
     if(b) {
         out.ret = SDSKV_SUCCESS;
@@ -1093,9 +1108,6 @@ static void sdskv_bulk_get_ult(hg_handle_t handle)
         return;
     }
 
-    ABT_rwlock_rdlock(svr_ctx->lock);
-    auto unlock = at_exit([svr_ctx]() { ABT_rwlock_unlock(svr_ctx->lock); });
-
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
         out.ret = SDSKV_ERR_MERCURY;
@@ -1104,19 +1116,23 @@ static void sdskv_bulk_get_ult(hg_handle_t handle)
         return;
     }
 
+    ABT_rwlock_rdlock(svr_ctx->lock);
     auto it = svr_ctx->databases.find(in.db_id);
     if(it == svr_ctx->databases.end()) {
+        ABT_rwlock_unlock(svr_ctx->lock);
         out.ret = SDSKV_ERR_UNKNOWN_DB;
         margo_respond(handle, &out);
         margo_free_input(handle, &in);
         margo_destroy(handle);
         return;
     }
+    auto db = it->second;
+    ABT_rwlock_unlock(svr_ctx->lock);
     
     ds_bulk_t kdata(in.key.data, in.key.data+in.key.size);
 
     ds_bulk_t vdata;
-    auto b = it->second->get(kdata, vdata);
+    auto b = db->get(kdata, vdata);
 
     if(!b || vdata.size() > in.vsize) {
         out.size = 0;
@@ -1187,9 +1203,6 @@ static void sdskv_erase_ult(hg_handle_t handle)
         return;
     }
 
-    ABT_rwlock_rdlock(svr_ctx->lock);
-    auto unlock = at_exit([svr_ctx]() { ABT_rwlock_unlock(svr_ctx->lock); });
-
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
         out.ret = SDSKV_ERR_MERCURY;
@@ -1198,18 +1211,22 @@ static void sdskv_erase_ult(hg_handle_t handle)
         return;
     }
 
+    ABT_rwlock_rdlock(svr_ctx->lock);
     auto it = svr_ctx->databases.find(in.db_id);
     if(it == svr_ctx->databases.end()) {
+        ABT_rwlock_unlock(svr_ctx->lock);
         out.ret = SDSKV_ERR_UNKNOWN_DB;
         margo_respond(handle, &out);
         margo_free_input(handle, &in);
         margo_destroy(handle);
         return;
     }
+    auto db = it->second;
+    ABT_rwlock_unlock(svr_ctx->lock);
     
     ds_bulk_t kdata(in.key.data, in.key.data+in.key.size);
 
-    if(it->second->erase(kdata)) {
+    if(db->erase(kdata)) {
         out.ret   = SDSKV_SUCCESS;
     } else {
         out.ret   = SDSKV_ERR_ERASE;
@@ -1246,9 +1263,6 @@ static void sdskv_erase_multi_ult(hg_handle_t handle)
         return;
     }
 
-    ABT_rwlock_rdlock(svr_ctx->lock);
-    auto unlock = at_exit([svr_ctx]() { ABT_rwlock_unlock(svr_ctx->lock); });
-
     /* deserialize input */
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
@@ -1258,11 +1272,15 @@ static void sdskv_erase_multi_ult(hg_handle_t handle)
     auto r3 = at_exit([&handle,&in]() { margo_free_input(handle, &in); });
 
     /* find the target database */
+    ABT_rwlock_rdlock(svr_ctx->lock);
     auto it = svr_ctx->databases.find(in.db_id);
     if(it == svr_ctx->databases.end()) {
+        ABT_rwlock_unlock(svr_ctx->lock);
         out.ret = SDSKV_ERR_UNKNOWN_DB;
         return;
     }
+    auto db = it->second;
+    ABT_rwlock_unlock(svr_ctx->lock);
 
     /* allocate buffers to receive the keys */
     local_keys_buffer.resize(in.keys_bulk_size);
@@ -1286,7 +1304,7 @@ static void sdskv_erase_multi_ult(hg_handle_t handle)
     /* go through the key/value pairs and erase them */
     for(unsigned i=0; i < in.num_keys; i++) {
         ds_bulk_t kdata(packed_keys, packed_keys+key_sizes[i]);
-        it->second->erase(kdata);
+        db->erase(kdata);
         packed_keys += key_sizes[i];
     }
 
@@ -1314,9 +1332,6 @@ static void sdskv_exists_ult(hg_handle_t handle)
         return;
     }
 
-    ABT_rwlock_rdlock(svr_ctx->lock);
-    auto unlock = at_exit([svr_ctx]() { ABT_rwlock_unlock(svr_ctx->lock); });
-
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
         out.ret = SDSKV_ERR_MERCURY;
@@ -1325,18 +1340,22 @@ static void sdskv_exists_ult(hg_handle_t handle)
         return;
     }
 
+    ABT_rwlock_rdlock(svr_ctx->lock);
     auto it = svr_ctx->databases.find(in.db_id);
     if(it == svr_ctx->databases.end()) {
+        ABT_rwlock_unlock(svr_ctx->lock);
         out.ret = SDSKV_ERR_UNKNOWN_DB;
         margo_respond(handle, &out);
         margo_free_input(handle, &in);
         margo_destroy(handle);
         return;
     }
+    auto db = it->second;
+    ABT_rwlock_unlock(svr_ctx->lock);
     
     ds_bulk_t kdata(in.key.data, in.key.data+in.key.size);
 
-    out.flag = it->second->exists(kdata) ? 1 : 0;
+    out.flag = db->exists(kdata) ? 1 : 0;
     out.ret  = SDSKV_SUCCESS;
 
     margo_respond(handle, &out);
@@ -1372,9 +1391,6 @@ static void sdskv_list_keys_ult(hg_handle_t handle)
         return;
     }
 
-    ABT_rwlock_rdlock(svr_ctx->lock);
-    auto unlock = at_exit([svr_ctx]() { ABT_rwlock_unlock(svr_ctx->lock); });
-
     /* get the input */
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
@@ -1388,12 +1404,15 @@ static void sdskv_list_keys_ult(hg_handle_t handle)
     try {
 
         /* find the database targeted */
+        ABT_rwlock_rdlock(svr_ctx->lock);
         auto it = svr_ctx->databases.find(in.db_id);
         if(it == svr_ctx->databases.end()) {
             std::cerr << "Error: SDSKV list_keys could not get database with id " << in.db_id << std::endl;
+            ABT_rwlock_unlock(svr_ctx->lock);
             throw SDSKV_ERR_UNKNOWN_DB;
         }
         auto db = it->second;
+        ABT_rwlock_unlock(svr_ctx->lock);
 
         /* create a bulk handle to receive and send key sizes from client */
         std::vector<hg_size_t> ksizes(in.max_keys);
@@ -1529,9 +1548,6 @@ static void sdskv_list_keyvals_ult(hg_handle_t handle)
         return;
     }
 
-    ABT_rwlock_rdlock(svr_ctx->lock);
-    auto unlock = at_exit([svr_ctx]() { ABT_rwlock_unlock(svr_ctx->lock); });
-
     /* get the input */
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
@@ -1545,12 +1561,15 @@ static void sdskv_list_keyvals_ult(hg_handle_t handle)
     try {
 
         /* find the database targeted */
+        ABT_rwlock_rdlock(svr_ctx->lock);
         auto it = svr_ctx->databases.find(in.db_id);
         if(it == svr_ctx->databases.end()) {
             std::cerr << "Error: SDSKV list_keyvals could not get database with id " << in.db_id << std::endl;
+            ABT_rwlock_unlock(svr_ctx->lock);
             throw SDSKV_ERR_UNKNOWN_DB;
         }
         auto db = it->second;
+        ABT_rwlock_unlock(svr_ctx->lock);
 
         /* create a bulk handle to receive and send key sizes from client */
         std::vector<hg_size_t> ksizes(in.max_keys);
@@ -1754,9 +1773,6 @@ static void sdskv_migrate_keys_ult(hg_handle_t handle)
         return;
     }
 
-    ABT_rwlock_rdlock(provider->lock);
-    auto unlock = at_exit([provider]() { ABT_rwlock_unlock(provider->lock); });
-
     /* get the input */
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
@@ -1765,12 +1781,15 @@ static void sdskv_migrate_keys_ult(hg_handle_t handle)
     }
     auto r2 = at_exit([&handle,&in]() { margo_free_input(handle, &in); });
     /* find the source database */
+    ABT_rwlock_rdlock(provider->lock);
     auto it = provider->databases.find(in.source_db_id);
     if(it == provider->databases.end()) {
+        ABT_rwlock_unlock(provider->lock);
         out.ret = SDSKV_ERR_UNKNOWN_DB;
         return;
     }
     auto database = it->second;
+    ABT_rwlock_unlock(provider->lock);
     /* lookup the address of the target provider */
     hg_addr_t target_addr = HG_ADDR_NULL;
     hret = margo_addr_lookup(mid, in.target_addr, &target_addr);
@@ -1885,6 +1904,10 @@ static void sdskv_migrate_key_range_ult(hg_handle_t handle)
     }
 
     // TODO implement this operation
+    ABT_rwlock_rdlock(provider->lock);
+    // find database
+    ABT_rwlock_unlock(provider->lock);
+    // ...
     out.ret = SDSKV_OP_NOT_IMPL;
     margo_respond(handle, &out);
 
@@ -1914,9 +1937,6 @@ static void sdskv_migrate_keys_prefixed_ult(hg_handle_t handle)
         return;
     }
 
-    ABT_rwlock_rdlock(provider->lock);
-    auto unlock = at_exit([provider]() { ABT_rwlock_unlock(provider->lock); });
-
     /* get the input */
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
@@ -1926,12 +1946,15 @@ static void sdskv_migrate_keys_prefixed_ult(hg_handle_t handle)
     /* need to destroy the input at exit */
     auto r2 = at_exit([&handle,&in]() { margo_free_input(handle, &in); });
     /* find the source database */
+    ABT_rwlock_rdlock(provider->lock);
     auto it = provider->databases.find(in.source_db_id);
     if(it == provider->databases.end()) {
+        ABT_rwlock_unlock(provider->lock);
         out.ret = SDSKV_ERR_UNKNOWN_DB;
         return;
     }
     auto database = it->second;
+    ABT_rwlock_unlock(provider->lock);
     /* lookup the address of the target provider */
     hg_addr_t target_addr = HG_ADDR_NULL;
     hret = margo_addr_lookup(mid, in.target_addr, &target_addr);
@@ -2006,7 +2029,8 @@ static void sdskv_migrate_all_keys_ult(hg_handle_t handle)
     hg_return_t hret;
     migrate_all_keys_in_t in;
     migrate_keys_out_t out;
-    
+    out.ret = SDSKV_SUCCESS;
+
     /* need to destroy the handle at exit */
     auto r0 = at_exit([&handle]() { margo_destroy(handle); });
     /* need to respond at exit */
@@ -2022,9 +2046,6 @@ static void sdskv_migrate_all_keys_ult(hg_handle_t handle)
         return;
     }
 
-    ABT_rwlock_rdlock(provider->lock);
-    auto unlock = at_exit([provider]() { ABT_rwlock_unlock(provider->lock); });
-
     /* get the input */
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
@@ -2034,12 +2055,15 @@ static void sdskv_migrate_all_keys_ult(hg_handle_t handle)
     /* need to destroy the input at exit */
     auto r2 = at_exit([&handle,&in]() { margo_free_input(handle, &in); });
     /* find the source database */
+    ABT_rwlock_rdlock(provider->lock);
     auto it = provider->databases.find(in.source_db_id);
     if(it == provider->databases.end()) {
+        ABT_rwlock_unlock(provider->lock);
         out.ret = SDSKV_ERR_UNKNOWN_DB;
         return;
     }
     auto database = it->second;
+    ABT_rwlock_unlock(provider->lock);
     /* lookup the address of the target provider */
     hg_addr_t target_addr = HG_ADDR_NULL;
     hret = margo_addr_lookup(mid, in.target_addr, &target_addr);
@@ -2134,8 +2158,6 @@ static void sdskv_migrate_database_ult(hg_handle_t handle)
             out.ret = SDSKV_ERR_UNKNOWN_PR;
             break;
         }
-        ABT_rwlock_wrlock(svr_ctx->lock);
-        auto unlock = at_exit([svr_ctx]() { ABT_rwlock_unlock(svr_ctx->lock); });
 
         hret = margo_get_input(handle, &in);
         if(hret != HG_SUCCESS)
@@ -2143,14 +2165,21 @@ static void sdskv_migrate_database_ult(hg_handle_t handle)
             out.ret = SDSKV_ERR_MERCURY;
             break;
         }
+
+        ABT_rwlock_rdlock(svr_ctx->lock);
         // find the database that needs to be migrated
         auto it = svr_ctx->databases.find(in.source_db_id);
         if(it == svr_ctx->databases.end()) {
+            ABT_rwlock_unlock(svr_ctx->lock);
             out.ret = SDSKV_ERR_UNKNOWN_DB;
             break;
         }
         auto database = it->second;
+        /* release the lock on the database */
+        ABT_rwlock_unlock(svr_ctx->lock);
+        /* sync the database */
         database->sync();
+
         /* lookup the address of the destination REMI provider */
         hret = margo_addr_lookup(mid, in.dest_remi_addr, &dest_addr);
         if(hret != HG_SUCCESS) {
@@ -2179,13 +2208,19 @@ static void sdskv_migrate_database_ult(hg_handle_t handle)
             out.ret = status;
             break;
         }
+
         if(in.remove_src) {
+            sdskv_provider_remove_database(svr_ctx, in.source_db_id);
+#if 0
+            ABT_rwlock_wrlock(svr_ctx->lock);
             /* remove the target from the list of managed targets */
             auto dbname = svr_ctx->id2name[in.source_db_id];
             svr_ctx->id2name.erase(in.source_db_id);
             svr_ctx->name2id.erase(dbname);
             delete database;
             svr_ctx->databases.erase(in.source_db_id);
+            ABT_rwlock_unlock(svr_ctx->lock);
+#endif
         }
 
         out.ret = SDSKV_SUCCESS;
@@ -2247,7 +2282,7 @@ static int sdskv_pre_migration_callback(remi_fileset_t fileset, void* uargs)
     // (2) check that there isn't a database with the same name
 
     {
-        ABT_rdlock_wrlock(provider->lock);
+        ABT_rwlock_rdlock(provider->lock);
         auto unlock = at_exit([provider]() { ABT_rwlock_unlock(provider->lock); });
         if(provider->name2id.find(db_name) != provider->name2id.end()) {
             return -102;

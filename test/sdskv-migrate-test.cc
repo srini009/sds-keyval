@@ -174,7 +174,7 @@ int main(int argc, char *argv[])
     ret = sdskv_migrate_all_keys(kvphA, db_idA, sdskv_svr_addr_strB,
             mplex_idB, db_idB, SDSKV_REMOVE_ORIGINAL);
     if(ret != SDSKV_SUCCESS) {
-        fprintf(stderr, "Error: sdskv_migrate_all_keys() failed\n");
+        fprintf(stderr, "Error: sdskv_migrate_all_keys() failed (ret = %d)\n", ret);
         sdskv_provider_handle_release(kvphA);
         sdskv_provider_handle_release(kvphB);
         margo_addr_free(mid, svr_addrA);
