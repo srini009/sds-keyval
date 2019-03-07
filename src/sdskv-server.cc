@@ -2245,8 +2245,13 @@ static int sdskv_pre_migration_callback(remi_fileset_t fileset, void* uargs)
     db_root.resize(root_size+1);
     remi_fileset_get_root(fileset, db_root.data(), &root_size);
     // (2) check that there isn't a database with the same name
-    if(provider->name2id.find(db_name) != provider->name2id.end()) {
-        return -102;
+
+    {
+        ABT_rdlock_wrlock(provider->lock);
+        auto unlock = at_exit([provider]() { ABT_rwlock_unlock(provider->lock); });
+        if(provider->name2id.find(db_name) != provider->name2id.end()) {
+            return -102;
+        }
     }
     // (3) check that the type of database is ok to migrate
     if(db_type != "berkeleydb" && db_type != "leveldb") {
