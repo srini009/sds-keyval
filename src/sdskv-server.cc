@@ -2176,10 +2176,13 @@ static void sdskv_migrate_database_ult(hg_handle_t handle)
             out.ret = status;
             break;
         }
-
         if(in.remove_src) {
             /* remove the target from the list of managed targets */
-            sdskv_provider_remove_database(svr_ctx, in.source_db_id);
+            auto dbname = svr_ctx->id2name[in.source_db_id];
+            svr_ctx->id2name.erase(in.source_db_id);
+            svr_ctx->name2id.erase(dbname);
+            delete database;
+            svr_ctx->databases.erase(in.source_db_id);
         }
 
         out.ret = SDSKV_SUCCESS;
