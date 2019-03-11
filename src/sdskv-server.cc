@@ -2205,7 +2205,10 @@ static void sdskv_migrate_database_ult(hg_handle_t handle)
         int status = 0;
         ret = remi_fileset_migrate(remi_ph, local_fileset, in.dest_root, in.remove_src, REMI_USE_ABTIO, &status);
         if(ret != REMI_SUCCESS) {
-            out.ret = status;
+            if(ret == REMI_ERR_USER)
+                out.ret = status;
+            else
+                out.ret = SDSKV_ERR_REMI;
             break;
         }
 
