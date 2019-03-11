@@ -42,7 +42,7 @@ struct sdskv_provider_handle {
 static int sdskv_client_register(sdskv_client_t client, margo_instance_id mid)
 {
     client->mid = mid;
-    sdskv_remi_errno = REMI_SUCCESS;
+    sdskv_remi_errno = 0;
 
     /* check if RPCs have already been registered */
     hg_bool_t flag;
@@ -196,7 +196,7 @@ int sdskv_open(
         const char* db_name,
         sdskv_database_id_t* db_id)
 {
-    hg_return_t hreta
+    hg_return_t hret;
     int ret;
     open_in_t in;
     open_out_t out;
