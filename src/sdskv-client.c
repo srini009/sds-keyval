@@ -3,6 +3,8 @@
 
 #define MAX_RPC_MESSAGE_SIZE 4000 // in bytes
 
+int32_t sdskv_remi_errno;
+
 struct sdskv_client {
     margo_instance_id mid;
 
@@ -40,6 +42,7 @@ struct sdskv_provider_handle {
 static int sdskv_client_register(sdskv_client_t client, margo_instance_id mid)
 {
     client->mid = mid;
+    sdskv_remi_errno = REMI_SUCCESS;
 
     /* check if RPCs have already been registered */
     hg_bool_t flag;
@@ -193,7 +196,7 @@ int sdskv_open(
         const char* db_name,
         sdskv_database_id_t* db_id)
 {
-    hg_return_t hret;
+    hg_return_t hreta
     int ret;
     open_in_t in;
     open_out_t out;
@@ -1494,6 +1497,7 @@ int sdskv_migrate_database(
     }
 
     ret = out.ret;
+    sdskv_remi_errno = out.remi_ret;
 
     margo_free_output(handle, &out);
     margo_destroy(handle);

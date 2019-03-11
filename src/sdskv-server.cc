@@ -2192,6 +2192,7 @@ static void sdskv_migrate_database_ult(hg_handle_t handle)
                 dest_addr, in.dest_remi_provider_id, &remi_ph);
         if(ret != REMI_SUCCESS) {
             out.ret = SDSKV_ERR_REMI;
+            out.remi_ret = ret;
             break;
         }
 
@@ -2205,6 +2206,7 @@ static void sdskv_migrate_database_ult(hg_handle_t handle)
         int status = 0;
         ret = remi_fileset_migrate(remi_ph, local_fileset, in.dest_root, in.remove_src, REMI_USE_ABTIO, &status);
         if(ret != REMI_SUCCESS) {
+            out.remi_ret = ret;
             if(ret == REMI_ERR_USER)
                 out.ret = status;
             else
@@ -2213,7 +2215,8 @@ static void sdskv_migrate_database_ult(hg_handle_t handle)
         }
 
         if(in.remove_src) {
-            sdskv_provider_remove_database(svr_ctx, in.source_db_id);
+            ret = sdskv_provider_remove_database(svr_ctx, in.source_db_id);
+            out.ret = ret;
 #if 0
             ABT_rwlock_wrlock(svr_ctx->lock);
             /* remove the target from the list of managed targets */
@@ -2226,7 +2229,6 @@ static void sdskv_migrate_database_ult(hg_handle_t handle)
 #endif
         }
 
-        out.ret = SDSKV_SUCCESS;
     } while(false);
 
     remi_fileset_free(local_fileset);

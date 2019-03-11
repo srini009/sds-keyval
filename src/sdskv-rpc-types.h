@@ -200,6 +200,7 @@ MERCURY_GEN_PROC(migrate_database_in_t,
         ((hg_const_string_t)(dest_root)))
 
 MERCURY_GEN_PROC(migrate_database_out_t,
-        ((int32_t)(ret)))
+        ((int32_t)(ret))\
+        ((int32_t)(remi_ret)))
 
 #endif

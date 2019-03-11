@@ -15,6 +15,12 @@ typedef struct sdskv_client* sdskv_client_t;
 typedef struct sdskv_provider_handle *sdskv_provider_handle_t;
 #define SDSKV_PROVIDER_HANDLE_NULL ((sdskv_provider_handle_t)NULL)
 
+
+/**
+ * @brief Global variable recording the last error encountered by REMI.
+ */
+extern int32_t sdskv_remi_errno;
+
 /**
  * @brief Creates a SDSKV client.
  *
