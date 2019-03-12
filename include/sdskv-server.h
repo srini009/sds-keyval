@@ -172,7 +172,7 @@ int sdskv_provider_set_migration_callbacks(
  *
  * @return SDSKV_SUCCESS or error code defined in sdskv-common.h
  */
-int sdskv_provider_set_abio_instance(
+int sdskv_provider_set_abtio_instance(
         sdskv_provider_t provider,
         abt_io_instance_id abtio);
 
