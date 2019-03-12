@@ -2369,3 +2369,12 @@ static int sdskv_post_migration_callback(remi_fileset_t fileset, void* uargs)
     return 0;
 }
 
+extern "C" int sdskv_provider_set_abio_instance(
+        sdskv_provider_t provider,
+        abt_io_instance_id abtio)
+{
+    remi_provider_set_abt_io_instance(
+            provider->remi_provider,
+            abtio);
+    return SDSKV_SUCCESS;
+}

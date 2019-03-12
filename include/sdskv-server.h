@@ -8,6 +8,7 @@
 #define __SDSKV_SERVER_H
 
 #include <margo.h>
+#include <abt-io.h>
 #include <sdskv-common.h>
 
 #ifdef __cplusplus
@@ -162,6 +163,18 @@ int sdskv_provider_set_migration_callbacks(
         sdskv_pre_migration_callback_fn pre_cb,
         sdskv_post_migration_callback_fn  post_cb,
         void* uargs);
+
+/**
+ * @brief Sets the ABT-IO instance to be used by REMI for migration IO.
+ *
+ * @param provider Provider.
+ * @param abtio ABT-IO instance.
+ *
+ * @return SDSKV_SUCCESS or error code defined in sdskv-common.h
+ */
+int sdskv_provider_set_abio_instance(
+        sdskv_provider_t provider,
+        abt_io_instance_id abtio);
 
 #ifdef __cplusplus
 }
