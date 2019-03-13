@@ -202,7 +202,7 @@ std::vector<std::pair<ds_bulk_t,ds_bulk_t>> LevelDBDataStore::vlist_keyvals(
         /* we treat 'start' the way RADOS treats it: excluding it from returned
          * keys. LevelDB treats start inclusively, so skip over it if we found
          * an exact match */
-        if ( start.size() == it->key().size() &&
+        if ( it->Valid() && (start.size() == it->key().size()) &&
                 (memcmp(it->key().data(), start.data(), start.size()) == 0))
             it->Next();
     } else {
