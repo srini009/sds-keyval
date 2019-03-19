@@ -35,9 +35,14 @@ bool BerkeleyDBDataStore::openDatabase(const std::string& db_name, const std::st
 
   _name = db_name;
   _path = db_path;
+  std::string fullpath = db_path;
+  if(fullpath[fullpath.size()-1] != '/') {
+    fullpath += "/";
+  }
+  fullpath += db_name;
 
-  if (!db_path.empty()) {
-    mkdirs(db_path.c_str());
+  if(!fullpath.empty()) {
+    mkdirs(fullpath.c_str());
   }
 
   // initialize the environment
@@ -82,7 +87,7 @@ bool BerkeleyDBDataStore::openDatabase(const std::string& db_name, const std::st
     }
     else {
       _dbenv->set_lk_detect(DB_LOCK_MINWRITE);
-      _dbenv->open(db_path.c_str(), flags, 0644);
+      _dbenv->open(fullpath.c_str(), flags, 0644);
     }
   }
   catch (DbException &e) {
@@ -385,8 +390,8 @@ remi_fileset_t BerkeleyDBDataStore::create_and_populate_fileset() const {
     if(_path[_path.size()-1] != '/')
         local_root += "/";
     remi_fileset_create("sdskv", local_root.c_str(), &fileset);
-    remi_fileset_register_file(fileset, _name.c_str());
-    remi_fileset_register_file(fileset, "log.0000000001");
+    remi_fileset_register_directory(fileset, _name.c_str());
+    //remi_fileset_register_file(fileset, "log.0000000001");
     remi_fileset_register_metadata(fileset, "database_type", "berkeleydb");
     remi_fileset_register_metadata(fileset, "comparison_function", _comp_fun_name.c_str());
     remi_fileset_register_metadata(fileset, "database_name", _name.c_str());
