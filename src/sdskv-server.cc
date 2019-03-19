@@ -402,6 +402,7 @@ extern "C" int sdskv_provider_compute_database_size(
     /* issue the migration */
     ret = remi_fileset_compute_size(fileset, 0, size);
     if(ret != REMI_SUCCESS) {
+        std::cerr << "[SDSKV] error: remi_fileset_compute_size returned " << ret << std::endl;
         return SDSKV_ERR_REMI;
     }
     return SDSKV_SUCCESS;
