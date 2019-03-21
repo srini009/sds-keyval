@@ -238,7 +238,6 @@ extern "C" int sdskv_provider_register(
     margo_register_data(mid, rpc_id, (void*)tmp_svr_ctx, NULL);
 
     /* register a REMI client */
-    // TODO use an ABT-IO instance
     ret = remi_client_init(mid, ABT_IO_INSTANCE_NULL, &(tmp_svr_ctx->remi_client));
     if(ret != REMI_SUCCESS) {
         sdskv_server_finalize_cb(tmp_svr_ctx);
@@ -246,7 +245,6 @@ extern "C" int sdskv_provider_register(
     }
 
     /* register a REMI provider */
-    // TODO use an ABT-IO instance
     ret = remi_provider_register(mid, ABT_IO_INSTANCE_NULL, provider_id, abt_pool, &(tmp_svr_ctx->remi_provider));
     if(ret != REMI_SUCCESS) {
         sdskv_server_finalize_cb(tmp_svr_ctx);
@@ -2376,6 +2374,9 @@ extern "C" int sdskv_provider_set_abtio_instance(
 {
     remi_provider_set_abt_io_instance(
             provider->remi_provider,
+            abtio);
+    remi_client_set_abt_io_instance(
+            provider->remi_client,
             abtio);
     return SDSKV_SUCCESS;
 }
