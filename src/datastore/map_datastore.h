@@ -29,13 +29,18 @@ class MapDataStore : public AbstractDataStore {
     public:
 
         MapDataStore()
-            : AbstractDataStore(), _less(nullptr), _map(keycmp(this)) {}
+            : AbstractDataStore(), _less(nullptr), _map(keycmp(this)) {
+            ABT_mutex_create(&_insert_mutex);
+        }
 
         MapDataStore(Duplicates duplicates, bool eraseOnGet, bool debug)
-            : AbstractDataStore(duplicates, eraseOnGet, debug), _less(nullptr), _map(keycmp(this))
-            {}
+            : AbstractDataStore(duplicates, eraseOnGet, debug), _less(nullptr), _map(keycmp(this)){
+            ABT_mutex_create(&_insert_mutex);
+        }
 
-        ~MapDataStore() = default;
+        ~MapDataStore() {
+            ABT_mutex_free(&_insert_mutex);
+        }
 
         virtual bool openDatabase(const std::string& db_name, const std::string& path) {
             _name = db_name;
@@ -54,7 +59,9 @@ class MapDataStore : public AbstractDataStore {
             if(_duplicates == Duplicates::IGNORE && (x != 0)) {
                 return false;
             }
+            ABT_mutex_lock(_insert_mutex);
             _map.insert(std::make_pair(key,data));
+            ABT_mutex_unlock(_insert_mutex);
             return true;
         }
 
@@ -194,6 +201,7 @@ class MapDataStore : public AbstractDataStore {
     private:
         AbstractDataStore::comparator_fn _less;
         std::map<ds_bulk_t, ds_bulk_t, keycmp> _map;
+        ABT_mutex _insert_mutex;
 };
 
 #endif
