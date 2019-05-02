@@ -29,39 +29,55 @@ class MapDataStore : public AbstractDataStore {
     public:
 
         MapDataStore()
-            : AbstractDataStore(), _less(nullptr), _map(keycmp(this)) {}
+            : AbstractDataStore(), _less(nullptr), _map(keycmp(this)) {
+            ABT_rwlock_create(&_map_lock);
+        }
 
         MapDataStore(Duplicates duplicates, bool eraseOnGet, bool debug)
-            : AbstractDataStore(duplicates, eraseOnGet, debug), _less(nullptr), _map(keycmp(this))
-            {}
+            : AbstractDataStore(duplicates, eraseOnGet, debug), _less(nullptr), _map(keycmp(this)){
+            ABT_rwlock_create(&_map_lock);
+        }
 
-        ~MapDataStore() = default;
+        ~MapDataStore() {
+            ABT_rwlock_free(&_map_lock);
+        }
 
         virtual bool openDatabase(const std::string& db_name, const std::string& path) {
             _name = db_name;
             _path = path;
+            ABT_rwlock_wrlock(_map_lock);
             _map.clear();
+            ABT_rwlock_unlock(_map_lock);
             return true;
         }
 
         virtual void sync() {}
 
         virtual bool put(const ds_bulk_t &key, const ds_bulk_t &data) {
+            ABT_rwlock_wrlock(_map_lock);
             auto x = _map.count(key);
             if(_no_overwrite && (x != 0)) {
+                ABT_rwlock_unlock(_map_lock);
                 return false;
             }
             if(_duplicates == Duplicates::IGNORE && (x != 0)) {
+                ABT_rwlock_unlock(_map_lock);
                 return false;
             }
             _map.insert(std::make_pair(key,data));
+            ABT_rwlock_unlock(_map_lock);
             return true;
         }
 
         virtual bool get(const ds_bulk_t &key, ds_bulk_t &data) {
+            ABT_rwlock_rdlock(_map_lock);
             auto it = _map.find(key);
-            if(it == _map.end()) return false;
+            if(it == _map.end()) {
+                ABT_rwlock_unlock(_map_lock);
+                return false;
+            }
             data = it->second;
+            ABT_rwlock_unlock(_map_lock);
             return true;
         }
 
@@ -72,12 +88,17 @@ class MapDataStore : public AbstractDataStore {
         }
 
         virtual bool exists(const ds_bulk_t& key) {
-            return _map.count(key) > 0;
+            ABT_rwlock_rdlock(_map_lock);
+            bool e = _map.count(key) > 0;
+            ABT_rwlock_unlock(_map_lock);
+            return e;
         }
 
         virtual bool erase(const ds_bulk_t &key) {
+            ABT_rwlock_wrlock(_map_lock);
             bool b = _map.find(key) != _map.end();
             _map.erase(key);
+            ABT_rwlock_unlock(_map_lock);
             return b;
         }
 
@@ -102,6 +123,7 @@ class MapDataStore : public AbstractDataStore {
 
         virtual std::vector<ds_bulk_t> vlist_keys(
                 const ds_bulk_t &start_key, size_t count, const ds_bulk_t &prefix) const {
+            ABT_rwlock_rdlock(_map_lock);
             std::vector<ds_bulk_t> result;
             decltype(_map.begin()) it;
             if(start_key.size() > 0) {
@@ -120,11 +142,13 @@ class MapDataStore : public AbstractDataStore {
                 }
                 it++;
             }
+            ABT_rwlock_unlock(_map_lock);
             return result;
         }
 
         virtual std::vector<std::pair<ds_bulk_t,ds_bulk_t>> vlist_keyvals(
                 const ds_bulk_t &start_key, size_t count, const ds_bulk_t &prefix) const {
+            ABT_rwlock_rdlock(_map_lock);
             std::vector<std::pair<ds_bulk_t,ds_bulk_t>> result;
             decltype(_map.begin()) it;
             if(start_key.size() > 0) {
@@ -143,11 +167,13 @@ class MapDataStore : public AbstractDataStore {
                 }
                 it++;
             }
+            ABT_rwlock_unlock(_map_lock);
             return result;
         }
 
         virtual std::vector<ds_bulk_t> vlist_key_range(
                 const ds_bulk_t &lower_bound, const ds_bulk_t &upper_bound, size_t max_keys) const {
+            ABT_rwlock_rdlock(_map_lock);
             std::vector<ds_bulk_t> result;
             decltype(_map.begin()) it, ub;
             // get the first element that goes immediately after lower_bound
@@ -165,12 +191,13 @@ class MapDataStore : public AbstractDataStore {
                 if(max_keys != 0 && result.size() == max_keys)
                     break;
             }
-
+            ABT_rwlock_unlock(_map_lock);
             return result;
         }
 
         virtual std::vector<std::pair<ds_bulk_t,ds_bulk_t>> vlist_keyval_range(
                 const ds_bulk_t &lower_bound, const ds_bulk_t& upper_bound, size_t max_keys) const {
+            ABT_rwlock_rdlock(_map_lock);
             std::vector<std::pair<ds_bulk_t,ds_bulk_t>> result;
             decltype(_map.begin()) it, ub;
             // get the first element that goes immediately after lower_bound
@@ -188,12 +215,14 @@ class MapDataStore : public AbstractDataStore {
                 if(max_keys != 0 && result.size() == max_keys)
                     break;
             }
+            ABT_rwlock_unlock(_map_lock);
             return result;
         }
 
     private:
         AbstractDataStore::comparator_fn _less;
         std::map<ds_bulk_t, ds_bulk_t, keycmp> _map;
+        ABT_rwlock _map_lock;
 };
 
 #endif
