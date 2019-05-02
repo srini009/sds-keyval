@@ -53,6 +53,74 @@ MERCURY_GEN_PROC(open_in_t,
         ((hg_string_t)(name)))
 MERCURY_GEN_PROC(open_out_t, ((uint64_t)(db_id)) ((int32_t)(ret)))
 
+// ------------- COUNT DATABASES - //
+MERCURY_GEN_PROC(count_db_out_t,\
+        ((uint64_t)(count)) ((int32_t)(ret)))
+
+// ------------- LIST DATABASES -- //
+MERCURY_GEN_PROC(list_db_in_t, ((uint64_t)(count)))
+
+typedef struct {
+    size_t    count;
+    char**    db_names;
+    uint64_t* db_ids;
+    int32_t   ret;
+} list_db_out_t;
+
+static hg_return_t hg_proc_list_db_out_t(hg_proc_t proc, void* arg)
+{
+    hg_return_t ret;
+    list_db_out_t *in = (list_db_out_t*)arg;
+
+    unsigned i;
+    ret = hg_proc_hg_size_t(proc, &in->count);
+    if(ret != HG_SUCCESS) return ret;
+    if (in->count) {
+        switch (hg_proc_get_op(proc)) {
+            case HG_ENCODE:
+                for(i=0; i < in->count; i++) {
+                    ret = hg_proc_hg_string_t(proc, &(in->db_names[i]));
+                    if(ret != HG_SUCCESS) return ret;
+                }
+                ret = hg_proc_raw(proc, in->db_ids, in->count*sizeof(*(in->db_ids)));
+                if(ret != HG_SUCCESS) return ret;
+                ret = hg_proc_int32_t(proc, &(in->ret));
+                if(ret != HG_SUCCESS) return ret;
+                break;
+            case HG_DECODE:
+                in->db_names = (char**)malloc(in->count*sizeof(char*));
+                in->db_ids   = (uint64_t*)malloc(in->count*sizeof(uint64_t));
+                for(i=0; i < in->count; i++) {
+                    ret = hg_proc_hg_string_t(proc, &(in->db_names[i]));
+                    if(ret != HG_SUCCESS) {
+                        free(in->db_names);
+                        free(in->db_ids);
+                        return ret;
+                    }
+                }
+                ret = hg_proc_raw(proc, in->db_ids, in->count*sizeof(*(in->db_ids)));
+                if(ret != HG_SUCCESS) {
+                    free(in->db_names);
+                    free(in->db_ids);
+                    return ret;
+                }
+                ret = hg_proc_int32_t(proc, &(in->ret));
+                if(ret != HG_SUCCESS) return ret;
+                break;
+            case HG_FREE:
+                for(i=0; i < in->count; i++) {
+                    hg_proc_hg_string_t(proc, &(in->db_names[i]));
+                }
+                free(in->db_names);
+                free(in->db_ids);
+                break;
+            default:
+                break;
+        }
+    }
+    return HG_SUCCESS;
+}
+
 // ------------- PUT ------------- //
 MERCURY_GEN_PROC(put_in_t, ((uint64_t)(db_id))\
         ((kv_data_t)(key))\

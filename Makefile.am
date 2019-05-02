@@ -9,6 +9,7 @@ bin_PROGRAMS = bin/sdskv-server-daemon 	    \
 	       bin/sdskv-shutdown
 
 check_PROGRAMS = test/sdskv-open-test              \
+		 test/sdskv-list-db-test           \
 		 test/sdskv-put-test               \
 		 test/sdskv-length-test            \
 		 test/sdskv-get-test               \
@@ -100,6 +101,7 @@ noinst_HEADERS = src/bulk.h \
 
 TESTS = test/basic.sh 		\
 	test/open-test.sh 	\
+	test/list-db-test.sh	\
        	test/put-test.sh 	\
 	test/length-test.sh 	\
 	test/get-test.sh 	\
@@ -117,6 +119,10 @@ TESTS_ENVIRONMENT = TIMEOUT="$(TIMEOUT)" \
 test_sdskv_open_test_SOURCES = test/sdskv-open-test.cc
 test_sdskv_open_test_DEPENDENCIES = lib/libsdskv-client.la
 test_sdskv_open_test_LDFLAGS = -Llib -lsdskv-client
+
+test_sdskv_list_db_test_SOURCES = test/sdskv-list-db-test.cc
+test_sdskv_list_db_test_DEPENDENCIES = lib/libsdskv-client.la
+test_sdskv_list_db_test_LDFLAGS = -Llib -lsdskv-client
 
 test_sdskv_put_test_SOURCES = test/sdskv-put-test.cc
 test_sdskv_put_test_DEPENDENCIES = lib/libsdskv-client.la

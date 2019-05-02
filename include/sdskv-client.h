@@ -94,6 +94,36 @@ int sdskv_open(
         sdskv_database_id_t* db_id);
 
 /**
+ * @brief Gets the number of databases currently managed by a provider.
+ *
+ * @param[in] provider provider handle
+ * @param[out] num number of databases
+ *
+ * @return SDSKV_SUCCESS or error code defined in sdskv-common.h
+ */
+int sdskv_count_databases(
+        sdskv_provider_handle_t provider,
+        size_t* num);
+
+/**
+ * @brief Lists the databases names and ids.
+ * The caller is responsible for calling free() on each of the
+ * entries in db_names.
+ *
+ * @param[in]    provider provider handle
+ * @param[inout] count    max number of databases to query, actual number returned
+ * @param[out]   db_names database names
+ * @param[out]   db_id    database ids
+ *
+ * @return SDSKV_SUCCESS or error code defined in sdskv-common.h
+ */
+int sdskv_list_databases(
+        sdskv_provider_handle_t provider,
+        size_t* count,
+        char** db_name,
+        sdskv_database_id_t* db_id);
+
+/**
  * @brief Puts a key/value pair into the database.
  *
  * @param provider provider handle managing the database

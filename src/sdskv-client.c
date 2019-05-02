@@ -7,7 +7,11 @@ int32_t sdskv_remi_errno;
 
 struct sdskv_client {
     margo_instance_id mid;
-
+    /* opening and querying databases */
+    hg_id_t sdskv_open_id;
+    hg_id_t sdskv_count_databases_id;
+    hg_id_t sdskv_list_databases_id;
+    /* accessing database */
     hg_id_t sdskv_put_id;
     hg_id_t sdskv_put_multi_id;
     hg_id_t sdskv_bulk_put_id;
@@ -19,7 +23,6 @@ struct sdskv_client {
     hg_id_t sdskv_length_id;
     hg_id_t sdskv_length_multi_id;
     hg_id_t sdskv_bulk_get_id;
-    hg_id_t sdskv_open_id;
     hg_id_t sdskv_list_keys_id;
     hg_id_t sdskv_list_keyvals_id;
     /* migration */
@@ -51,6 +54,9 @@ static int sdskv_client_register(sdskv_client_t client, margo_instance_id mid)
 
     if(flag == HG_TRUE) { /* RPCs already registered */
 
+        margo_registered_name(mid, "sdskv_open_rpc",                  &client->sdskv_open_id,                  &flag);
+        margo_registered_name(mid, "sdskv_count_databases_rpc",       &client->sdskv_count_databases_id,       &flag);
+        margo_registered_name(mid, "sdskv_list_databases_rpc",        &client->sdskv_list_databases_id,        &flag);
         margo_registered_name(mid, "sdskv_put_rpc",                   &client->sdskv_put_id,                   &flag);
         margo_registered_name(mid, "sdskv_put_multi_rpc",             &client->sdskv_put_multi_id,             &flag);
         margo_registered_name(mid, "sdskv_bulk_put_rpc",              &client->sdskv_bulk_put_id,              &flag);
@@ -62,7 +68,6 @@ static int sdskv_client_register(sdskv_client_t client, margo_instance_id mid)
         margo_registered_name(mid, "sdskv_length_rpc",                &client->sdskv_length_id,                &flag);
         margo_registered_name(mid, "sdskv_length_multi_rpc",          &client->sdskv_length_multi_id,          &flag);
         margo_registered_name(mid, "sdskv_bulk_get_rpc",              &client->sdskv_bulk_get_id,              &flag);
-        margo_registered_name(mid, "sdskv_open_rpc",                  &client->sdskv_open_id,                  &flag);
         margo_registered_name(mid, "sdskv_list_keys_rpc",             &client->sdskv_list_keys_id,             &flag);
         margo_registered_name(mid, "sdskv_list_keyvals_rpc",          &client->sdskv_list_keyvals_id,          &flag);
         margo_registered_name(mid, "sdskv_migrate_keys_rpc",          &client->sdskv_migrate_keys_id,          &flag);
@@ -73,6 +78,12 @@ static int sdskv_client_register(sdskv_client_t client, margo_instance_id mid)
 
     } else {
 
+        client->sdskv_open_id =
+            MARGO_REGISTER(mid, "sdskv_open_rpc", open_in_t, open_out_t, NULL);
+        client->sdskv_count_databases_id =
+            MARGO_REGISTER(mid, "sdskv_count_databases_rpc", void, count_db_out_t, NULL);
+        client->sdskv_list_databases_id =
+            MARGO_REGISTER(mid, "sdskv_list_databases_rpc", list_db_in_t, list_db_out_t, NULL);
         client->sdskv_put_id =
             MARGO_REGISTER(mid, "sdskv_put_rpc", put_in_t, put_out_t, NULL);
         client->sdskv_put_multi_id =
@@ -95,8 +106,6 @@ static int sdskv_client_register(sdskv_client_t client, margo_instance_id mid)
             MARGO_REGISTER(mid, "sdskv_length_multi_rpc", length_multi_in_t, length_multi_out_t, NULL);
         client->sdskv_bulk_get_id =
             MARGO_REGISTER(mid, "sdskv_bulk_get_rpc", bulk_get_in_t, bulk_get_out_t, NULL);
-        client->sdskv_open_id =
-            MARGO_REGISTER(mid, "sdskv_open_rpc", open_in_t, open_out_t, NULL);
         client->sdskv_list_keys_id =
             MARGO_REGISTER(mid, "sdskv_list_keys_rpc", list_keys_in_t, list_keys_out_t, NULL);
         client->sdskv_list_keyvals_id =
@@ -226,6 +235,95 @@ int sdskv_open(
 
     ret = out.ret;
     *db_id = out.db_id;
+
+    margo_free_output(handle, &out);
+    margo_destroy(handle);
+
+    return ret;
+}
+
+int sdskv_count_databases(
+        sdskv_provider_handle_t provider,
+        size_t* num)
+{
+    hg_return_t hret;
+    int ret;
+    count_db_out_t out;
+    hg_handle_t handle;
+
+    /* create handle */
+    hret = margo_create(
+            provider->client->mid,
+            provider->addr,
+            provider->client->sdskv_count_databases_id,
+            &handle);
+    if(hret != HG_SUCCESS) return SDSKV_ERR_MERCURY;
+
+    hret = margo_provider_forward(provider->provider_id, handle, NULL);
+    if(hret != HG_SUCCESS) {
+        margo_destroy(handle);
+        return SDSKV_ERR_MERCURY;
+    }
+
+    hret = margo_get_output(handle, &out);
+    if(hret != HG_SUCCESS) {
+        margo_destroy(handle);
+        return SDSKV_ERR_MERCURY;
+    }
+
+    ret = out.ret;
+    *num = out.count;
+
+    margo_free_output(handle, &out);
+    margo_destroy(handle);
+
+    return ret;
+}
+
+int sdskv_list_databases(
+        sdskv_provider_handle_t provider,
+        size_t* count,
+        char** db_names,
+        sdskv_database_id_t* db_ids)
+{
+    hg_return_t hret;
+    int ret;
+    list_db_in_t in;
+    in.count = *count;
+    list_db_out_t out;
+    hg_handle_t handle;
+
+    /* create handle */
+    hret = margo_create(
+            provider->client->mid,
+            provider->addr,
+            provider->client->sdskv_list_databases_id,
+            &handle);
+    if(hret != HG_SUCCESS) return SDSKV_ERR_MERCURY;
+
+    hret = margo_provider_forward(provider->provider_id, handle, &in);
+    if(hret != HG_SUCCESS) {
+        margo_destroy(handle);
+        return SDSKV_ERR_MERCURY;
+    }
+
+    hret = margo_get_output(handle, &out);
+    if(hret != HG_SUCCESS) {
+        margo_destroy(handle);
+        return SDSKV_ERR_MERCURY;
+    }
+
+    ret = out.ret;
+    if(ret == SDSKV_SUCCESS) {
+        *count = out.count;
+        unsigned i;
+        for(i = 0; i < out.count; i++) {
+            if(db_names != NULL) db_names[i] = strdup(out.db_names[i]);
+            if(db_ids != NULL)   db_ids[i]   = out.db_ids[i];
+        }
+    } else {
+        *count = 0;
+    }
 
     margo_free_output(handle, &out);
     margo_destroy(handle);
