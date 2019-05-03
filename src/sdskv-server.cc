@@ -114,15 +114,6 @@ extern "C" int sdskv_provider_register(
         }
     }
 
-    /* check if a REMI provider exists with the same provider id */
-    {
-        int flag;
-        remi_provider_registered(mid, provider_id, &flag, NULL, NULL, NULL);
-        if(flag) {
-            fprintf(stderr, "sdskv_provider_register(): a REMI provider with the same (%d) already exists\n", provider_id);
-            return SDSKV_ERR_REMI;
-        }
-    }
 
     /* allocate the resulting structure */    
     tmp_svr_ctx = new sdskv_server_context_t;
@@ -258,18 +249,28 @@ extern "C" int sdskv_provider_register(
         return SDSKV_ERR_REMI;
     }
 
-    /* register a REMI provider */
-    ret = remi_provider_register(mid, ABT_IO_INSTANCE_NULL, provider_id, abt_pool, &(tmp_svr_ctx->remi_provider));
-    if(ret != REMI_SUCCESS) {
-        sdskv_server_finalize_cb(tmp_svr_ctx);
-        return SDSKV_ERR_REMI;
-    }
-    ret = remi_provider_register_migration_class(tmp_svr_ctx->remi_provider,
-            "sdskv", sdskv_pre_migration_callback,
-            sdskv_post_migration_callback, NULL, tmp_svr_ctx);
-    if(ret != REMI_SUCCESS) {
-        sdskv_server_finalize_cb(tmp_svr_ctx);
-        return SDSKV_ERR_REMI;
+    /* check if a REMI provider exists with the same provider id */
+    {
+        int flag;
+        remi_provider_t remi_provider;
+        remi_provider_registered(mid, provider_id, &flag, NULL, NULL, &remi_provider);
+        if(flag) { /* a REMI provider exists */
+            tmp_svr_ctx->remi_provider = remi_provider;
+        } else {
+            /* register a REMI provider because it does not exist */
+            ret = remi_provider_register(mid, ABT_IO_INSTANCE_NULL, provider_id, abt_pool, &(tmp_svr_ctx->remi_provider));
+            if(ret != REMI_SUCCESS) {
+                sdskv_server_finalize_cb(tmp_svr_ctx);
+                return SDSKV_ERR_REMI;
+            }
+        }
+        ret = remi_provider_register_migration_class(tmp_svr_ctx->remi_provider,
+                "sdskv", sdskv_pre_migration_callback,
+                sdskv_post_migration_callback, NULL, tmp_svr_ctx);
+        if(ret != REMI_SUCCESS) {
+            sdskv_server_finalize_cb(tmp_svr_ctx);
+            return SDSKV_ERR_REMI;
+        }
     }
 
     /* install the bake server finalize callback */
