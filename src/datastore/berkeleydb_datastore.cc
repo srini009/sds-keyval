@@ -158,8 +158,7 @@ bool BerkeleyDBDataStore::put(const ds_bulk_t &key, const ds_bulk_t &data) {
     Dbt db_data((void*)&(data[0]), uint32_t(data.size()));
     db_key.set_flags(DB_DBT_USERMEM);
     db_data.set_flags(DB_DBT_USERMEM);
-    uint32_t flags = _duplicates == Duplicates::IGNORE ? DB_NODUPDATA : 0;
-    status = _dbm->put(NULL, &db_key, &db_data, flags);
+    status = _dbm->put(NULL, &db_key, &db_data, 0);
     if (status == 0 || 
 	(_duplicates == Duplicates::IGNORE && status == DB_KEYEXIST)) {
       success = true;
