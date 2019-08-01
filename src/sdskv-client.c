@@ -1133,15 +1133,16 @@ int sdskv_list_keys_with_prefix(sdskv_provider_handle_t provider,
     }
 
     /* create bulk handle to expose where the keys should be placed */
-    hret = margo_bulk_create(provider->client->mid,
+    if(keys) {
+        hret = margo_bulk_create(provider->client->mid,
                              *max_keys, keys, ksizes,
                              HG_BULK_WRITE_ONLY,
                              &in.keys_bulk_handle);
-    if(hret != HG_SUCCESS) {
-        ret = SDSKV_ERR_MERCURY;
-        goto finish;
+        if(hret != HG_SUCCESS) {
+            ret = SDSKV_ERR_MERCURY;
+            goto finish;
+        }
     }
-
 
     /* create handle */
     hret = margo_create(

@@ -1771,21 +1771,25 @@ static void sdskv_list_keyvals_ult(hg_handle_t handle)
         for(unsigned i = num_keys; i < vsizes.size(); i++) vsizes[i] = 0;
 
         /* transfer the ksizes back to the client */
-        hret = margo_bulk_transfer(mid, HG_BULK_PUSH, origin_addr, 
+        if(ksizes_bulk_size) {
+            hret = margo_bulk_transfer(mid, HG_BULK_PUSH, origin_addr, 
                 in.ksizes_bulk_handle, 0, ksizes_local_bulk, 0, ksizes_bulk_size);
-        if(hret != HG_SUCCESS) {
-            std::cerr << "Error: SDSKV list_keyvals could not issue bulk transfer "
-                << "(push from ksizes_local_bulk to in.ksizes_bulk_handle)" << std::endl;
-            throw SDSKV_ERR_MERCURY;
+            if(hret != HG_SUCCESS) {
+                std::cerr << "Error: SDSKV list_keyvals could not issue bulk transfer "
+                    << "(push from ksizes_local_bulk to in.ksizes_bulk_handle)" << std::endl;
+                throw SDSKV_ERR_MERCURY;
+            }
         }
 
         /* transfer the vsizes back to the client */
-        hret = margo_bulk_transfer(mid, HG_BULK_PUSH, origin_addr, 
+        if(vsizes_bulk_size) {
+            hret = margo_bulk_transfer(mid, HG_BULK_PUSH, origin_addr, 
                 in.vsizes_bulk_handle, 0, vsizes_local_bulk, 0, vsizes_bulk_size);
-        if(hret != HG_SUCCESS) {
-            std::cerr << "Error: SDSKV list_keyvals could not issue bulk transfer "
-                << "(push from vsizes_local_bulk to in.vsizes_bulk_handle)" << std::endl;
-            throw SDSKV_ERR_MERCURY;
+            if(hret != HG_SUCCESS) {
+                std::cerr << "Error: SDSKV list_keyvals could not issue bulk transfer "
+                    << "(push from vsizes_local_bulk to in.vsizes_bulk_handle)" << std::endl;
+                throw SDSKV_ERR_MERCURY;
+            }
         }
 
         if(size_error)
