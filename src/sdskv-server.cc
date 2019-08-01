@@ -1556,16 +1556,33 @@ static void sdskv_list_keys_ult(hg_handle_t handle)
         /* create the array of actual sizes */
         std::vector<hg_size_t> true_ksizes(num_keys);
         hg_size_t keys_bulk_size = 0;
+        bool size_error = false;
         for(unsigned i = 0; i < num_keys; i++) {
             true_ksizes[i] = keys[i].size();
             if(true_ksizes[i] > ksizes[i]) {
                 // this key has a size that exceeds the allocated size on client
-                throw SDSKV_ERR_SIZE;
-            } else {
-                ksizes[i] = true_ksizes[i];
-                keys_bulk_size += ksizes[i];
+                size_error = true;
             }
+            ksizes[i] = true_ksizes[i];
+            keys_bulk_size += ksizes[i];
         }
+        for(unsigned i = num_keys; i < in.max_keys; i++) {
+            ksizes[i] = 0;
+        }
+        out.nkeys = num_keys;
+
+        /* transfer the ksizes back to the client */
+        hret = margo_bulk_transfer(mid, HG_BULK_PUSH, origin_addr, 
+                in.ksizes_bulk_handle, 0, ksizes_local_bulk, 0, ksizes_bulk_size);
+        if(hret != HG_SUCCESS) {
+            std::cerr << "Error: SDSKV list_keys could not issue bulk transfer "
+                << "(push from ksizes_local_bulk to in.ksizes_bulk_handle)" << std::endl;
+            throw SDSKV_ERR_MERCURY;
+        }
+            
+        /* if user provided a size too small for some key, return error (we already set the right key sizes) */    
+        if(size_error)
+            throw SDSKV_ERR_SIZE;
 
         /* create an array of addresses pointing to keys */
         std::vector<void*> keys_addr(num_keys);
@@ -1578,15 +1595,6 @@ static void sdskv_list_keys_ult(hg_handle_t handle)
                 true_ksizes.data(), HG_BULK_READ_ONLY, &keys_local_bulk);
         if(hret != HG_SUCCESS) {
             std::cerr << "Error: SDSKV list_keys could not create bulk handle (keys_local_bulk)" << std::endl;
-            throw SDSKV_ERR_MERCURY;
-        }
-
-        /* transfer the ksizes back to the client */
-        hret = margo_bulk_transfer(mid, HG_BULK_PUSH, origin_addr, 
-                in.ksizes_bulk_handle, 0, ksizes_local_bulk, 0, ksizes_bulk_size);
-        if(hret != HG_SUCCESS) {
-            std::cerr << "Error: SDSKV list_keys could not issue bulk transfer "
-                << "(push from ksizes_local_bulk to in.ksizes_bulk_handle)" << std::endl;
             throw SDSKV_ERR_MERCURY;
         }
 
@@ -1608,7 +1616,6 @@ static void sdskv_list_keys_ult(hg_handle_t handle)
             local_offset  += true_ksizes[i];
         }
 
-        out.nkeys = num_keys;
         out.ret = SDSKV_SUCCESS;
 
     } catch(int exc_no) {
@@ -1729,7 +1736,11 @@ static void sdskv_list_keyvals_ult(hg_handle_t handle)
         auto keyvals = db->list_keyvals(start_kdata, in.max_keys, prefix);
         hg_size_t num_keys = std::min(keyvals.size(), in.max_keys);
 
+        out.nkeys = num_keys;
+
         if(num_keys == 0) throw SDSKV_SUCCESS;
+
+        bool size_error = false;
 
         /* create the array of actual key sizes */
         std::vector<hg_size_t> true_ksizes(num_keys);
@@ -1738,12 +1749,12 @@ static void sdskv_list_keyvals_ult(hg_handle_t handle)
             true_ksizes[i] = keyvals[i].first.size();
             if(true_ksizes[i] > ksizes[i]) {
                 // this key has a size that exceeds the allocated size on client
-                throw SDSKV_ERR_SIZE;
-            } else {
-                ksizes[i] = true_ksizes[i];
-                keys_bulk_size += ksizes[i];
-            }
+                size_error = true;
+            } 
+            ksizes[i] = true_ksizes[i];
+            keys_bulk_size += ksizes[i];
         }
+        for(unsigned i = num_keys; i < ksizes.size(); i++) ksizes[i] = 0;
 
         /* create the array of actual value sizes */
         std::vector<hg_size_t> true_vsizes(num_keys);
@@ -1752,12 +1763,33 @@ static void sdskv_list_keyvals_ult(hg_handle_t handle)
             true_vsizes[i] = keyvals[i].second.size();
             if(true_vsizes[i] > vsizes[i]) {
                 // this value has a size that exceeds the allocated size on client
-                throw SDSKV_ERR_SIZE;
-            } else {
-                vsizes[i] = true_vsizes[i];
-                vals_bulk_size += vsizes[i];
+                size_error = true;
             }
+            vsizes[i] = true_vsizes[i];
+            vals_bulk_size += vsizes[i];
         }
+        for(unsigned i = num_keys; i < vsizes.size(); i++) vsizes[i] = 0;
+
+        /* transfer the ksizes back to the client */
+        hret = margo_bulk_transfer(mid, HG_BULK_PUSH, origin_addr, 
+                in.ksizes_bulk_handle, 0, ksizes_local_bulk, 0, ksizes_bulk_size);
+        if(hret != HG_SUCCESS) {
+            std::cerr << "Error: SDSKV list_keyvals could not issue bulk transfer "
+                << "(push from ksizes_local_bulk to in.ksizes_bulk_handle)" << std::endl;
+            throw SDSKV_ERR_MERCURY;
+        }
+
+        /* transfer the vsizes back to the client */
+        hret = margo_bulk_transfer(mid, HG_BULK_PUSH, origin_addr, 
+                in.vsizes_bulk_handle, 0, vsizes_local_bulk, 0, vsizes_bulk_size);
+        if(hret != HG_SUCCESS) {
+            std::cerr << "Error: SDSKV list_keyvals could not issue bulk transfer "
+                << "(push from vsizes_local_bulk to in.vsizes_bulk_handle)" << std::endl;
+            throw SDSKV_ERR_MERCURY;
+        }
+
+        if(size_error)
+            throw SDSKV_ERR_SIZE;
 
         /* create an array of addresses pointing to keys */
         std::vector<void*> keys_addr(num_keys);
@@ -1787,23 +1819,6 @@ static void sdskv_list_keyvals_ult(hg_handle_t handle)
             throw SDSKV_ERR_MERCURY;
         }
 
-        /* transfer the ksizes back to the client */
-        hret = margo_bulk_transfer(mid, HG_BULK_PUSH, origin_addr, 
-                in.ksizes_bulk_handle, 0, ksizes_local_bulk, 0, ksizes_bulk_size);
-        if(hret != HG_SUCCESS) {
-            std::cerr << "Error: SDSKV list_keyvals could not issue bulk transfer "
-                << "(push from ksizes_local_bulk to in.ksizes_bulk_handle)" << std::endl;
-            throw SDSKV_ERR_MERCURY;
-        }
-
-        /* transfer the vsizes back to the client */
-        hret = margo_bulk_transfer(mid, HG_BULK_PUSH, origin_addr, 
-                in.vsizes_bulk_handle, 0, vsizes_local_bulk, 0, vsizes_bulk_size);
-        if(hret != HG_SUCCESS) {
-            std::cerr << "Error: SDSKV list_keyvals could not issue bulk transfer "
-                << "(push from vsizes_local_bulk to in.vsizes_bulk_handle)" << std::endl;
-            throw SDSKV_ERR_MERCURY;
-        }
 
         uint64_t remote_offset = 0;
         uint64_t local_offset  = 0;
@@ -1839,7 +1854,6 @@ static void sdskv_list_keyvals_ult(hg_handle_t handle)
             local_offset  += true_vsizes[i];
         }
 
-        out.nkeys = num_keys;
         out.ret = SDSKV_SUCCESS;
 
     } catch(int exc_no) {

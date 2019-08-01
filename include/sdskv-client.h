@@ -167,6 +167,9 @@ int sdskv_put_multi(sdskv_provider_handle_t provider,
  * will hold the actual size of the key. Note that the size
  * of a value can get obtained using sdskv_length.
  *
+ * If value is NULL, the call will be equivalent
+ * to sdskv_length and put the length of the value in *vsize.
+ *
  * @param[in] provider provider handle
  * @param[in] db_id database id of the target database
  * @param[in] key key to lookup
@@ -193,6 +196,9 @@ int sdskv_get(sdskv_provider_handle_t provider,
  * be filled and its size will be set to 0 (so users must have
  * another way to distinguish a 0-sized value and a value for
  * which there was an error).
+ *
+ * If values is set to NULL, the call is equivalent to calling
+ * sdskv_length_multi to get the size of the values.
  *
  * @param[in] provider provider handle
  * @param[in] db_id database id
@@ -299,9 +305,12 @@ int sdskv_erase_multi(sdskv_provider_handle_t handle,
  * being a preallocated buffer of size ksizes[i]. ksizes must be an array
  * of sizes of the preallocated buffers. After a successful call, max_keys
  * is set to the actual number of keys retrieved, ksizes[i] is set to the
- * actual size of the i-th key, and keys[i] contains the i-th key. The call
- * will fail if at least one of the preallocated size is too small to hold
- * the key.
+ * actual size of the i-th key, and keys[i] contains the i-th key.
+ *
+ * If at least one of the keys cannot fit in its buffer, the call will fail
+ * and return SDSKV_ERR_SIZE, but the ksizes array will be updated to the
+ * sizes required to fit each key, and max_keys will be updated to the number
+ * of keys that can be listed. keys will be left untouched.
  *
  * @param[in] provider provider handle
  * @param[in] db_id database id
@@ -357,6 +366,11 @@ int sdskv_list_keys_with_prefix(
  * each element values[i] being a buffer of size vsizes[i].
  * After a successful call, values[i] will hold the i-th value
  * and vsizes[i] will be set to the actual size of the i-th value.
+ *
+ * If a buffer for a key or a value is too small, the call will fail
+ * but ksizes and vsizes will be updated to the correct sizes needed,
+ * and max_items will be updated to the number of entries that can be
+ * listed.
  *
  * @param[in] provider provider handle
  * @param[in] db_id database id

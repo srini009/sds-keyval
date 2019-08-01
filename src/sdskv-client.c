@@ -551,6 +551,10 @@ int sdskv_get(sdskv_provider_handle_t provider,
     int ret;
     hg_handle_t handle;
 
+    if(value == NULL) {
+        return sdskv_length(provider, db_id, key, ksize, vsize);
+    }
+
     size = *(hg_size_t*)vsize;
     msize = size + sizeof(hg_size_t) + sizeof(hg_return_t);
 
@@ -656,6 +660,10 @@ int sdskv_get_multi(sdskv_provider_handle_t provider,
     void**          key_seg_ptrs  = NULL;
     hg_size_t*      key_seg_sizes = NULL;
     char*           vals_buffer   = NULL;
+
+    if(values == NULL) {
+        return sdskv_length_multi(provider, db_id, num, keys, ksizes, vsizes);
+    }
 
     in.db_id    = db_id;
     in.num_keys = num;
