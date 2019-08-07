@@ -53,6 +53,15 @@ int sdskv_provider_register(
         sdskv_provider_t* provider);
 
 /**
+ * @brief Deregister the provider's RPCs and destroys the provider.
+ *
+ * @param provider Provider to destroy.
+ *
+ * @return SDSKV_SUCCESS  or error code defined in sdskv-common.h
+ */
+int sdskv_provider_destroy(sdskv_provider_t provider);
+
+/**
  * @brief Registers a comparison function for databases to use.
  *
  * @param provider provider
