@@ -153,11 +153,27 @@ if test "x${bwtree_backend}" == xyes ; then
 	CXXFLAGS="-pthread -g -Wall -mcx16 -Wno-invalid-offsetof ${CXXFLAGS}"
 fi
 
-PKG_CHECK_MODULES([REMI],[remi],[],
-		[AC_MSG_ERROR([Could not find working remi installation!])])
-LIBS="$REMI_LIBS $LIBS"
-CPPFLAGS="$REMI_CFLAGS $CPPFLAGS"
-CFLAGS="$REMI_CFLAGS $CFLAGS"
+AC_ARG_ENABLE(remi,
+              [AS_HELP_STRING([--enable-remi],[Enable REMI (migration) support @<:@default=no@:>@])],
+              [case "${enableval}" in
+                yes) enable_remi="yes" ;;
+                no) enable_remi="no" ;;
+                *) AC_MSG_ERROR(bad value ${enableval} for --enable-remi) ;;
+               esac],
+              [enable_remi="no"]
+)
+AM_CONDITIONAL(ENABLE_REMI, test x$enable_remi = xyes)
+if test "$enable_remi" = "yes"; then
+        PKG_CHECK_MODULES(REMI, remi)
+        AC_DEFINE(USE_REMI, 1, [REMI support enabled.])
+        USE_REMI=1
+        LIBS="$REMI_LIBS $LIBS"
+        CPPFLAGS="$REMI_CFLAGS $CPPFLAGS"
+        CFLAGS="$REMI_CFLAGS $CFLAGS"
+else
+        USE_REMI=0
+fi
+AC_SUBST(USE_REMI)
 
 AM_CONDITIONAL([BUILD_BDB], [test "x${berkelydb_backend}" == xyes])
 AM_CONDITIONAL([BUILD_LEVELDB], [test "x${leveldb_backend}" == xyes])
