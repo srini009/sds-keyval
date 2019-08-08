@@ -115,9 +115,11 @@ class MapDataStore : public AbstractDataStore {
             _no_overwrite = true;
         }
 
-        remi_fileset_t create_and_populate_fileset() const {
+#ifdef USE_REMI
+        virtual remi_fileset_t create_and_populate_fileset() const {
             return REMI_FILESET_NULL;
         }
+#endif
 
     protected:
 

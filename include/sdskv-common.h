@@ -20,6 +20,7 @@ typedef uint64_t sdskv_database_id_t;
 #define SDSKV_KEEP_ORIGINAL    0 /* for migration operations, keep original */
 #define SDSKV_REMOVE_ORIGINAL  1 /* for migration operations, remove the origin after migrating */
 
+/* Note: the values below are used in sdskv-common.hpp, do not change them! */
 #define SDSKV_SUCCESS          0 /* Success */
 #define SDSKV_ERR_ALLOCATION  -1 /* Error allocating something */
 #define SDSKV_ERR_INVALID_ARG -2 /* An argument is invalid */

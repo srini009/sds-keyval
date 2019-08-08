@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([sds-keyval], [0.1], [robl@mcs.anl.gov])
+AC_INIT([sds-keyval], [0.1.4], [robl@mcs.anl.gov])
 AM_INIT_AUTOMAKE([1.13.4 -Wall -Werror foreign subdir-objects silent-rules])
 AM_SILENT_RULES([yes])
 AC_CONFIG_MACRO_DIR([m4])
@@ -68,6 +68,12 @@ PKG_CHECK_MODULES([MARGO],[margo],[],
 LIBS="$MARGO_LIBS $LIBS"
 CPPFLAGS="$MARGO_CFLAGS $CPPFLAGS"
 CFLAGS="$MARGO_CFLAGS $CFLAGS"
+
+PKG_CHECK_MODULES([ABTIO],[abt-io],[],
+      AC_MSG_ERROR([Could not find working abt-io installation!]) )
+LIBS="$ABTIO_LIBS $LIBS"
+CPPFLAGS="$ABTIO_CFLAGS $CPPFLAGS"
+CFLAGS="$ABTIO_CFLAGS $CFLAGS"
 
 SERVER_DEPS_PKG=""
 
@@ -166,6 +172,7 @@ AM_CONDITIONAL(ENABLE_REMI, test x$enable_remi = xyes)
 if test "$enable_remi" = "yes"; then
         PKG_CHECK_MODULES(REMI, remi)
         AC_DEFINE(USE_REMI, 1, [REMI support enabled.])
+        SERVER_DEPS_PKG="${SERVER_DEPS_PKG} remi"
         USE_REMI=1
         LIBS="$REMI_LIBS $LIBS"
         CPPFLAGS="$REMI_CFLAGS $CPPFLAGS"

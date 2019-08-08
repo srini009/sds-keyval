@@ -5,8 +5,8 @@ includedir=@includedir@
 
 Name: sdskv-server
 Description: services-based keyval server
-Version: 0.1
+Version: 0.1.4
 URL: https://xgitlab.cels.anl.gov/sds/sds-keyval
-Requires: margo remi @SERVER_DEPS_PKG@
+Requires: margo abt-io @SERVER_DEPS_PKG@
 Libs: -L${libdir} -lsdskv-server @SERVER_LIBS_EXT@
 Cflags: -I${includedir}

@@ -53,7 +53,9 @@ class LevelDBDataStore : public AbstractDataStore {
             _no_overwrite = true;
         }
         virtual void sync();
-        remi_fileset_t create_and_populate_fileset() const;
+#ifdef USE_REMI
+        virtual remi_fileset_t create_and_populate_fileset() const;
+#endif
     protected:
         virtual std::vector<ds_bulk_t> vlist_keys(
                 const ds_bulk_t &start, size_t count, const ds_bulk_t &prefix) const;

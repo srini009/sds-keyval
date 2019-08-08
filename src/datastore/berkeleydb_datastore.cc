@@ -382,6 +382,7 @@ int BerkeleyDBDataStore::compkeys(Db *db, const Dbt *dbt1, const Dbt *dbt2, size
     }
 }
 
+#ifdef USE_REMI
 remi_fileset_t BerkeleyDBDataStore::create_and_populate_fileset() const {
     remi_fileset_t fileset = REMI_FILESET_NULL;
     std::string local_root = _path;
@@ -399,3 +400,4 @@ remi_fileset_t BerkeleyDBDataStore::create_and_populate_fileset() const {
     }
     return fileset;
 }
+#endif

@@ -5,7 +5,10 @@
 
 #include "kv-config.h"
 #include "bulk.h"
+#include <margo.h>
+#ifdef USE_REMI
 #include "remi/remi-common.h"
+#endif
 
 #include <vector>
 
@@ -29,7 +32,10 @@ class AbstractDataStore {
         virtual void set_comparison_function(const std::string& name, comparator_fn less)=0;
         virtual void set_no_overwrite()=0;
         virtual void sync() = 0;
+
+#ifdef USE_REMI
         virtual remi_fileset_t create_and_populate_fileset() const = 0;
+#endif
 
         const std::string& get_path() const {
             return _path;

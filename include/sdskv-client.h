@@ -57,6 +57,24 @@ int sdskv_provider_handle_create(
         sdskv_provider_handle_t* handle);
 
 /**
+ * @brief Retrieves the information (string address and provider id)
+ * from a provider handle. If any argument is NULL, the corresponding
+ * field will be ignored.
+ *
+ * @param[in] ph Provider handle.
+ * @param[inout] client Client.
+ * @param[inout] addr Address.
+ * @param[inout] provider_id 
+ *
+ * @return SDSKV_SUCCESS or error code defined in sdskv-common.h
+ */
+int sdskv_provider_handle_get_info(
+        sdskv_provider_handle_t ph,
+        sdskv_client_t* client,
+        hg_addr_t* addr,
+        uint16_t* provider_id);
+
+/**
  * @brief Increments the reference counter of a provider handle.
  *
  * @param handle provider handle
@@ -449,7 +467,7 @@ int sdskv_migrate_keys(
         uint16_t target_provider_id,
         sdskv_database_id_t target_db_id,
         hg_size_t num_keys,
-        const void** keys,
+        const void* const* keys,
         const hg_size_t* key_sizes,
         int flag);
 

@@ -242,6 +242,7 @@ std::vector<std::pair<ds_bulk_t,ds_bulk_t>> LevelDBDataStore::vlist_keyval_range
     return result;
 }
 
+#ifdef USE_REMI
 remi_fileset_t LevelDBDataStore::create_and_populate_fileset() const {
     remi_fileset_t fileset = REMI_FILESET_NULL;
     std::string local_root = _path;
@@ -258,3 +259,4 @@ remi_fileset_t LevelDBDataStore::create_and_populate_fileset() const {
     }
     return fileset;
 }
+#endif

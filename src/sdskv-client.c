@@ -180,6 +180,24 @@ int sdskv_provider_handle_create(
     return SDSKV_SUCCESS;
 }
 
+
+int sdskv_provider_handle_get_info(
+        sdskv_provider_handle_t ph,
+        sdskv_client_t* client,
+        hg_addr_t* addr,
+        uint16_t* provider_id) {
+    if(ph) {
+        if(client) *client = ph->client;
+        if(addr) *addr = ph->addr;
+        if(provider_id) *provider_id = ph->provider_id;
+    } else {
+        if(client) *client = SDSKV_CLIENT_NULL;
+        if(addr) *addr = HG_ADDR_NULL;
+        if(provider_id) *provider_id = 0;
+    }
+    return SDSKV_SUCCESS;
+}
+
 int sdskv_provider_handle_ref_incr(
         sdskv_provider_handle_t handle)
 {
@@ -1345,7 +1363,7 @@ int sdskv_migrate_keys(
         uint16_t target_provider_id,
         sdskv_database_id_t target_db_id,
         hg_size_t num_keys,
-        const void** keys,
+        const void* const* keys,
         const hg_size_t* key_sizes,
         int flag)
 {
