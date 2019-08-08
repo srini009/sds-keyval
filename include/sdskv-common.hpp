@@ -1,9 +1,11 @@
 #ifndef __SDSKV_COMMON_HPP
 #define __SDSKV_COMMON_HPP
 
+#include <sdskv-common.h>
+
 namespace sdskv {
 
-const char const sdskv_error_messages[] = {
+const char* const sdskv_error_messages[] = {
     "",
     "Allocation error",
     "Invalid argument",
@@ -28,15 +30,13 @@ class exception : public std::exception {
     std::string m_msg;
     int m_error;
 
-    static const 
-
     public:
 
     exception(int error)
     : m_msg(std::string("[SDSKV] ") + sdskv_error_messages[-error])
     , m_error(error) {}
 
-    const char* what() const {
+    virtual const char* what() const noexcept override {
         return m_msg.c_str();
     }
 

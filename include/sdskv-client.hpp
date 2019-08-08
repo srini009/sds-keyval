@@ -5,7 +5,7 @@
 #include <vector>
 #include <string>
 #include <sdskv-client.h>
-#include <sdskv-commong.hpp>
+#include <sdskv-common.hpp>
 
 #define _CHECK_RET(__ret) \
         if(__ret != SDSKV_SUCCESS) throw exception(__ret)
@@ -25,9 +25,11 @@ class client {
 
     public:
 
+    client() = default;
+
     client(margo_instance_id mid)
     : m_mid(mid) {
-        sdskv_client_register(mid, &m_client);
+        sdskv_client_init(mid, &m_client);
     }
 
     client(margo_instance_id mid, sdskv_client_t c, bool transfer_ownership=false)
@@ -40,7 +42,7 @@ class client {
     client(client&& c)
     : m_mid(c.m_mid)
     , m_client(c.m_client)
-    , m_owns_client = c.m_owns_client {
+    , m_owns_client(c.m_owns_client) {
         c.m_client = SDSKV_CLIENT_NULL;
     }
 
@@ -60,7 +62,7 @@ class client {
     }
 
     ~client() {
-        if(m_owns_client)
+        if(m_owns_client && m_client)
             sdskv_client_finalize(m_client);
     }
 
@@ -187,7 +189,7 @@ class client {
             std::vector<size_t>& vsizes) const {
         vsizes.resize(keys.size());
         std::vector<const void*> kdata; kdata.reserve(keys.size());
-        std::vector<size_t> ksize; ksizes.reserve(keys.size());
+        std::vector<size_t> ksizes; ksizes.reserve(keys.size());
         for(const auto& k : keys) {
             kdata.push_back(k.data());
             ksizes.push_back(k.size());
@@ -199,7 +201,7 @@ class client {
     std::vector<size_t> length(const database& db, const std::vector<K>& keys) const {
         std::vector<size_t> vsizes(keys.size());
         std::vector<const void*> kdata; kdata.reserve(keys.size());
-        std::vector<size_t> ksize; ksizes.reserve(keys.size());
+        std::vector<size_t> ksizes; ksizes.reserve(keys.size());
         for(const auto& k : keys) {
             kdata.push_back(k.data());
             ksizes.push_back(k.size());
@@ -228,7 +230,7 @@ class client {
     template<typename K, typename V>
     V get(const database& db,
           const K& key) const {
-        size_t vsize = length(ph, db, key);
+        size_t vsize = length(db, key);
         V value(vsize, 0);
         get(db, key, value);
         return value;
@@ -240,11 +242,11 @@ class client {
 
     bool get(const database& db,
              size_t count, const void* const* keys, const size_t* ksizes,
-             void** values, hg_size_t *vsizes) const; // XXX
+             void** values, size_t *vsizes) const; // XXX
 
     bool get(const database& db,
              const std::vector<const void*>& keys, const std::vector<size_t>& ksizes,
-             const std::vector<void*>& values, std::vector<size_t>& vsizes) const {
+             std::vector<void*>& values, std::vector<size_t>& vsizes) const {
         if(keys.size() != ksizes.size()
         || keys.size() != values.size()
         || keys.size() != vsizes.size()) {
@@ -275,7 +277,7 @@ class client {
     }
 
     template<typename IK, typename IV>
-    void get(const database& db,
+    bool get(const database& db,
              const IK& kbegin, const IK& kend,
              const IV& vbegin, const IV& vend) const {
         size_t count = std::distance(kbegin, kend);
@@ -283,7 +285,7 @@ class client {
             throw std::length_error("Provided iterators should point to the same number of objects");
         }
         std::vector<const void*> kdata; kdata.reserve(count);
-        std::vector<const void*> vdata; vdata.reserve(count);
+        std::vector<void*> vdata; vdata.reserve(count);
         std::vector<size_t> ksizes; ksizes.reserve(count);
         std::vector<size_t> vsizes; vsizes.reserve(count);
         for(auto it = kbegin; it != kend; it++) {
@@ -338,7 +340,7 @@ class client {
     void erase(const database& db,
             const std::vector<K>& keys) const {
         std::vector<const void*> kdata; kdata.reserve(keys.size());
-        std::vector<size_t> ksize; ksizes.reserve(keys.size());
+        std::vector<size_t> ksizes; ksizes.reserve(keys.size());
         for(const auto& k : keys) {
             kdata.push_back(k.data());
             ksizes.push_back(k.size());
@@ -350,19 +352,19 @@ class client {
     // LIST_KEYS methods
     //////////////////////////
     
-    void list(const database& db,
+    void list_keys(const database& db,
             const void *start_key, size_t start_ksize,
             const void *prefix, size_t prefix_size,
             void** keys, size_t* ksizes, size_t* max_keys) const; // XXX
 
-    void list(const database& db,
+    void list_keys(const database& db,
             const void *start_key, size_t start_ksize,
             void** keys, size_t* ksizes, size_t* max_keys) const {
-        list(db, start_key, start_ksize, NULL, 0, keys, ksizes, max_keys;
+        list_keys(db, start_key, start_ksize, NULL, 0, keys, ksizes, max_keys);
     }
 
     template<typename K>
-    void list(const database& db,
+    void list_keys(const database& db,
                 const K& start_key,
                 std::vector<K>& keys) {
         size_t max_keys = keys.size();
@@ -373,7 +375,7 @@ class client {
             ksizes.push_back(k.size());
         }
         try {
-            list(db, start_key.data(), start_key.size(),
+            list_keys(db, start_key.data(), start_key.size(),
                 kdata.data(), ksizes.data(), &max_keys);
         } catch(exception& e) {
             if(e.error() == SDSKV_ERR_SIZE) {
@@ -381,7 +383,7 @@ class client {
                     keys[i].resize(ksizes[i]);
                     kdata[i] = keys[i].data();
                 }
-                list(db, start_key.data(), start_key.size(),
+                list_keys(db, start_key.data(), start_key.size(),
                         kdata.data(), ksizes.data(), &max_keys);
             } else {
                 throw;
@@ -394,7 +396,7 @@ class client {
     }
 
     template<typename K>
-    void list(const database& db,
+    void list_keys(const database& db,
                 const K& start_key,
                 const K& prefix,
                 std::vector<K>& keys) {
@@ -406,7 +408,7 @@ class client {
             ksizes.push_back(k.size());
         }
         try {
-            list(db, start_key.data(), start_key.size(),
+            list_keys(db, start_key.data(), start_key.size(),
                 prefix.data(), prefix.size(),
                 kdata.data(), ksizes.data(), &max_keys);
         } catch(exception& e) {
@@ -415,7 +417,7 @@ class client {
                     keys[i].resize(ksizes[i]);
                     kdata[i] = keys[i].data();
                 }
-                list(db, start_key.data(), start_key.size(),
+                list_keys(db, start_key.data(), start_key.size(),
                         prefix.data(), prefix.size(),
                         kdata.data(), ksizes.data(), &max_keys);
             } else {
@@ -432,24 +434,24 @@ class client {
     // LIST_KEYVALS methods
     //////////////////////////
 
-    void list(const database& db,
+    void list_keyvals(const database& db,
             const void *start_key, size_t start_ksize,
             const void *prefix, size_t prefix_size,
             void** keys, size_t* ksizes, 
             void** values, size_t* vsizes,
             size_t* max_items) const; // XXX
 
-    void list(const database& db,
+    void list_keyvals(const database& db,
             const void *start_key, size_t start_ksize,
             void** keys, size_t* ksizes,
             void** values, size_t* vsizes,
-            size_t* max_keys) const {
-        list(db, start_key, start_ksize,
+            size_t* max_items) const {
+        list_keyvals(db, start_key, start_ksize,
                 NULL, 0, keys, ksizes, values, vsizes, max_items);
     }
 
     template<typename K, typename V>
-    void list(const database& db,
+    void list_keyvals(const database& db,
                 const K& start_key,
                 std::vector<K>& keys,
                 std::vector<V>& values) const {
@@ -468,7 +470,7 @@ class client {
             vsizes.push_back(v.size());
         }
         try {
-            list(db, start_key.data(), start_key.size(),
+            list_keyvals(db, start_key.data(), start_key.size(),
                 kdata.data(), ksizes.data(), 
                 vdata.data(), vsizes.data(), &max_keys);
         } catch(exception& e) {
@@ -477,9 +479,9 @@ class client {
                     keys[i].resize(ksizes[i]);
                     kdata[i] = keys[i].data();
                     values[i].resize(vsizes[i]);
-                    sdata[i] = values[i].data();
+                    vdata[i] = values[i].data();
                 }
-                list(db, start_key.data(), start_key.size(),
+                list_keyvals(db, start_key.data(), start_key.size(),
                     kdata.data(), ksizes.data(), 
                     vdata.data(), vsizes.data(), &max_keys);
             } else {
@@ -495,7 +497,7 @@ class client {
     }
 
     template<typename K, typename V>
-    void list(const database& db,
+    void list_keyvals(const database& db,
                 const K& start_key,
                 const K& prefix,
                 std::vector<K>& keys,
@@ -515,7 +517,7 @@ class client {
             vsizes.push_back(v.size());
         }
         try {
-            list(db, start_key.data(), start_key.size(),
+            list_keyvals(db, start_key.data(), start_key.size(),
                 prefix.data(), prefix.size(),
                 kdata.data(), ksizes.data(), 
                 vdata.data(), vsizes.data(), &max_keys);
@@ -527,7 +529,7 @@ class client {
                     values[i].resize(vsizes[i]);
                     vdata[i] = values[i].data();
                 }
-                list(db, start_key.data(), start_key.size(),
+                list_keyvals(db, start_key.data(), start_key.size(),
                         prefix.data(), prefix.size(),
                         kdata.data(), ksizes.data(), 
                         vdata.data(), vsizes.data(), &max_keys);
@@ -625,53 +627,60 @@ class provider_handle {
     friend class database;
 
     sdskv_provider_handle_t m_ph = SDSKV_PROVIDER_HANDLE_NULL;
+    client*                 m_client;
 
     public:
 
     provider_handle() = default;
 
     provider_handle(
-            const client& c,
+            client& c,
             hg_addr_t addr,
             uint16_t provider_id=0)
+    : m_client(&c)
     {
         int ret = sdskv_provider_handle_create(c.m_client, addr, provider_id, &m_ph);
         _CHECK_RET(ret);
     }
 
     provider_handle(const provider_handle& other)
-    : m_ph(other.m_ph) {
+    : m_client(other.m_client)
+    , m_ph(other.m_ph) {
         if(m_ph != SDSKV_PROVIDER_HANDLE_NULL) {
-            int ret = bake_provider_handle_ref_incr(m_ph);
+            int ret = sdskv_provider_handle_ref_incr(m_ph);
             _CHECK_RET(ret);
         }
     }
 
     provider_handle(provider_handle&& other)
-    : m_ph(other.m_ph) {
+    : m_client(other.m_client)
+    , m_ph(other.m_ph) {
         other.m_ph = SDSKV_PROVIDER_HANDLE_NULL;
     }
 
     provider_handle& operator=(const provider_handle& other) {
-        if(&other == this) return *this;
+        if(this == &other) return *this;
         if(m_ph != SDSKV_PROVIDER_HANDLE_NULL) {
             int ret = sdskv_provider_handle_release(m_ph);
             _CHECK_RET(ret);
         }
         m_ph = other.m_ph;
+        m_client = other.m_client;
         int ret = sdskv_provider_handle_ref_incr(m_ph);
         _CHECK_RET(ret);
         return *this;
     }
 
     provider_handle& operator=(provider_handle& other) {
-        if(&other == this) return *this;
+        if(this == &other) return *this;
         if(m_ph != SDSKV_PROVIDER_HANDLE_NULL) {
             int ret = sdskv_provider_handle_release(m_ph);
             _CHECK_RET(ret);
         }
         m_ph = other.m_ph;
+        m_client = other.m_client;
         other.m_ph = SDSKV_PROVIDER_HANDLE_NULL;
+        other.m_client = nullptr;
         return *this;
     }
 
@@ -690,44 +699,87 @@ class database {
     provider_handle     m_ph;
     sdskv_database_id_t m_db_id;
 
+    database(const provider_handle& ph, sdskv_database_id_t db_id)
+    : m_ph(ph)
+    , m_db_id(db_id) {}
+
     public:
+
+    database() = default;
+    database(const database& other) = default;
+    database(database&& other) = default;
+    database& operator=(const database& other) = default;
+    database& operator=(database&& other) = default;
+    ~database() = default;
 
     template<typename ... T>
     void put(T&& ... args) const {
-        m_ph.m_client.put(*this, std::forward<T>(args)...);
+        m_ph.m_client->put(*this, std::forward<T>(args)...);
     }
 
     template<typename ... T>
     decltype(auto) length(T&& ... args) const {
-        return m_ph.m_client.length(*this, std::forward<T>(args)...);
+        return m_ph.m_client->length(*this, std::forward<T>(args)...);
     }
 
     template<typename ... T>
     decltype(auto) get(T&& ... args) const {
-        return m_ph.m_client.get(*this, std::forward<T>(args)...);
+        return m_ph.m_client->get(*this, std::forward<T>(args)...);
     }
 
     template<typename ... T>
     void erase(T&& ... args) const {
-        m_ph.m_client.erase(*this, std::forward<T>(args)...);
+        m_ph.m_client->erase(*this, std::forward<T>(args)...);
     }
 
     template<typename ... T>
-    decltype(auto) list(T&& ... args) const {
-        return m_ph.m_client.list(*this, std::forward<T>(args)...);
+    decltype(auto) list_keys(T&& ... args) const {
+        return m_ph.m_client->list_keys(*this, std::forward<T>(args)...);
+    }
+
+    template<typename ... T>
+    decltype(auto) list_keyvals(T&& ... args) const {
+        return m_ph.m_client->list_keyvals(*this, std::forward<T>(args)...);
     }
 
     template<typename ... T>
     void migrate(const database& dest_db, T&& ... args) const {
-        m_ph.m_client.list(*this, dest_db, std::forward<T>(args)...);
+        m_ph.m_client->migrate(*this, dest_db, std::forward<T>(args)...);
     }
 
     template<typename ... T>
     void migrate(const std::string& dest_provider_addr, uint16_t dest_provider_id, T&& ... args) {
-        m_ph.m_client.migrate(*this, dest_provider_addr, dest_provider_id, std::forward<T>(args)...);
+        m_ph.m_client->migrate(*this, dest_provider_addr, dest_provider_id, std::forward<T>(args)...);
     }
 
 };
+
+inline database client::open(const provider_handle& ph, const std::string& db_name) const {
+    sdskv_database_id_t db_id;
+    int ret = sdskv_open(ph.m_ph, db_name.c_str(), &db_id);
+    _CHECK_RET(ret);
+    return database(ph, db_id);
+}
+
+inline std::vector<database> client::open(const provider_handle& ph) const {
+    std::vector<sdskv_database_id_t> ids;
+    std::vector<char*> names; 
+    size_t count;
+    int ret = sdskv_count_databases(ph.m_ph, &count);
+    ids.resize(count);
+    names.resize(count);
+    _CHECK_RET(ret);
+    ret = sdskv_list_databases(ph.m_ph, &count, names.data(), ids.data());
+    _CHECK_RET(ret);
+    for(unsigned i=0; i < count; i++) {
+        free(names[i]);
+    }
+    std::vector<database> dbs; dbs.reserve(count);
+    for(unsigned i=0; i < count; i++) {
+        dbs.push_back(database(ph, ids[i]));
+    }
+    return dbs;
+}
 
 inline void client::put(const database& db,
         const void *key, size_t ksize,
@@ -804,7 +856,7 @@ inline void client::erase(const database& db,
     _CHECK_RET(ret);
 }
 
-inline void client::list(const database& db,
+inline void client::list_keys(const database& db,
         const void *start_key, size_t start_ksize,
         const void *prefix, size_t prefix_size,
         void** keys, size_t* ksizes, size_t* max_keys) const {
@@ -814,7 +866,7 @@ inline void client::list(const database& db,
     _CHECK_RET(ret);
 }
 
-inline void client::list(const database& db,
+inline void client::list_keyvals(const database& db,
         const void *start_key, size_t start_ksize,
         const void *prefix, size_t prefix_size,
         void** keys, size_t* ksizes,
@@ -835,16 +887,17 @@ inline void client::migrate(const database& source_db, const database& dest_db,
     uint16_t target_pr_id;
     sdskv_provider_handle_get_info(dest_db.m_ph.m_ph, NULL, &addr, &target_pr_id);
 
-    margo_instance_id mid = dest_db.m_ph.m_client.m_mid;
+    margo_instance_id mid = dest_db.m_ph.m_client->m_mid;
 
     std::vector<char> target_addr_str(256);
     size_t addr_size = 256;
-    hg_return_t hret = margo_addr_to_string(mid, addr, addr_str.data(), &addr_size);
+    hg_return_t hret = margo_addr_to_string(mid, target_addr_str.data(), &addr_size, addr);
 
     if(hret != 0) throw std::runtime_error("margo_addr_to_string failed in client::migrate");
 
     int ret = sdskv_migrate_keys(source_db.m_ph.m_ph, source_db.m_db_id, 
-            target_addr_str.data(), target_pr_id, num_items, keys, key_sizes, flag);
+            target_addr_str.data(), target_pr_id, dest_db.m_db_id, 
+            num_items, keys, key_sizes, flag);
     _CHECK_RET(ret);
 }
 
@@ -855,16 +908,17 @@ inline void client::migrate(const database& source_db, const database& dest_db,
     uint16_t target_pr_id;
     sdskv_provider_handle_get_info(dest_db.m_ph.m_ph, NULL, &addr, &target_pr_id);
 
-    margo_instance_id mid = dest_db.m_ph.m_client.m_mid;
+    margo_instance_id mid = dest_db.m_ph.m_client->m_mid;
 
     std::vector<char> target_addr_str(256);
     size_t addr_size = 256;
-    hg_return_t hret = margo_addr_to_string(mid, addr, addr_str.data(), &addr_size);
+    hg_return_t hret = margo_addr_to_string(mid, target_addr_str.data(), &addr_size, addr);
 
     if(hret != 0) throw std::runtime_error("margo_addr_to_string failed in client::migrate");
 
-    int ret = sdskv_migrate_range(source_db.m_ph.m_ph, source_db.m_db_id, 
-            target_addr_str.data(), target_pr_id, key_range, key_sizes, flag);
+    int ret = sdskv_migrate_key_range(source_db.m_ph.m_ph, source_db.m_db_id, 
+            target_addr_str.data(), target_pr_id, 
+            dest_db.m_db_id, key_range, key_sizes, flag);
     _CHECK_RET(ret);
 }
 
@@ -875,16 +929,16 @@ inline void client::migrate(const database& source_db, const database& dest_db,
     uint16_t target_pr_id;
     sdskv_provider_handle_get_info(dest_db.m_ph.m_ph, NULL, &addr, &target_pr_id);
 
-    margo_instance_id mid = dest_db.m_ph.m_client.m_mid;
+    margo_instance_id mid = dest_db.m_ph.m_client->m_mid;
 
     std::vector<char> target_addr_str(256);
     size_t addr_size = 256;
-    hg_return_t hret = margo_addr_to_string(mid, addr, addr_str.data(), &addr_size);
+    hg_return_t hret = margo_addr_to_string(mid, target_addr_str.data(), &addr_size, addr);
 
     if(hret != 0) throw std::runtime_error("margo_addr_to_string failed in client::migrate");
 
     int ret = sdskv_migrate_keys_prefixed(source_db.m_ph.m_ph, source_db.m_db_id, 
-            target_addr_str.data(), target_pr_id, prefix, prefix_sizes, flag);
+            target_addr_str.data(), target_pr_id, dest_db.m_db_id, prefix, prefix_size, flag);
     _CHECK_RET(ret);
 }
 
@@ -893,11 +947,11 @@ inline void client::migrate(const database& source_db, const database& dest_db, 
     uint16_t target_pr_id;
     sdskv_provider_handle_get_info(dest_db.m_ph.m_ph, NULL, &addr, &target_pr_id);
 
-    margo_instance_id mid = dest_db.m_ph.m_client.m_mid;
+    margo_instance_id mid = dest_db.m_ph.m_client->m_mid;
 
     std::vector<char> target_addr_str(256);
     size_t addr_size = 256;
-    hg_return_t hret = margo_addr_to_string(mid, addr, addr_str.data(), &addr_size);
+    hg_return_t hret = margo_addr_to_string(mid, target_addr_str.data(), &addr_size, addr);
 
     if(hret != HG_SUCCESS) throw std::runtime_error("margo_addr_to_string failed in client::migrate");
 
@@ -912,11 +966,13 @@ inline void client::migrate(database& db,
         const std::string& dest_root,
         int flag) const {
     hg_addr_t addr;
-    margo_instance_id mid = db.m_ph.m_client.m_mid;
+    margo_instance_id mid = db.m_ph.m_client->m_mid;
     hg_return_t hret = margo_addr_lookup(mid, dest_provider_addr.c_str(), &addr);
     if(hret != HG_SUCCESS) throw std::runtime_error("margo_addr_lookup failed in client::migrate");
 
-    provider_handle dest_ph(addr, dest_provider_id);
+    provider_handle dest_ph(*(db.m_ph.m_client), addr, dest_provider_id);
+
+    margo_addr_free(mid, addr);
 
     int ret = sdskv_migrate_database(db.m_ph.m_ph, db.m_db_id,
                 dest_provider_addr.c_str(),
