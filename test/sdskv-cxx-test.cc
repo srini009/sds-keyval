@@ -18,6 +18,8 @@
 
 static std::string gen_random_string(size_t len);
 
+static int put_get_erase_test(sdskv::database& DB, uint32_t num_keys);
+
 int main(int argc, char *argv[])
 {
     char cli_addr_prefix[64] = {0};
@@ -68,35 +70,8 @@ int main(int argc, char *argv[])
         /* open the database */
         sdskv::database DB = kvcl.open(kvph, db_name);
 
-        /* **** put keys ***** */
-        std::vector<std::string> keys;
-        std::map<std::string, std::string> reference;
-        size_t max_value_size = 24;
-
-        for(unsigned i=0; i < num_keys; i++) {
-            auto k = gen_random_string(16);
-            // half of the entries will be put using bulk
-            auto v = gen_random_string(3+i*(max_value_size-3)/num_keys);
-            DB.put(k, v);
-            std::cout << "Inserted " << k << "\t ===> " << v << std::endl;
-            reference[k] = v;
-            keys.push_back(k);
-        }
-        std::cout << "Successfuly inserted " << num_keys << " keys" << std::endl;
-
-        /* **** get keys **** */
-        for(unsigned i=0; i < num_keys; i++) {
-            auto k = keys[rand() % keys.size()];
-            size_t value_size = max_value_size;
-            std::vector<char> v(max_value_size);
-            DB.get(k,v);
-            std::string vstring((char*)(v.data()));
-            std::cout << "Got " << k << " ===> " << vstring << std::endl;
-            if(vstring != reference[k]) {
-                std::cerr << "DB.get() returned a value different from the reference" << std::endl;
-                return -1;
-            }
-        }
+        /* Put get erase test */
+        put_get_erase_test(DB, num_keys);
 
         /* shutdown the server */
         kvcl.shutdown(svr_addr);
@@ -122,3 +97,43 @@ static std::string gen_random_string(size_t len) {
     }
     return s;
 }
+
+static int put_get_erase_test(sdskv::database& DB, uint32_t num_keys) {
+
+    /* **** put keys ***** */
+    std::vector<std::string> keys;
+    std::map<std::string, std::string> reference;
+    size_t max_value_size = 24;
+
+    for(unsigned i=0; i < num_keys; i++) {
+        auto k = gen_random_string(16);
+        // half of the entries will be put using bulk
+        auto v = gen_random_string(3+i*(max_value_size-3)/num_keys);
+        DB.put(k, v);
+        std::cout << "Inserted " << k << "\t ===> " << v << std::endl;
+        reference[k] = v;
+        keys.push_back(k);
+    }
+    std::cout << "Successfuly inserted " << num_keys << " keys" << std::endl;
+
+    /* **** get keys **** */
+    for(unsigned i=0; i < num_keys; i++) {
+        auto k = keys[rand() % keys.size()];
+        size_t value_size = max_value_size;
+        std::vector<char> v(max_value_size);
+        DB.get(k,v);
+        std::string vstring((char*)(v.data()));
+        std::cout << "Got " << k << " ===> " << vstring << std::endl;
+        if(vstring != reference[k]) {
+            throw std::runtime_error("DB.get() returned a value different from the reference");
+        }
+    }
+
+    /* erase keys */
+    for(unsigned i=0; i < num_keys; i++) {
+        DB.erase(keys[i]);
+    }
+
+    return 0;
+}
+
