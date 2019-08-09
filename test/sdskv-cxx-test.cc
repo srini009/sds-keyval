@@ -134,6 +134,15 @@ static int put_get_erase_test(sdskv::database& DB, uint32_t num_keys) {
         DB.erase(keys[i]);
     }
 
+    /* try getting a random key that should have been deleted */
+    try {
+        std::vector<char> v(max_value_size);
+        DB.get(keys[num_keys/2], v);
+        throw std::runtime_error("DB.get() succeeded when it shouldn't have");
+    } catch(sdskv::exception& ex) {
+        std::cout << "Correctly thronw exception: " << ex.what() << std::endl;
+    }
+
     return 0;
 }
 
