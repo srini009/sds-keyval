@@ -20,6 +20,8 @@ static std::string gen_random_string(size_t len);
 
 static int put_get_erase_test(sdskv::database& DB, uint32_t num_keys);
 static int put_get_erase_multi_test(sdskv::database& DB, uint32_t num_keys);
+static int list_keys_test(sdskv::database& DB, uint32_t num_keys);
+static int list_keyvals_test(sdskv::database& DB, uint32_t num_keys);
 
 int main(int argc, char *argv[])
 {
@@ -74,6 +76,7 @@ int main(int argc, char *argv[])
         /* Put get erase test */
         put_get_erase_test(DB, num_keys);
         put_get_erase_multi_test(DB, num_keys);
+        list_keys_test(DB, num_keys);
 
         /* shutdown the server */
         kvcl.shutdown(svr_addr);
@@ -200,3 +203,99 @@ static int put_get_erase_multi_test(sdskv::database& DB, uint32_t num_keys) {
     return 0;
 }
 
+static int list_keys_test(sdskv::database& DB, uint32_t num_keys) {
+
+    /* **** put keys ***** */
+    std::vector<std::string> keys;
+    std::map<std::string, std::string> reference;
+    size_t max_value_size = 24;
+
+    for(unsigned i=0; i < num_keys; i++) {
+        auto k = gen_random_string(16);
+        // half of the entries will be put using bulk
+        auto v = gen_random_string(3+i*(max_value_size-3)/num_keys);
+        DB.put(k, v);
+        std::cout << "Inserted " << k << "\t ===> " << v << std::endl;
+        reference[k] = v;
+        keys.push_back(k);
+    }
+    std::cout << "Successfuly inserted " << num_keys << " keys" << std::endl;
+
+    std::string start_key;
+    std::vector<std::string> keys_out(3);
+    auto it = reference.begin();
+    do {
+        DB.list_keys(start_key, keys_out);
+        if(keys_out.size() == 0) break;
+        start_key = keys_out[keys_out.size()-1];
+        for(auto& k : keys_out) {
+            if(k != it->first) {
+                std::cerr << "Error: key " << k << " != " << it->first << std::endl;
+                throw std::runtime_error("list_keys error");
+            } else {
+                std::cerr << "Key OK: key " << k << " == " << it->first << std::endl;
+            }
+            ++it;
+        }
+    } while(keys_out.size() == 3);
+
+    /* erase keys */
+    for(unsigned i=0; i < num_keys; i++) {
+        DB.erase(keys[i]);
+    }
+
+    return 0;
+}
+
+static int list_keyvals_test(sdskv::database& DB, uint32_t num_keys) {
+
+    /* **** put keys ***** */
+    std::vector<std::string> keys;
+    std::map<std::string, std::string> reference;
+    size_t max_value_size = 24;
+
+    for(unsigned i=0; i < num_keys; i++) {
+        auto k = gen_random_string(16);
+        // half of the entries will be put using bulk
+        auto v = gen_random_string(3+i*(max_value_size-3)/num_keys);
+        DB.put(k, v);
+        std::cout << "Inserted " << k << "\t ===> " << v << std::endl;
+        reference[k] = v;
+        keys.push_back(k);
+    }
+    std::cout << "Successfuly inserted " << num_keys << " keys" << std::endl;
+
+    std::string start_key;
+    std::vector<std::string> keys_out(3);
+    std::vector<std::string> vals_out(3);
+    auto it = reference.begin();
+    do {
+        DB.list_keyvals(start_key, keys_out, vals_out);
+        if(keys_out.size() == 0) break;
+        start_key = keys_out[keys_out.size()-1];
+        for(unsigned i = 0; i < keys_out.size(); i++) {
+            auto& k = keys_out[i];
+            auto& v = vals_out[i];
+            if(k != it->first) {
+                std::cerr << "Error: key " << k << " != " << it->first << std::endl;
+                throw std::runtime_error("list_keys error");
+            } else {
+                std::cerr << "Key OK: key " << k << " == " << it->first << std::endl;
+            }
+            if(v != it->second) {
+                std::cerr << "Error: value " << v << " != " << it->second << std::endl;
+                throw std::runtime_error("list_keys error");
+            } else {
+                std::cerr << "Val OK: val " << v << " == " << it->second << std::endl;
+            }
+            ++it;
+        }
+    } while(keys_out.size() == 3);
+
+    /* erase keys */
+    for(unsigned i=0; i < num_keys; i++) {
+        DB.erase(keys[i]);
+    }
+
+    return 0;
+}

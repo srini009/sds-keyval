@@ -23,7 +23,7 @@ check_PROGRAMS = test/sdskv-open-test              \
 		 test/sdskv-cxx-test               \
 		 test/sdskv-custom-server-daemon
 
-bin_sdskv_server_daemon_SOURCES = src/sdskv-server-daemon.c
+bin_sdskv_server_daemon_SOURCES = src/sdskv-server-daemon.cc
 bin_sdskv_server_daemon_DEPENDENCIES = lib/libsdskv-server.la
 bin_sdskv_server_daemon_LDFLAGS = -Llib -lsdskv-server
 bin_sdskv_server_daemon_LDADD = ${LIBS} -lsdskv-server ${SERVER_LIBS}
@@ -161,7 +161,7 @@ test_sdskv_custom_cmp_test_SOURCES = test/sdskv-custom-cmp-test.cc
 test_sdskv_custom_cmp_test_DEPENDENCIES = lib/libsdskv-client.la
 test_sdskv_custom_cmp_test_LDFLAGS = -Llib -lsdskv-client
 
-test_sdskv_custom_server_daemon_SOURCES = test/sdskv-custom-server-daemon.c
+test_sdskv_custom_server_daemon_SOURCES = test/sdskv-custom-server-daemon.cc
 test_sdskv_custom_server_daemon_DEPENDENCIES = lib/libsdskv-server.la
 test_sdskv_custom_server_daemon_LDFLAGS = -Llib -lsdskv-server
 test_sdskv_custom_server_daemon_LDADD = ${LIBS} -lsdskv-server ${SERVER_LIBS}
