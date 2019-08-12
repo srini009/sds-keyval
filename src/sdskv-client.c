@@ -670,6 +670,20 @@ int sdskv_get_multi(sdskv_provider_handle_t provider,
         size_t num, const void* const* keys, const hg_size_t* ksizes,
         void** values, hg_size_t *vsizes)
 {
+    /******* NOTE ********
+     * This function works as follows:
+     *  - in.keys_bulk_handle will be a multi-segment bulk handle of num+1 segments.
+     *    The addresses to these segments are stored in key_seg_ptrs and their size
+     *    is in key_seg_sizes. Segment 0 will point to the ksizes array and will be
+     *    used to communicate the size of each key. The next segments will be used
+     *    to communicate the keys themselves.
+     * - in.vals_bulk_handle will be a bulk handle exposing a large single segment.
+     *   The beginning of this segment will be used to hold num hg_size_t values
+     *   corresponding to the sizes allocated for each value, and that the server
+     *   will modifiy with the actual sizes. The rest of the buffer will be used
+     *   for the server to push actual values, which will be concatenated back to back
+     *   and will require unpacking to be put into the values input buffers.
+     */
     hg_return_t     hret;
     int             ret;
     hg_handle_t     handle = HG_HANDLE_NULL;
@@ -724,7 +738,7 @@ int sdskv_get_multi(sdskv_provider_handle_t provider,
     }
 
     /* create the bulk handle to access the values */
-    hret = margo_bulk_create(provider->client->mid, num, (void**)&vals_buffer, &in.vals_bulk_size,
+    hret = margo_bulk_create(provider->client->mid, 1, (void**)&vals_buffer, &in.vals_bulk_size,
             HG_BULK_READWRITE, &in.vals_bulk_handle);
     if(hret != HG_SUCCESS) {
         fprintf(stderr,"[SDSKV] margo_bulk_create() failed in sdskv_get_multi()\n");
