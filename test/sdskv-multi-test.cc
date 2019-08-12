@@ -121,8 +121,8 @@ int main(int argc, char *argv[])
     for(unsigned i=0; i < num_keys; i++) {
         keys_ptr[i]  = (const void*)keys[i].data();
         vals_ptr[i]  = (const void*)vals[i].data();
-        keys_size[i] = keys[i].size()+1; // +1 because of the null character
-        vals_size[i] = vals[i].size()+1;
+        keys_size[i] = keys[i].size();
+        vals_size[i] = vals[i].size();
     }
 
     /* **** issue a put_multi ***** */
@@ -194,8 +194,11 @@ int main(int argc, char *argv[])
     /* check the keys we received against reference */
     for(unsigned i=0; i < num_keys; i++) {
         std::string vstring(read_values[i].data());
+        vstring.resize(rval_len[i]);
         auto& k = keys[i];
-        std::cout << "Got " << k << " ===> " << vstring << "\t" << "expected: " << reference[k] <<  std::endl;
+        std::cout << "Got " << k << " ===> " << vstring << "\t(size = " << vstring.size() 
+            << ") expected: " << reference[k] << " (size = " << reference[k].size() << ")"
+            <<  std::endl;
         if(vstring != reference[k]) {
             fprintf(stderr, "Error: sdskv_get_multi() returned a value different from the reference\n");
             sdskv_shutdown_service(kvcl, svr_addr);
