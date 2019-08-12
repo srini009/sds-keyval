@@ -66,6 +66,10 @@ class client {
             sdskv_client_finalize(m_client);
     }
 
+    operator sdskv_client_t() const {
+        return m_client;
+    }
+
     operator bool() const {
         return m_client != SDSKV_CLIENT_NULL;
     }
@@ -79,26 +83,26 @@ class client {
     //////////////////////////
 
     void put(const database& db,
-             const void *key, size_t ksize,
-             const void *value, size_t vsize) const; // XXX
+             const void *key, hg_size_t ksize,
+             const void *value, hg_size_t vsize) const;
 
     template<typename K, typename V>
-    void put(const database& db,
+    inline void put(const database& db,
              const K& key, const V& value) const {
-        put(db, key.data(), key.size(), value.data(), value.size());
+        put(db, (const void*)(key.data()), key.size(), (const void*)(value.data()), value.size());
     }
 
     void put(const database& db,
-             size_t count, const void* const* keys, const hg_size_t* ksizes,
-             const void* const* values, const hg_size_t *vsizes) const; // XXX
+             hg_size_t count, const void* const* keys, const hg_size_t* ksizes,
+             const void* const* values, const hg_size_t *vsizes) const;
 
     //////////////////////////
     // PUT_MULTI methods
     //////////////////////////
 
-    void put(const database& db,
-             const std::vector<const void*>& keys, const std::vector<size_t>& ksizes,
-             const std::vector<const void*>& values, const  std::vector<size_t>& vsizes) const {
+    inline void put(const database& db,
+             const std::vector<const void*>& keys, const std::vector<hg_size_t>& ksizes,
+             const std::vector<const void*>& values, const  std::vector<hg_size_t>& vsizes) const {
         if(keys.size() != ksizes.size()
         || keys.size() != values.size()
         || keys.size() != vsizes.size()) {
@@ -108,45 +112,45 @@ class client {
     }
 
     template<typename K, typename V>
-    void put(const database& db,
+    inline void put(const database& db,
              const std::vector<K>& keys, const std::vector<V>& values) {
         if(keys.size() != values.size()) {
             throw std::length_error("Provided vectors should have the same size");
         }
         std::vector<const void*> kdata; kdata.reserve(keys.size());
-        std::vector<const void*> vdata; vdata.reserve(values.sizes());
-        std::vector<size_t> ksizes; ksizes.reserve(keys.size());
-        std::vector<size_t> vsizes; vsizes.reserve(values.size());
+        std::vector<const void*> vdata; vdata.reserve(values.size());
+        std::vector<hg_size_t> ksizes; ksizes.reserve(keys.size());
+        std::vector<hg_size_t> vsizes; vsizes.reserve(values.size());
         for(const auto& k : keys) {
             ksizes.push_back(k.size());
-            kdata.push_back(k.data());
+            kdata.push_back((const void*)k.data());
         }
         for(const auto& v : values) {
             vsizes.push_back(v.size());
-            vdata.push_back(v.data());
+            vdata.push_back((const void*)v.data());
         }
         put(db, kdata, ksizes, vdata, vsizes);
     }
 
     template<typename IK, typename IV>
-    void put(const database& db,
+    inline void put(const database& db,
              const IK& kbegin, const IK& kend,
              const IV& vbegin, const IV& vend) const {
-        size_t count = std::distance(kbegin, kend);
+        hg_size_t count = std::distance(kbegin, kend);
         if(count != std::distance(vbegin, vend)) {
             throw std::length_error("Provided iterators should point to the same number of objects");
         }
         std::vector<const void*> kdata; kdata.reserve(count);
         std::vector<const void*> vdata; vdata.reserve(count);
-        std::vector<size_t> ksizes; ksizes.reserve(count);
-        std::vector<size_t> vsizes; vsizes.reserve(count);
+        std::vector<hg_size_t> ksizes; ksizes.reserve(count);
+        std::vector<hg_size_t> vsizes; vsizes.reserve(count);
         for(auto it = kbegin; it != kend; it++) {
             ksizes.push_back(it->size());
-            kdata.push_back(it->data());
+            kdata.push_back((const void*)(it->data()));
         }
         for(auto it = vbegin; it != vend; it++) {
             vsizes.push_back(it->size());
-            vdata.push_back(it->data());
+            vdata.push_back((const void*)(it->data()));
         }
         put(db, kdata, ksizes, vdata, vsizes);
     }
@@ -155,24 +159,24 @@ class client {
     // EXISTS methods
     //////////////////////////
 
-    bool exists(const database& db, const void* key, size_t ksize) const; // XXX
+    bool exists(const database& db, const void* key, hg_size_t ksize) const;
 
     template<typename K>
-    bool exists(const database& db, const K& key) const {
-        return exists(db, key.data(), key.size());
+    inline bool exists(const database& db, const K& key) const {
+        return exists(db, (const void*)(key.data()), key.size());
     }
 
     //////////////////////////
     // LENGTH methods
     //////////////////////////
 
-    size_t length(const database& db,
-            const void* key, size_t ksize) const; // XXX
+    hg_size_t length(const database& db,
+            const void* key, hg_size_t ksize) const;
 
     template<typename K>
-    size_t length(const database& db,
+    inline hg_size_t length(const database& db,
             const K& key) const {
-        return length(db, key.data(), key.size());
+        return length(db, (const void*)(key.data()), key.size());
     }
 
     //////////////////////////
@@ -180,33 +184,27 @@ class client {
     //////////////////////////
 
     bool length(const database& db,
-            size_t num, const void* const* keys,
-            const size_t* ksizes, size_t* vsizes) const; // XXX
+            hg_size_t num, const void* const* keys,
+            const hg_size_t* ksizes, hg_size_t* vsizes) const;
 
     template<typename K>
-    bool length(const database& db,
+    inline bool length(const database& db,
             const std::vector<K>& keys,
-            std::vector<size_t>& vsizes) const {
+            std::vector<hg_size_t>& vsizes) const {
         vsizes.resize(keys.size());
         std::vector<const void*> kdata; kdata.reserve(keys.size());
-        std::vector<size_t> ksizes; ksizes.reserve(keys.size());
+        std::vector<hg_size_t> ksizes; ksizes.reserve(keys.size());
         for(const auto& k : keys) {
-            kdata.push_back(k.data());
+            kdata.push_back((const void*)(k.data()));
             ksizes.push_back(k.size());
         }
         return length(db, keys.size(), kdata.data(), ksizes.data(), vsizes.data());
     }
 
     template<typename K>
-    std::vector<size_t> length(const database& db, const std::vector<K>& keys) const {
-        std::vector<size_t> vsizes(keys.size());
-        std::vector<const void*> kdata; kdata.reserve(keys.size());
-        std::vector<size_t> ksizes; ksizes.reserve(keys.size());
-        for(const auto& k : keys) {
-            kdata.push_back(k.data());
-            ksizes.push_back(k.size());
-        }
-        length(db, keys.size(), kdata.data(), ksizes.data(), vsizes.data());
+    inline std::vector<hg_size_t> length(const database& db, const std::vector<K>& keys) const {
+        std::vector<hg_size_t> vsizes(keys.size());
+        length(db, keys, vsizes);
         return vsizes;
     }
 
@@ -215,23 +213,26 @@ class client {
     //////////////////////////
 
     bool get(const database& db,
-             const void* key, size_t ksize,
-             void* value, size_t* vsize) const; // XXX
+             const void* key, hg_size_t ksize,
+             void* value, hg_size_t* vsize) const;
 
     template<typename K, typename V>
-    bool get(const database& db,
+    inline bool get(const database& db,
              const K& key, V& value) const {
-        size_t s = value.size();
-        get(db, key.data(), key.size(), value.data(), &s);
+        hg_size_t s = value.size();
+        if(s == 0) {
+            s = length(db, key);
+            value.resize(s);
+        }
+        get(db, (const void*)(key.data()), key.size(), (void*)(value.data()), &s);
         value.resize(s);
         return true;
     }
 
     template<typename K, typename V>
-    V get(const database& db,
+    inline V get(const database& db,
           const K& key) const {
-        size_t vsize = length(db, key);
-        V value(vsize, 0);
+        V value;
         get(db, key, value);
         return value;
     }
@@ -241,12 +242,12 @@ class client {
     //////////////////////////
 
     bool get(const database& db,
-             size_t count, const void* const* keys, const size_t* ksizes,
-             void** values, size_t *vsizes) const; // XXX
+             hg_size_t count, const void* const* keys, const hg_size_t* ksizes,
+             void** values, hg_size_t *vsizes) const;
 
-    bool get(const database& db,
-             const std::vector<const void*>& keys, const std::vector<size_t>& ksizes,
-             std::vector<void*>& values, std::vector<size_t>& vsizes) const {
+    inline bool get(const database& db,
+             const std::vector<const void*>& keys, const std::vector<hg_size_t>& ksizes,
+             std::vector<void*>& values, std::vector<hg_size_t>& vsizes) const {
         if(keys.size() != ksizes.size()
         || keys.size() != values.size()
         || keys.size() != vsizes.size()) {
@@ -256,61 +257,66 @@ class client {
     }
 
     template<typename K, typename V>
-    bool get(const database& db,
+    inline bool get(const database& db,
              const std::vector<K>& keys, std::vector<V>& values) const {
         if(keys.size() != values.size()) {
             throw std::length_error("Provided vectors should have the same size");
         }
         std::vector<const void*> kdata; kdata.reserve(keys.size());
-        std::vector<void*> vdata; vdata.reserve(values.sizes());
-        std::vector<size_t> ksizes; ksizes.reserve(keys.size());
-        std::vector<size_t> vsizes; vsizes.reserve(values.size());
+        std::vector<void*> vdata; vdata.reserve(values.size());
+        std::vector<hg_size_t> ksizes; ksizes.reserve(keys.size());
+        std::vector<hg_size_t> vsizes; vsizes.reserve(values.size());
         for(const auto& k : keys) {
             ksizes.push_back(k.size());
-            kdata.push_back(k.data());
+            kdata.push_back((const void*)(k.data()));
         }
         for(auto& v : values) {
             vsizes.push_back(v.size());
-            vdata.push_back(v.data());
+            vdata.push_back((void*)(v.data()));
         }
-        return get(db, kdata, ksizes, vdata, vsizes);
+        get(db, kdata, ksizes, vdata, vsizes);
+        for(unsigned i=0; i < values.size(); i++) {
+            values[i].resize(vsizes[i]);
+            std::cout << "key: " << keys[i] << ", value: " << values[i] << ", value size: " << vsizes[i] <<  std::endl;
+        }
+        return true;
     }
 
     template<typename IK, typename IV>
-    bool get(const database& db,
+    inline bool get(const database& db,
              const IK& kbegin, const IK& kend,
              const IV& vbegin, const IV& vend) const {
-        size_t count = std::distance(kbegin, kend);
+        hg_size_t count = std::distance(kbegin, kend);
         if(count != std::distance(vbegin, vend)) {
             throw std::length_error("Provided iterators should point to the same number of objects");
         }
         std::vector<const void*> kdata; kdata.reserve(count);
         std::vector<void*> vdata; vdata.reserve(count);
-        std::vector<size_t> ksizes; ksizes.reserve(count);
-        std::vector<size_t> vsizes; vsizes.reserve(count);
+        std::vector<hg_size_t> ksizes; ksizes.reserve(count);
+        std::vector<hg_size_t> vsizes; vsizes.reserve(count);
         for(auto it = kbegin; it != kend; it++) {
             ksizes.push_back(it->size());
-            kdata.push_back(it->data());
+            kdata.push_back((const void*)(it->data()));
         }
         for(auto it = vbegin; it != vend; it++) {
             vsizes.push_back(it->size());
-            vdata.push_back(it->data());
+            vdata.push_back((void*)(it->data()));
         }
         return get(db, kdata, ksizes, vdata, vsizes);
     }
 
     template<typename K>
-    std::vector<std::vector<char>> get(
+    inline std::vector<std::vector<char>> get(
             const database& db,
             const std::vector<K>& keys) {
-        size_t num = keys.size();
-        std::vector<size_t> vsizes(num);
+        hg_size_t num = keys.size();
+        std::vector<hg_size_t> vsizes(num);
         length(db, keys, vsizes);
         std::vector<std::vector<char>> values(num);
         for(unsigned i=0 ; i < num; i++) {
             values[i].resize(vsizes[i]);
         }
-        get(db, keys.begin(), keys.end(), values.begin(), values.end());
+        get(db, keys, values);
         return values;
     }
 
@@ -320,12 +326,12 @@ class client {
     
     void erase(const database& db,
                const void* key,
-               size_t ksize) const; // XXX
+               hg_size_t ksize) const;
 
     template<typename K>
-    void erase( const database& db,
+    inline void erase( const database& db,
                const K& key) const {
-        erase(db, key.data(), key.size());
+        erase(db, (const void*)(key.data()), key.size());
     }
 
     //////////////////////////
@@ -333,16 +339,16 @@ class client {
     //////////////////////////
 
     void erase(const database& db,
-            size_t num, const void* const* keys,
-            const size_t* ksizes) const; // XXX
+            hg_size_t num, const void* const* keys,
+            const hg_size_t* ksizes) const;
 
     template<typename K>
-    void erase(const database& db,
+    inline void erase(const database& db,
             const std::vector<K>& keys) const {
         std::vector<const void*> kdata; kdata.reserve(keys.size());
-        std::vector<size_t> ksizes; ksizes.reserve(keys.size());
+        std::vector<hg_size_t> ksizes; ksizes.reserve(keys.size());
         for(const auto& k : keys) {
-            kdata.push_back(k.data());
+            kdata.push_back((const  void*)(k.data()));
             ksizes.push_back(k.size());
         }
         return erase(db, keys.size(), kdata.data(), ksizes.data());
@@ -353,37 +359,38 @@ class client {
     //////////////////////////
     
     void list_keys(const database& db,
-            const void *start_key, size_t start_ksize,
-            const void *prefix, size_t prefix_size,
-            void** keys, size_t* ksizes, size_t* max_keys) const; // XXX
+            const void *start_key, hg_size_t start_ksize,
+            const void *prefix, hg_size_t prefix_size,
+            void** keys, hg_size_t* ksizes, hg_size_t* max_keys) const;
 
-    void list_keys(const database& db,
-            const void *start_key, size_t start_ksize,
-            void** keys, size_t* ksizes, size_t* max_keys) const {
+    inline void list_keys(const database& db,
+            const void *start_key, hg_size_t start_ksize,
+            void** keys, hg_size_t* ksizes, hg_size_t* max_keys) const {
         list_keys(db, start_key, start_ksize, NULL, 0, keys, ksizes, max_keys);
     }
 
     template<typename K>
-    void list_keys(const database& db,
+    inline void list_keys(const database& db,
                 const K& start_key,
                 std::vector<K>& keys) {
-        size_t max_keys = keys.size();
+        hg_size_t max_keys = keys.size();
+        if(max_keys == 0) return;
         std::vector<void*> kdata; kdata.reserve(keys.size());
-        std::vector<size_t> ksizes; ksizes.reserve(keys.size());
+        std::vector<hg_size_t> ksizes; ksizes.reserve(keys.size());
         for(auto& k : keys) {
-            kdata.push_back(k.data());
+            kdata.push_back((void*)(k.data()));
             ksizes.push_back(k.size());
         }
         try {
-            list_keys(db, start_key.data(), start_key.size(),
+            list_keys(db, (const void*)(start_key.data()), start_key.size(),
                 kdata.data(), ksizes.data(), &max_keys);
         } catch(exception& e) {
-            if(e.error() == SDSKV_ERR_SIZE) {
+            if(e.error() == SDSKV_ERR_SIZE && keys[0].size() == 0) {
                 for(unsigned i=0; i < max_keys; i++) {
                     keys[i].resize(ksizes[i]);
-                    kdata[i] = keys[i].data();
+                    kdata[i] = (void*)(keys[i].data());
                 }
-                list_keys(db, start_key.data(), start_key.size(),
+                list_keys(db, (const void*)(start_key.data()), start_key.size(),
                         kdata.data(), ksizes.data(), &max_keys);
             } else {
                 throw;
@@ -396,29 +403,29 @@ class client {
     }
 
     template<typename K>
-    void list_keys(const database& db,
+    inline void list_keys(const database& db,
                 const K& start_key,
                 const K& prefix,
                 std::vector<K>& keys) {
-        size_t max_keys = keys.size();
+        hg_size_t max_keys = keys.size();
         std::vector<void*> kdata; kdata.reserve(keys.size());
-        std::vector<size_t> ksizes; ksizes.reserve(keys.size());
+        std::vector<hg_size_t> ksizes; ksizes.reserve(keys.size());
         for(auto& k : keys) {
-            kdata.push_back(k.data());
+            kdata.push_back((void*)(k.data()));
             ksizes.push_back(k.size());
         }
         try {
-            list_keys(db, start_key.data(), start_key.size(),
-                prefix.data(), prefix.size(),
+            list_keys(db, (const void*)(start_key.data()), start_key.size(),
+                (const void*)(prefix.data()), prefix.size(),
                 kdata.data(), ksizes.data(), &max_keys);
         } catch(exception& e) {
-            if(e.error() == SDSKV_ERR_SIZE) {
+            if(e.error() == SDSKV_ERR_SIZE && keys[0].size() == 0) {
                 for(unsigned i=0; i < max_keys; i++) {
                     keys[i].resize(ksizes[i]);
                     kdata[i] = keys[i].data();
                 }
-                list_keys(db, start_key.data(), start_key.size(),
-                        prefix.data(), prefix.size(),
+                list_keys(db, (const void*)(start_key.data()), start_key.size(),
+                        (const void*)(prefix.data()), prefix.size(),
                         kdata.data(), ksizes.data(), &max_keys);
             } else {
                 throw;
@@ -435,51 +442,51 @@ class client {
     //////////////////////////
 
     void list_keyvals(const database& db,
-            const void *start_key, size_t start_ksize,
-            const void *prefix, size_t prefix_size,
-            void** keys, size_t* ksizes, 
-            void** values, size_t* vsizes,
-            size_t* max_items) const; // XXX
+            const void *start_key, hg_size_t start_ksize,
+            const void *prefix, hg_size_t prefix_size,
+            void** keys, hg_size_t* ksizes, 
+            void** values, hg_size_t* vsizes,
+            hg_size_t* max_items) const;
 
-    void list_keyvals(const database& db,
-            const void *start_key, size_t start_ksize,
-            void** keys, size_t* ksizes,
-            void** values, size_t* vsizes,
-            size_t* max_items) const {
+    inline void list_keyvals(const database& db,
+            const void *start_key, hg_size_t start_ksize,
+            void** keys, hg_size_t* ksizes,
+            void** values, hg_size_t* vsizes,
+            hg_size_t* max_items) const {
         list_keyvals(db, start_key, start_ksize,
                 NULL, 0, keys, ksizes, values, vsizes, max_items);
     }
 
     template<typename K, typename V>
-    void list_keyvals(const database& db,
+    inline void list_keyvals(const database& db,
                 const K& start_key,
                 std::vector<K>& keys,
                 std::vector<V>& values) const {
 
-        size_t max_keys = std::min(keys.size(), values.size());
+        hg_size_t max_keys = std::min(keys.size(), values.size());
         std::vector<void*> kdata; kdata.reserve(keys.size());
-        std::vector<size_t> ksizes; ksizes.reserve(keys.size());
+        std::vector<hg_size_t> ksizes; ksizes.reserve(keys.size());
         std::vector<void*> vdata; vdata.reserve(values.size());
-        std::vector<size_t> vsizes; vsizes.reserve(values.size());
+        std::vector<hg_size_t> vsizes; vsizes.reserve(values.size());
         for(auto& k : keys) {
-            kdata.push_back(k.data());
+            kdata.push_back((void*)(k.data()));
             ksizes.push_back(k.size());
         }
         for(auto& v : values) {
-            vdata.push_back(v.data());
+            vdata.push_back((void*)(v.data()));
             vsizes.push_back(v.size());
         }
         try {
-            list_keyvals(db, start_key.data(), start_key.size(),
+            list_keyvals(db, (const void*)(start_key.data()), start_key.size(),
                 kdata.data(), ksizes.data(), 
                 vdata.data(), vsizes.data(), &max_keys);
         } catch(exception& e) {
             if(e.error() == SDSKV_ERR_SIZE) {
                 for(unsigned i=0; i < max_keys; i++) {
                     keys[i].resize(ksizes[i]);
-                    kdata[i] = keys[i].data();
+                    kdata[i] = (void*)(keys[i].data());
                     values[i].resize(vsizes[i]);
-                    vdata[i] = values[i].data();
+                    vdata[i] = (void*)(values[i].data());
                 }
                 list_keyvals(db, start_key.data(), start_key.size(),
                     kdata.data(), ksizes.data(), 
@@ -497,40 +504,40 @@ class client {
     }
 
     template<typename K, typename V>
-    void list_keyvals(const database& db,
+    inline void list_keyvals(const database& db,
                 const K& start_key,
                 const K& prefix,
                 std::vector<K>& keys,
                 std::vector<V>& values) const {
 
-        size_t max_keys = std::min(keys.size(), values.size());
+        hg_size_t max_keys = std::min(keys.size(), values.size());
         std::vector<void*> kdata; kdata.reserve(keys.size());
-        std::vector<size_t> ksizes; ksizes.reserve(keys.size());
+        std::vector<hg_size_t> ksizes; ksizes.reserve(keys.size());
         std::vector<void*> vdata; vdata.reserve(values.size());
-        std::vector<size_t> vsizes; vsizes.reserve(values.size());
+        std::vector<hg_size_t> vsizes; vsizes.reserve(values.size());
         for(auto& k : keys) {
-            kdata.push_back(k.data());
+            kdata.push_back((void*)k.data());
             ksizes.push_back(k.size());
         }
         for(auto& v : values) {
-            vdata.push_back(v.data());
+            vdata.push_back((void*)v.data());
             vsizes.push_back(v.size());
         }
         try {
-            list_keyvals(db, start_key.data(), start_key.size(),
-                prefix.data(), prefix.size(),
+            list_keyvals(db, (const void*)start_key.data(), start_key.size(),
+                (const void*)prefix.data(), prefix.size(),
                 kdata.data(), ksizes.data(), 
                 vdata.data(), vsizes.data(), &max_keys);
         } catch(exception& e) {
             if(e.error() == SDSKV_ERR_SIZE) {
                 for(unsigned i=0; i < max_keys; i++) {
                     keys[i].resize(ksizes[i]);
-                    kdata[i] = keys[i].data();
+                    kdata[i] = (void*)keys[i].data();
                     values[i].resize(vsizes[i]);
-                    vdata[i] = values[i].data();
+                    vdata[i] = (void*)values[i].data();
                 }
-                list_keyvals(db, start_key.data(), start_key.size(),
-                        prefix.data(), prefix.size(),
+                list_keyvals(db, (const void*)start_key.data(), start_key.size(),
+                        (const void*)prefix.data(), prefix.size(),
                         kdata.data(), ksizes.data(), 
                         vdata.data(), vsizes.data(), &max_keys);
             } else {
@@ -550,12 +557,12 @@ class client {
     //////////////////////////
     
     void migrate(const database& source_db, const database& dest_db,
-            size_t num_items, const void* const* keys, const size_t* key_sizes,
-            int flag = SDSKV_KEEP_ORIGINAL) const; // XXX
+            hg_size_t num_items, const void* const* keys, const hg_size_t* key_sizes,
+            int flag = SDSKV_KEEP_ORIGINAL) const;
 
-    void migrate(const database& source_db, const database& dest_db,
+    inline void migrate(const database& source_db, const database& dest_db,
             const std::vector<const void*> keys, 
-            const std::vector<size_t> ksizes,
+            const std::vector<hg_size_t> ksizes,
             int flag = SDSKV_KEEP_ORIGINAL) const {
         if(keys.size() != ksizes.size()) {
             throw std::length_error("Provided vectors should have the same size");
@@ -564,42 +571,42 @@ class client {
     }
 
     template<typename K>
-    void migrate(const database& source_db, const database& dest_db,
+    inline void migrate(const database& source_db, const database& dest_db,
             const std::vector<K> keys, int flag = SDSKV_KEEP_ORIGINAL) const {
-        std::vector<size_t> ksizes; ksizes.reserve(keys.size());
+        std::vector<hg_size_t> ksizes; ksizes.reserve(keys.size());
         std::vector<const void*> kdata; kdata.reserve(keys.size());
         for(const auto& k : keys) {
             ksizes.push_back(k.size());
-            kdata.push_back(k.data());
+            kdata.push_back((const void*)(k.data()));
         }
         migrate(source_db, dest_db,
                 kdata, ksizes, flag);
     }
 
     void migrate(const database& source_db, const database& dest_db,
-            const void* key_range[2], const size_t key_sizes[2],
-            int flag = SDSKV_KEEP_ORIGINAL) const; // XXX
+            const void* key_range[2], const hg_size_t key_sizes[2],
+            int flag = SDSKV_KEEP_ORIGINAL) const;
 
     template<typename K>
-    void migrate(const database& source_db, const database& dest_db,
+    inline void migrate(const database& source_db, const database& dest_db,
                  const std::pair<K,K>& key_range,
                  int flag = SDSKV_KEEP_ORIGINAL) const {
-        const void* key_range_arr[2] = { key_range.first.data(), key_range.second.data() };
-        const size_t key_sizes_arr[2] = { key_range.first.size(), key_range.second.size() };
+        const void* key_range_arr[2] = { (const void*)key_range.first.data(), (const void*)key_range.second.data() };
+        const hg_size_t key_sizes_arr[2] = { key_range.first.size(), key_range.second.size() };
         migrate(source_db, dest_db, key_range_arr, key_sizes_arr, flag);
     }
 
     void migrate(const database& source_db, const database& dest_db,
-            const void* prefix, size_t prefix_size,
-            int flag = SDSKV_KEEP_ORIGINAL) const; // XXX
+            const void* prefix, hg_size_t prefix_size,
+            int flag = SDSKV_KEEP_ORIGINAL) const;
 
     template<typename K>
-    void migrate(const database& source_db, const database& dest_db,
+    inline void migrate(const database& source_db, const database& dest_db,
                  const K& prefix, int flag = SDSKV_KEEP_ORIGINAL) const {
-        migrate(source_db, dest_db, prefix.data(), prefix.size(), flag);
+        migrate(source_db, dest_db, (const void*)(prefix.data()), prefix.size(), flag);
     }
 
-    void migrate(const database& source_db, const database& dest_db, int flag = SDSKV_KEEP_ORIGINAL) const; // XXX
+    void migrate(const database& source_db, const database& dest_db, int flag = SDSKV_KEEP_ORIGINAL) const;
 
     //////////////////////////
     // MIGRATE_DB method
@@ -609,7 +616,7 @@ class client {
             const std::string& dest_provider_addr,
             uint16_t dest_provider_id,
             const std::string& dest_root,
-            int flag = SDSKV_KEEP_ORIGINAL) const; // XXX
+            int flag = SDSKV_KEEP_ORIGINAL) const;
 
     //////////////////////////
     // SHUTDOWN method
@@ -689,6 +696,10 @@ class provider_handle {
             sdskv_provider_handle_release(m_ph);
     }
 
+    operator sdskv_provider_handle_t() const {
+        return m_ph;
+    }
+
 };
 
 class database {
@@ -711,6 +722,10 @@ class database {
     database& operator=(const database& other) = default;
     database& operator=(database&& other) = default;
     ~database() = default;
+
+    operator sdskv_database_id_t() const {
+        return m_db_id;
+    }
 
     template<typename ... T>
     void put(T&& ... args) const {
@@ -764,7 +779,7 @@ inline database client::open(const provider_handle& ph, const std::string& db_na
 inline std::vector<database> client::open(const provider_handle& ph) const {
     std::vector<sdskv_database_id_t> ids;
     std::vector<char*> names; 
-    size_t count;
+    hg_size_t count;
     int ret = sdskv_count_databases(ph.m_ph, &count);
     ids.resize(count);
     names.resize(count);
@@ -782,31 +797,31 @@ inline std::vector<database> client::open(const provider_handle& ph) const {
 }
 
 inline void client::put(const database& db,
-        const void *key, size_t ksize,
-        const void *value, size_t vsize) const {
+        const void *key, hg_size_t ksize,
+        const void *value, hg_size_t vsize) const {
     int ret = sdskv_put(db.m_ph.m_ph, db.m_db_id,
             key, ksize, value, vsize);
     _CHECK_RET(ret);
 }
 
 inline void client::put(const database& db,
-        size_t count, const void* const* keys, const hg_size_t* ksizes,
+        hg_size_t count, const void* const* keys, const hg_size_t* ksizes,
         const void* const* values, const hg_size_t *vsizes) const {
     int ret = sdskv_put_multi(db.m_ph.m_ph, db.m_db_id,
             count, keys, ksizes, values, vsizes);
      _CHECK_RET(ret);
 }
 
-inline size_t client::length(const database& db,
-        const void* key, size_t ksize) const {
-    size_t vsize;
+inline hg_size_t client::length(const database& db,
+        const void* key, hg_size_t ksize) const {
+    hg_size_t vsize;
     int ret = sdskv_length(db.m_ph.m_ph, db.m_db_id,
             key, ksize, &vsize);
     _CHECK_RET(ret);
     return vsize;
 }
 
-inline bool client::exists(const database& db, const void* key, size_t ksize) const {
+inline bool client::exists(const database& db, const void* key, hg_size_t ksize) const {
     int flag;
     int ret = sdskv_exists(db.m_ph.m_ph, db.m_db_id, key, ksize, &flag);
     _CHECK_RET(ret);
@@ -814,8 +829,8 @@ inline bool client::exists(const database& db, const void* key, size_t ksize) co
 }
 
 inline bool client::length(const database& db,
-        size_t num, const void* const* keys,
-        const size_t* ksizes, size_t* vsizes) const {
+        hg_size_t num, const void* const* keys,
+        const hg_size_t* ksizes, hg_size_t* vsizes) const {
     int ret = sdskv_length_multi(db.m_ph.m_ph, db.m_db_id,
             num, keys, ksizes, vsizes);
     _CHECK_RET(ret);
@@ -823,8 +838,8 @@ inline bool client::length(const database& db,
 }
 
 inline bool client::get(const database& db,
-        const void* key, size_t ksize,
-        void* value, size_t* vsize) const {
+        const void* key, hg_size_t ksize,
+        void* value, hg_size_t* vsize) const {
     int ret = sdskv_get(db.m_ph.m_ph, db.m_db_id,
             key, ksize, value, vsize);
     _CHECK_RET(ret);
@@ -832,7 +847,7 @@ inline bool client::get(const database& db,
 }
 
 inline bool client::get(const database& db,
-        size_t count, const void* const* keys, const size_t* ksizes,
+        hg_size_t count, const void* const* keys, const hg_size_t* ksizes,
         void** values, hg_size_t *vsizes) const {
     int ret = sdskv_get_multi(db.m_ph.m_ph, db.m_db_id,
             count, keys, ksizes, values, vsizes);
@@ -842,24 +857,24 @@ inline bool client::get(const database& db,
 
 inline void client::erase(const database& db,
         const void* key,
-        size_t ksize) const {
+        hg_size_t ksize) const {
     int ret = sdskv_erase(db.m_ph.m_ph, db.m_db_id,
             key, ksize);
     _CHECK_RET(ret);
 }
 
 inline void client::erase(const database& db,
-        size_t num, const void* const* keys,
-        const size_t* ksizes) const {
+        hg_size_t num, const void* const* keys,
+        const hg_size_t* ksizes) const {
     int ret = sdskv_erase_multi(db.m_ph.m_ph, db.m_db_id,
             num, keys, ksizes);
     _CHECK_RET(ret);
 }
 
 inline void client::list_keys(const database& db,
-        const void *start_key, size_t start_ksize,
-        const void *prefix, size_t prefix_size,
-        void** keys, size_t* ksizes, size_t* max_keys) const {
+        const void *start_key, hg_size_t start_ksize,
+        const void *prefix, hg_size_t prefix_size,
+        void** keys, hg_size_t* ksizes, hg_size_t* max_keys) const {
     int ret = sdskv_list_keys_with_prefix(db.m_ph.m_ph, db.m_db_id,
             start_key, start_ksize, prefix, prefix_size,
             keys, ksizes, max_keys);
@@ -867,11 +882,11 @@ inline void client::list_keys(const database& db,
 }
 
 inline void client::list_keyvals(const database& db,
-        const void *start_key, size_t start_ksize,
-        const void *prefix, size_t prefix_size,
-        void** keys, size_t* ksizes,
-        void** values, size_t* vsizes,
-        size_t* max_items) const {
+        const void *start_key, hg_size_t start_ksize,
+        const void *prefix, hg_size_t prefix_size,
+        void** keys, hg_size_t* ksizes,
+        void** values, hg_size_t* vsizes,
+        hg_size_t* max_items) const {
     int ret = sdskv_list_keyvals_with_prefix(db.m_ph.m_ph, db.m_db_id,
             start_key, start_ksize, prefix, prefix_size,
             keys, ksizes,
@@ -881,7 +896,7 @@ inline void client::list_keyvals(const database& db,
 }
 
 inline void client::migrate(const database& source_db, const database& dest_db,
-        size_t num_items, const void* const* keys, const size_t* key_sizes,
+        hg_size_t num_items, const void* const* keys, const hg_size_t* key_sizes,
         int flag) const {
     hg_addr_t addr;
     uint16_t target_pr_id;
@@ -890,7 +905,7 @@ inline void client::migrate(const database& source_db, const database& dest_db,
     margo_instance_id mid = dest_db.m_ph.m_client->m_mid;
 
     std::vector<char> target_addr_str(256);
-    size_t addr_size = 256;
+    hg_size_t addr_size = 256;
     hg_return_t hret = margo_addr_to_string(mid, target_addr_str.data(), &addr_size, addr);
 
     if(hret != 0) throw std::runtime_error("margo_addr_to_string failed in client::migrate");
@@ -902,7 +917,7 @@ inline void client::migrate(const database& source_db, const database& dest_db,
 }
 
 inline void client::migrate(const database& source_db, const database& dest_db,
-        const void* key_range[2], const size_t key_sizes[2],
+        const void* key_range[2], const hg_size_t key_sizes[2],
         int flag) const {
     hg_addr_t addr;
     uint16_t target_pr_id;
@@ -911,7 +926,7 @@ inline void client::migrate(const database& source_db, const database& dest_db,
     margo_instance_id mid = dest_db.m_ph.m_client->m_mid;
 
     std::vector<char> target_addr_str(256);
-    size_t addr_size = 256;
+    hg_size_t addr_size = 256;
     hg_return_t hret = margo_addr_to_string(mid, target_addr_str.data(), &addr_size, addr);
 
     if(hret != 0) throw std::runtime_error("margo_addr_to_string failed in client::migrate");
@@ -923,7 +938,7 @@ inline void client::migrate(const database& source_db, const database& dest_db,
 }
 
 inline void client::migrate(const database& source_db, const database& dest_db,
-        const void* prefix, size_t prefix_size,
+        const void* prefix, hg_size_t prefix_size,
         int flag) const {
     hg_addr_t addr;
     uint16_t target_pr_id;
@@ -932,7 +947,7 @@ inline void client::migrate(const database& source_db, const database& dest_db,
     margo_instance_id mid = dest_db.m_ph.m_client->m_mid;
 
     std::vector<char> target_addr_str(256);
-    size_t addr_size = 256;
+    hg_size_t addr_size = 256;
     hg_return_t hret = margo_addr_to_string(mid, target_addr_str.data(), &addr_size, addr);
 
     if(hret != 0) throw std::runtime_error("margo_addr_to_string failed in client::migrate");
@@ -950,7 +965,7 @@ inline void client::migrate(const database& source_db, const database& dest_db, 
     margo_instance_id mid = dest_db.m_ph.m_client->m_mid;
 
     std::vector<char> target_addr_str(256);
-    size_t addr_size = 256;
+    hg_size_t addr_size = 256;
     hg_return_t hret = margo_addr_to_string(mid, target_addr_str.data(), &addr_size, addr);
 
     if(hret != HG_SUCCESS) throw std::runtime_error("margo_addr_to_string failed in client::migrate");
