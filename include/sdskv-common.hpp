@@ -25,6 +25,9 @@ const char* const sdskv_error_messages[] = {
     "Argobots error"
 };
 
+/**
+ * @brief Exception thrown when an sdskv call fails with a return code != 0.
+ */
 class exception : public std::exception {
 
     std::string m_msg;

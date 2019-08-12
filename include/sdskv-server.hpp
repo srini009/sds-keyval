@@ -9,11 +9,21 @@
 
 namespace sdskv {
 
+/**
+ * @brief The provider class wraps an sdskv_provider_t C handle.
+ */
 class provider {
 
     margo_instance_id m_mid     = MARGO_INSTANCE_NULL;
     sdskv_provider_t m_provider = SDSKV_PROVIDER_NULL;
 
+    /**
+     * @brief Constructor is private. Use the create() factory method.
+     *
+     * @param mid Margo instance.
+     * @param provider_id Provider id.
+     * @param pool Argobots pool.
+     */
     provider(margo_instance_id mid,
              uint16_t provider_id = 0,
              ABT_pool pool = SDSKV_ABT_POOL_DEFAULT)
@@ -30,6 +40,16 @@ class provider {
 
     public:
 
+    /**
+     * @brief Create a pointer to a provider. The provider will be automatically
+     * deleted when Margo finalizes, unless the user calls delete before.
+     *
+     * @param mid Margo instance.
+     * @param provider_id Provider id.
+     * @param pool Argobots pool.
+     *
+     * @return Pointer to a newly allocated provider.
+     */
     static provider* create(margo_instance_id mid,
                             uint16_t provider_id = 0,
                             ABT_pool pool = SDSKV_ABT_POOL_DEFAULT)
@@ -38,25 +58,53 @@ class provider {
         margo_provider_push_finalize_callback(mid, this, &finalize_callback, this);
     }
 
+    /**
+     * @brief Copy constructor is deleted.
+     */
     provider(const provider&) = delete;
 
+    /**
+     * @brief Move constructor is deleted.
+     */
     provider(provider&& other) = delete;
 
+    /**
+     * @brief Copy-assignment operator is deleted.
+     */
     provider& operator=(const provider&) = delete;
 
+    /**
+     * @brief Move-assignment operator is deleted.
+     */
     provider& operator=(provider&&) = delete;
 
+    /**
+     * @brief Destructor. Deregisters the provider.
+     */
     ~provider() {
         margo_provider_pop_finalize_callback(mid, this);
         sdskv_provider_destroy(m_provider);
     }
 
+    /**
+     * @brief Add a comparison function.
+     *
+     * @param name Name for the comparison function.
+     * @param comp_fn Comparison function pointer.
+     */
     void add_comparison_function(const std::string& name,
                                  sdskv_compare_fn comp_fn) {
         int ret = sdskv_provider_add_comparison_function(m_provider, name.c_str(), comp_fn);
         _CHECK_RET(ret);
     }
 
+    /**
+     * @brief Attach a database and returns the database id.
+     *
+     * @param config Database configuration.
+     *
+     * @return Database id.
+     */
     sdskv_database_id_t attach_database(const sdskv_config_t& config) {
         sdskv_database_id_t db_id;
         int ret = sdskv_provider_attach_database(m_provider, &config, &db_id);
@@ -64,16 +112,30 @@ class provider {
         return db_id;
     }
 
+    /**
+     * @brief Remove a database (this will not remove the underlying files).
+     *
+     * @param db_id Database id of the database to remove.
+     */
     void remove_database(sdskv_database_id_t db_id) {
         int ret = sdskv_provider_remove_database(m_provider, db_id);
         _CHECK_RET(ret);
     }
 
+    /**
+     * @brief Remove all the databases from this provider (this will not
+     * remove the underlying files).
+     */
     void remove_all_databases() {
         int ret = sdskv_provider_remove_all_databases(m_provider);
         _CHECK_RET(ret);
     }
 
+    /**
+     * @brief Returns the list of databases handled by this provider.
+     *
+     * @return Vector of database ids.
+     */
     std::vector<sdskv_database_id_t> databases() const {
         std::vector<sdskv_database_id_t> dbs;
         uint64_t num_dbs;
@@ -84,6 +146,14 @@ class provider {
         _CHECK_RET(ret);
     }
 
+    /**
+     * @brief Compute the size of a database (combined sizes of all files
+     * that make up the database). Requires REMI support.
+     *
+     * @param db_id Database id.
+     *
+     * @return Size of the specified database.
+     */
     size_t compute_database_size(sdskv_database_id_t db_id) const {
         size_t size;
         int ret = sdskv_provider_compute_database_size(
@@ -94,6 +164,13 @@ class provider {
         return size;
     }
     
+    /**
+     * @brief Registers migration callbacks for REMI to use.
+     *
+     * @param pre_cb Pre-migration callback.
+     * @param post_cb Post-migration callback.
+     * @param uargs User arguments.
+     */
     void set_migration_callbacks(sdskv_pre_migration_callback_fn pre_cb,
                                  sdskv_post_migration_callback_fn post_cb,
                                  void* uargs) {
@@ -102,6 +179,11 @@ class provider {
         _CHECK_RET(ret);
     }
 
+    /**
+     * @brief Set the ABT-IO instance to be used by REMI.
+     *
+     * @param abtio ABT-IO instance.
+     */
     void set_abtio_instance(abt_io_instance_id abtio) {
         int ret = sdskv_provider_set_abtio_instance(m_provider, abtio);
         _CHECK_RET(ret);
