@@ -19,6 +19,7 @@
 static std::string gen_random_string(size_t len);
 
 static int put_get_erase_test(sdskv::database& DB, uint32_t num_keys);
+static int put_get_erase_multi_test(sdskv::database& DB, uint32_t num_keys);
 
 int main(int argc, char *argv[])
 {
@@ -72,6 +73,7 @@ int main(int argc, char *argv[])
 
         /* Put get erase test */
         put_get_erase_test(DB, num_keys);
+        put_get_erase_multi_test(DB, num_keys);
 
         /* shutdown the server */
         kvcl.shutdown(svr_addr);
@@ -141,6 +143,58 @@ static int put_get_erase_test(sdskv::database& DB, uint32_t num_keys) {
         throw std::runtime_error("DB.get() succeeded when it shouldn't have");
     } catch(sdskv::exception& ex) {
         std::cout << "Correctly thronw exception: " << ex.what() << std::endl;
+    }
+
+    return 0;
+}
+
+static int put_get_erase_multi_test(sdskv::database& DB, uint32_t num_keys) {
+
+    std::cout << "============== put_get_erase_multi_test ==============" << std::endl;
+    /* **** put keys ***** */
+    std::vector<std::string> keys;
+    std::vector<std::string> values;
+    std::map<std::string, std::string> reference;
+    size_t max_value_size = 24;
+
+    for(unsigned i=0; i < num_keys; i++) {
+        auto k = gen_random_string(16);
+        // half of the entries will be put using bulk
+        auto v = gen_random_string(3+i*(max_value_size-3)/num_keys);
+        reference[k] = v;
+        keys.push_back(k);
+        values.push_back(v);
+        std::cout << "Inserting " << k << "===>\t" << v << std::endl;
+    }
+    DB.put(keys, values);
+    std::cout << "Successfuly inserted " << num_keys << " keys" << std::endl;
+
+    /* **** get keys **** */
+    unsigned i1 = rand() % (keys.size()/3);
+    unsigned i2 = i1 + (rand() % (keys.size()/3));
+    std::cout << "Will do a get_multi on the following keys: " << std::endl;
+    std::vector<std::string> keys_subset;
+    for(; i1 < i2+1; i1++) {
+        auto k = keys[rand() % keys.size()];
+        std::cout << "      " << k << std::endl;
+        keys_subset.push_back(k);
+    }
+    std::vector<std::string> vals_subset(keys_subset.size(), std::string(max_value_size, 0));
+    DB.get(keys_subset, vals_subset);
+
+    for(unsigned i=0; i < keys_subset.size(); i++) {
+        if(vals_subset[i] != reference[keys_subset[i]]) {
+            std::cerr << "Error in get multi, resulting values don't match: "
+                << " keys: " << keys_subset[i] << " val read: " << vals_subset[i] << " (size " << vals_subset[i].size() 
+                << ") val expected: " << reference[keys_subset[i]]  << " (size " << reference[keys_subset[i]].size() << ")" << std::endl;
+            throw std::runtime_error("Error in get multi, resulting values don't match");
+        }
+    }
+    
+
+    /* erase keys */
+    for(unsigned i=0; i < num_keys; i++) {
+        DB.erase(keys[i]);
     }
 
     return 0;
