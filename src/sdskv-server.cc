@@ -1032,7 +1032,7 @@ static void sdskv_get_multi_ult(hg_handle_t handle)
             val_sizes[i] = 0;
         }
         packed_keys += key_sizes[i];
-        packed_values += client_allocated_value_size;
+        packed_values += val_sizes[i]; //client_allocated_value_size;
     }
 
     /* do a PUSH operation to push back the values to the client */
