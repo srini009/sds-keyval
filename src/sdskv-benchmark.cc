@@ -604,7 +604,7 @@ static void run_client(MPI_Comm comm, Json::Value& config) {
             auto& bench  = benchmarks[i];
             unsigned rep = repetitions[i];
             // reset the RNG
-            srand(seed + rank);
+            srand(seed + rank*1789);
             std::vector<double> local_timings(rep);
             for(unsigned j = 0; j < rep; j++) {
                 MPI_Barrier(comm);
@@ -647,7 +647,7 @@ static void run_client(MPI_Comm comm, Json::Value& config) {
                 double q1 = global_timings[n/4];
                 double q3 = global_timings[(3*n)/4];
                 std::cout << std::setprecision(9) << std::fixed;
-                std::cout << "Repetitions     : " << n << std::endl;
+                std::cout << "Samples         : " << n << std::endl;
                 std::cout << "Average(sec)    : " << average << std::endl;
                 std::cout << "Variance(sec^2) : " << variance << std::endl;
                 std::cout << "StdDev(sec)     : " << stddev << std::endl;

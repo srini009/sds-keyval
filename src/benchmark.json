@@ -58,7 +58,7 @@
             "key-sizes" : 32,
             "val-sizes" : [ 56, 64 ],
             "erase-on-teardown" : true
-        }
+        },
         {
             "type" : "erase",
             "repetitions" : 10,
