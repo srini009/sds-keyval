@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include <cmath>
 #include <algorithm>
 #include <numeric>
@@ -123,7 +124,7 @@ class PutBenchmark : public AbstractBenchmark {
         m_num_entries = config["num-entries"].asUInt64();
         if(config["key-sizes"].isIntegral()) {
             auto x = config["key-sizes"].asUInt64();
-            m_key_size_range = { x, x };
+            m_key_size_range = { x, x+1 };
         } else if(config["key-sizes"].isArray() && config["key-sizes"].size() == 2) {
             auto x = config["key-sizes"][0].asUInt64();
             auto y = config["key-sizes"][1].asUInt64();
@@ -201,6 +202,118 @@ class PutMultiBenchmark : public PutBenchmark {
     }
 };
 REGISTER_BENCHMARK("put-multi", PutMultiBenchmark);
+
+/**
+ * GetBenchmark executes a series of GET operations and measures their duration.
+ */
+class GetBenchmark : public AbstractBenchmark {
+
+    protected:
+
+    uint64_t                  m_num_entries = 0;
+    std::pair<size_t, size_t> m_key_size_range;
+    std::pair<size_t, size_t> m_val_size_range;
+    bool                      m_erase_on_teardown;
+
+    std::vector<std::string>  m_keys;
+    std::vector<std::string>  m_vals;
+
+    public:
+
+    template<typename ... T>
+    GetBenchmark(Json::Value& config, T&& ... args)
+    : AbstractBenchmark(std::forward<T>(args)...) {
+        // read the configuration
+        m_num_entries = config["num-entries"].asUInt64();
+        if(config["key-sizes"].isIntegral()) {
+            auto x = config["key-sizes"].asUInt64();
+            m_key_size_range = { x, x+1 };
+        } else if(config["key-sizes"].isArray() && config["key-sizes"].size() == 2) {
+            auto x = config["key-sizes"][0].asUInt64();
+            auto y = config["key-sizes"][1].asUInt64();
+            if(x > y) throw std::range_error("invalid key-sizes range");
+            m_key_size_range = { x, y };
+        } else {
+            throw std::range_error("invalid key-sizes range or value");
+        }
+        if(config["val-sizes"].isIntegral()) {
+            auto x = config["val-sizes"].asUInt64();
+            m_val_size_range = { x, x+1 };
+        } else if(config["val-sizes"].isArray() && config["val-sizes"].size() == 2) {
+            auto x = config["val-sizes"][0].asUInt64();
+            auto y = config["val-sizes"][1].asUInt64();
+            if(x >= y) throw std::range_error("invalid val-sizes range");
+            m_val_size_range = { x, y };
+        } else {
+            throw std::range_error("invalid val-sizes range or value");
+        }
+        m_erase_on_teardown = config["erase-on-teardown"].asBool();
+    }
+
+    virtual void setup() override {
+        // generate key/value pairs and store them in the local
+        m_keys.reserve(m_num_entries);
+        m_vals.reserve(m_num_entries);
+        for(unsigned i=0; i < m_num_entries; i++) {
+            size_t ksize = m_key_size_range.first + (rand() % (m_key_size_range.second - m_key_size_range.first));
+            m_keys.push_back(gen_random_string(ksize));
+            size_t vsize = m_val_size_range.first + (rand() % (m_val_size_range.second - m_val_size_range.first));
+            m_vals.push_back(gen_random_string(vsize));
+        }
+        // execute PUT operations (not part of the measure)
+        auto& db = remoteDatabase();
+        for(unsigned i=0; i < m_num_entries; i++) {
+            auto& key = m_keys[i];
+            auto& val = m_vals[i];
+            db.put(key, val);
+        }
+    }
+
+    virtual void execute() override {
+        // execute GET operations
+        auto& db = remoteDatabase();
+        std::string val(m_val_size_range.second-1, 0);
+        for(unsigned i=0; i < m_num_entries; i++) {
+            auto& key = m_keys[i];
+            db.get(key, val);
+            val.resize(m_val_size_range.second-1, 0);
+        }
+    }
+
+    virtual void teardown() override {
+        if(m_erase_on_teardown) {
+            // erase all the keys from the database
+            auto& db = remoteDatabase();
+            for(unsigned i=0; i < m_num_entries; i++) {
+                db.erase(m_keys[i]);
+            }
+        }
+        // erase keys and values from the local vectors
+        m_keys.resize(0);
+        m_vals.resize(0);
+    }
+};
+REGISTER_BENCHMARK("get", GetBenchmark);
+
+/**
+ * GetMultiBenchmark inherites from GetBenchmark and does the same but
+ * executes a GET-MULTI instead of a GET.
+ */
+class GetMultiBenchmark : public GetBenchmark {
+    
+    public:
+
+    template<typename ... T>
+    GetMultiBenchmark(T&& ... args)
+    : GetBenchmark(std::forward<T>(args)...) {}
+
+    virtual void execute() override {
+        auto& db = remoteDatabase();
+        std::vector<std::string> vals(m_num_entries, std::string(m_val_size_range.second-1, 0));
+        db.get(m_keys, vals);
+    }
+};
+REGISTER_BENCHMARK("get-multi", GetMultiBenchmark);
 
 static void run_server(MPI_Comm comm, Json::Value& config);
 static void run_client(MPI_Comm comm, Json::Value& config);
@@ -374,6 +487,7 @@ static void run_client(MPI_Comm comm, Json::Value& config) {
                 double median = (n % 2) ? global_timings[n/2] : ((global_timings[n/2] + global_timings[n/2 + 1])/2.0);
                 double q1 = global_timings[n/4];
                 double q3 = global_timings[(3*n)/4];
+                std::cout << std::setprecision(9) << std::fixed;
                 std::cout << "Repetitions     : " << n << std::endl;
                 std::cout << "Average(sec)    : " << average << std::endl;
                 std::cout << "Variance(sec^2) : " << variance << std::endl;
