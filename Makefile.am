@@ -8,6 +8,10 @@ AM_CPPFLAGS = -I${srcdir}/src -I${srcdir}/include
 bin_PROGRAMS = bin/sdskv-server-daemon 	    \
 	       bin/sdskv-shutdown
 
+if BUILD_BENCHMARK
+bin_PROGRAMS += bin/sdskv-benchmark
+endif
+
 check_PROGRAMS = test/sdskv-open-test              \
 		 test/sdskv-list-db-test           \
 		 test/sdskv-put-test               \
@@ -33,6 +37,13 @@ bin_sdskv_shutdown_SOURCES = src/sdskv-shutdown.c
 bin_sdskv_shutdown_DEPENDENCIES = lib/libsdskv-client.la
 bin_sdskv_shutdown_LDFLAGS = -Llib -lsdskv-client
 bin_sdskv_shutdown_LDADD = ${LIBS} -lsdskv-client
+
+if BUILD_BENCHMARK
+bin_sdskv_benchmark_SOURCES = src/sdskv-benchmark.cc
+bin_sdskv_benchmark_DEPENDENCIES = lib/libsdskv-client.la lib/libsdskv-server.la
+bin_sdskv_benchmark_LDFLAGS = -Llib -lsdskv-client -lsdskv-server
+bin_sdskv_benchmark_LDADD = ${LIBS} -lsdskv-client -lsdskv-server ${SERVER_LIBS}
+endif
 
 #lib_LTLIBRARIES = lib/libkvclient.la \
 #                  lib/libkvserver.la \
