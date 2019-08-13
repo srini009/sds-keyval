@@ -919,17 +919,17 @@ int sdskv_length_multi(sdskv_provider_handle_t provider,
     hret = margo_bulk_create(provider->client->mid, num+1, key_seg_ptrs, key_seg_sizes,
             HG_BULK_READ_ONLY, &in.keys_bulk_handle);
     if(hret != HG_SUCCESS) {
-        fprintf(stderr,"[SDSKV] margo_bulk_create() failed in sdskv_get_multi()\n");
+        fprintf(stderr,"[SDSKV] margo_bulk_create() for keys failed in sdskv_length_multi()\n");
         out.ret = SDSKV_ERR_MERCURY;
         goto finish;
     }
 
     /* create the bulk handle for the server to put the values sizes */
     hg_size_t vals_size_bulk_size = num*sizeof(hg_size_t);
-    hret = margo_bulk_create(provider->client->mid, num, (void**)&vsizes, &vals_size_bulk_size,
+    hret = margo_bulk_create(provider->client->mid, 1, (void**)&vsizes, &vals_size_bulk_size,
             HG_BULK_WRITE_ONLY, &in.vals_size_bulk_handle);
     if(hret != HG_SUCCESS) {
-        fprintf(stderr,"[SDSKV] margo_bulk_create() failed in sdskv_get_multi()\n");
+        fprintf(stderr,"[SDSKV] margo_bulk_create() for vsizes failed in sdskv_length_multi()\n");
         out.ret = SDSKV_ERR_MERCURY;
         goto finish;
     }
@@ -941,7 +941,7 @@ int sdskv_length_multi(sdskv_provider_handle_t provider,
             provider->client->sdskv_length_multi_id,
             &handle);
     if(hret != HG_SUCCESS) {
-        fprintf(stderr,"[SDSKV] margo_create() failed in sdskv_get_multi()\n");
+        fprintf(stderr,"[SDSKV] margo_create() failed in sdskv_length_multi()\n");
         out.ret = SDSKV_ERR_MERCURY;
         goto finish;
     }
@@ -949,7 +949,7 @@ int sdskv_length_multi(sdskv_provider_handle_t provider,
     /* forward the RPC handle */
     hret = margo_provider_forward(provider->provider_id, handle, &in);
     if(hret != HG_SUCCESS) {
-        fprintf(stderr,"[SDSKV] margo_forward() failed in sdskv_get_multi()\n");
+        fprintf(stderr,"[SDSKV] margo_forward() failed in sdskv_length_multi()\n");
         out.ret = SDSKV_ERR_MERCURY;
         goto finish;
     }
@@ -957,7 +957,7 @@ int sdskv_length_multi(sdskv_provider_handle_t provider,
     /* get the response */
     hret = margo_get_output(handle, &out);
     if(hret != HG_SUCCESS) {
-        fprintf(stderr,"[SDSKV] margo_get_output() failed in sdskv_put_multi()\n");
+        fprintf(stderr,"[SDSKV] margo_get_output() failed in sdskv_length_multi()\n");
         out.ret = SDSKV_ERR_MERCURY;
         goto finish;
     }

@@ -100,11 +100,8 @@ std::map<std::string, AbstractBenchmark::benchmark_factory_function> AbstractBen
 #define REGISTER_BENCHMARK(__name, __class) \
     static BenchmarkRegistration<__class> __class##_registration(__name)
 
-/**
- * PutBenchmark executes a series of PUT operations and measures their duration.
- */
-class PutBenchmark : public AbstractBenchmark {
-
+class AbstractAccessBenchmark : public AbstractBenchmark {
+    
     protected:
 
     uint64_t                  m_num_entries = 0;
@@ -112,13 +109,10 @@ class PutBenchmark : public AbstractBenchmark {
     std::pair<size_t, size_t> m_val_size_range;
     bool                      m_erase_on_teardown;
 
-    std::vector<std::string>  m_keys;
-    std::vector<std::string>  m_vals;
-
     public:
 
     template<typename ... T>
-    PutBenchmark(Json::Value& config, T&& ... args)
+    AbstractAccessBenchmark(Json::Value& config, T&& ... args)
     : AbstractBenchmark(std::forward<T>(args)...) {
         // read the configuration
         m_num_entries = config["num-entries"].asUInt64();
@@ -146,6 +140,23 @@ class PutBenchmark : public AbstractBenchmark {
         }
         m_erase_on_teardown = config["erase-on-teardown"].asBool();
     }
+};
+
+/**
+ * PutBenchmark executes a series of PUT operations and measures their duration.
+ */
+class PutBenchmark : public AbstractAccessBenchmark {
+
+    protected:
+
+    std::vector<std::string>  m_keys;
+    std::vector<std::string>  m_vals;
+
+    public:
+
+    template<typename ... T>
+    PutBenchmark(T&& ... args)
+    : AbstractAccessBenchmark(std::forward<T>(args)...) { }
 
     virtual void setup() override {
         // generate key/value pairs and store them in the local
@@ -206,14 +217,9 @@ REGISTER_BENCHMARK("put-multi", PutMultiBenchmark);
 /**
  * GetBenchmark executes a series of GET operations and measures their duration.
  */
-class GetBenchmark : public AbstractBenchmark {
+class GetBenchmark : public AbstractAccessBenchmark {
 
     protected:
-
-    uint64_t                  m_num_entries = 0;
-    std::pair<size_t, size_t> m_key_size_range;
-    std::pair<size_t, size_t> m_val_size_range;
-    bool                      m_erase_on_teardown;
 
     std::vector<std::string>  m_keys;
     std::vector<std::string>  m_vals;
@@ -221,34 +227,8 @@ class GetBenchmark : public AbstractBenchmark {
     public:
 
     template<typename ... T>
-    GetBenchmark(Json::Value& config, T&& ... args)
-    : AbstractBenchmark(std::forward<T>(args)...) {
-        // read the configuration
-        m_num_entries = config["num-entries"].asUInt64();
-        if(config["key-sizes"].isIntegral()) {
-            auto x = config["key-sizes"].asUInt64();
-            m_key_size_range = { x, x+1 };
-        } else if(config["key-sizes"].isArray() && config["key-sizes"].size() == 2) {
-            auto x = config["key-sizes"][0].asUInt64();
-            auto y = config["key-sizes"][1].asUInt64();
-            if(x > y) throw std::range_error("invalid key-sizes range");
-            m_key_size_range = { x, y };
-        } else {
-            throw std::range_error("invalid key-sizes range or value");
-        }
-        if(config["val-sizes"].isIntegral()) {
-            auto x = config["val-sizes"].asUInt64();
-            m_val_size_range = { x, x+1 };
-        } else if(config["val-sizes"].isArray() && config["val-sizes"].size() == 2) {
-            auto x = config["val-sizes"][0].asUInt64();
-            auto y = config["val-sizes"][1].asUInt64();
-            if(x >= y) throw std::range_error("invalid val-sizes range");
-            m_val_size_range = { x, y };
-        } else {
-            throw std::range_error("invalid val-sizes range or value");
-        }
-        m_erase_on_teardown = config["erase-on-teardown"].asBool();
-    }
+    GetBenchmark(T&& ... args)
+    : AbstractAccessBenchmark(std::forward<T>(args)...) {}
 
     virtual void setup() override {
         // generate key/value pairs and store them in the local
@@ -314,6 +294,85 @@ class GetMultiBenchmark : public GetBenchmark {
     }
 };
 REGISTER_BENCHMARK("get-multi", GetMultiBenchmark);
+
+/**
+ * LengthBenchmark executes a series of LENGTH operations and measures their duration.
+ */
+class LengthBenchmark : public AbstractAccessBenchmark {
+
+    protected:
+
+    std::vector<std::string>  m_keys;
+    std::vector<std::string>  m_vals;
+
+    public:
+
+    template<typename ... T>
+    LengthBenchmark(T&& ... args)
+    : AbstractAccessBenchmark(std::forward<T>(args)...) {}
+
+    virtual void setup() override {
+        // generate key/value pairs and store them in the local
+        m_keys.reserve(m_num_entries);
+        m_vals.reserve(m_num_entries);
+        for(unsigned i=0; i < m_num_entries; i++) {
+            size_t ksize = m_key_size_range.first + (rand() % (m_key_size_range.second - m_key_size_range.first));
+            m_keys.push_back(gen_random_string(ksize));
+            size_t vsize = m_val_size_range.first + (rand() % (m_val_size_range.second - m_val_size_range.first));
+            m_vals.push_back(gen_random_string(vsize));
+        }
+        // execute PUT operations (not part of the measure)
+        auto& db = remoteDatabase();
+        for(unsigned i=0; i < m_num_entries; i++) {
+            auto& key = m_keys[i];
+            auto& val = m_vals[i];
+            db.put(key, val);
+        }
+    }
+
+    virtual void execute() override {
+        // execute LENGTH operations
+        auto& db = remoteDatabase();
+        for(unsigned i=0; i < m_num_entries; i++) {
+            auto& key = m_keys[i];
+            db.length(key);
+        }
+    }
+
+    virtual void teardown() override {
+        if(m_erase_on_teardown) {
+            // erase all the keys from the database
+            auto& db = remoteDatabase();
+            for(unsigned i=0; i < m_num_entries; i++) {
+                db.erase(m_keys[i]);
+            }
+        }
+        // erase keys and values from the local vectors
+        m_keys.resize(0);
+        m_vals.resize(0);
+    }
+};
+REGISTER_BENCHMARK("length", LengthBenchmark);
+
+/**
+ * LengthMultiBenchmark inherites from LengthBenchmark and does the same but
+ * executes a LENGTH-MULTI instead of a LENGTH.
+ */
+class LengthMultiBenchmark : public LengthBenchmark {
+    
+    public:
+
+    template<typename ... T>
+    LengthMultiBenchmark(T&& ... args)
+    : LengthBenchmark(std::forward<T>(args)...) {}
+
+    virtual void execute() override {
+        auto& db = remoteDatabase();
+        std::vector<hg_size_t> sizes(m_num_entries); 
+        db.length(m_keys, sizes);
+    }
+};
+REGISTER_BENCHMARK("length-multi", LengthMultiBenchmark);
 
 static void run_server(MPI_Comm comm, Json::Value& config);
 static void run_client(MPI_Comm comm, Json::Value& config);
