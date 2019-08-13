@@ -374,6 +374,106 @@ class LengthMultiBenchmark : public LengthBenchmark {
 };
 REGISTER_BENCHMARK("length-multi", LengthMultiBenchmark);
 
+/**
+ * EraseBenchmark executes a series of ERASE operations and measures their duration.
+ */
+class EraseBenchmark : public AbstractBenchmark {
+
+    protected:
+
+    uint64_t                  m_num_entries = 0;
+    std::pair<size_t, size_t> m_key_size_range;
+    std::pair<size_t, size_t> m_val_size_range;
+
+    std::vector<std::string>  m_keys;
+    std::vector<std::string>  m_vals;
+
+    public:
+
+    template<typename ... T>
+    EraseBenchmark(Json::Value& config, T&& ... args)
+    : AbstractBenchmark(std::forward<T>(args)...) {
+        // read the configuration
+        m_num_entries = config["num-entries"].asUInt64();
+        if(config["key-sizes"].isIntegral()) {
+            auto x = config["key-sizes"].asUInt64();
+            m_key_size_range = { x, x+1 };
+        } else if(config["key-sizes"].isArray() && config["key-sizes"].size() == 2) {
+            auto x = config["key-sizes"][0].asUInt64();
+            auto y = config["key-sizes"][1].asUInt64();
+            if(x > y) throw std::range_error("invalid key-sizes range");
+            m_key_size_range = { x, y };
+        } else {
+            throw std::range_error("invalid key-sizes range or value");
+        }
+        if(config["val-sizes"].isIntegral()) {
+            auto x = config["val-sizes"].asUInt64();
+            m_val_size_range = { x, x+1 };
+        } else if(config["val-sizes"].isArray() && config["val-sizes"].size() == 2) {
+            auto x = config["val-sizes"][0].asUInt64();
+            auto y = config["val-sizes"][1].asUInt64();
+            if(x >= y) throw std::range_error("invalid val-sizes range");
+            m_val_size_range = { x, y };
+        } else {
+            throw std::range_error("invalid val-sizes range or value");
+        }
+    }
+
+    virtual void setup() override {
+        // generate key/value pairs and store them in the local
+        m_keys.reserve(m_num_entries);
+        m_vals.reserve(m_num_entries);
+        for(unsigned i=0; i < m_num_entries; i++) {
+            size_t ksize = m_key_size_range.first + (rand() % (m_key_size_range.second - m_key_size_range.first));
+            m_keys.push_back(gen_random_string(ksize));
+            size_t vsize = m_val_size_range.first + (rand() % (m_val_size_range.second - m_val_size_range.first));
+            m_vals.push_back(gen_random_string(vsize));
+        }
+        // execute PUT operations (not part of the measure)
+        auto& db = remoteDatabase();
+        for(unsigned i=0; i < m_num_entries; i++) {
+            auto& key = m_keys[i];
+            auto& val = m_vals[i];
+            db.put(key, val);
+        }
+    }
+
+    virtual void execute() override {
+        // execute ERASE operations
+        auto& db = remoteDatabase();
+        for(unsigned i=0; i < m_num_entries; i++) {
+            auto& key = m_keys[i];
+            db.erase(key);
+        }
+    }
+
+    virtual void teardown() override {
+        // erase keys and values from the local vectors
+        m_keys.resize(0);
+        m_vals.resize(0);
+    }
+};
+REGISTER_BENCHMARK("erase", EraseBenchmark);
+
+/**
+ * EraseMultiBenchmark inherites from EraseBenchmark and does the same but
+ * executes a ERASE-MULTI instead of a ERASE.
+ */
+class EraseMultiBenchmark : public EraseBenchmark {
+    
+    public:
+
+    template<typename ... T>
+    EraseMultiBenchmark(T&& ... args)
+    : EraseBenchmark(std::forward<T>(args)...) {}
+
+    virtual void execute() override {
+        auto& db = remoteDatabase();
+        db.erase(m_keys);
+    }
+};
+REGISTER_BENCHMARK("erase-multi", EraseMultiBenchmark);
+
 static void run_server(MPI_Comm comm, Json::Value& config);
 static void run_client(MPI_Comm comm, Json::Value& config);
 static sdskv_db_type_t database_type_from_string(const std::string& type);
