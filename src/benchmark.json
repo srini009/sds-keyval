@@ -64,16 +64,14 @@
             "repetitions" : 10,
             "num-entries" : 30,
             "key-sizes" : 64,
-            "val-sizes" : 128,
-            "erase-on-teardown" : true
+            "val-sizes" : 128
         },
         {
             "type" : "erase-multi",
             "repetitions" : 10,
             "num-entries" : 30,
             "key-sizes" : 32,
-            "val-sizes" : [ 56, 64 ],
-            "erase-on-teardown" : true
+            "val-sizes" : [ 56, 64 ]
         }
     ]
 }
