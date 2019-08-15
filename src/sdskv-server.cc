@@ -652,6 +652,7 @@ static void sdskv_put_ult(hg_handle_t handle)
 
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
+        fprintf(stderr, "Error (sdskv_put_ult): margo_get_input failed with error %d\n", hret);
         out.ret = SDSKV_ERR_MERCURY;
         margo_respond(handle, &out);
         margo_destroy(handle);
@@ -662,6 +663,7 @@ static void sdskv_put_ult(hg_handle_t handle)
     auto it = svr_ctx->databases.find(in.db_id);
     if(it == svr_ctx->databases.end()) {
         ABT_rwlock_unlock(svr_ctx->lock);
+        fprintf(stderr, "Error (sdskv_put_ult): could not find target database\n");
         out.ret = SDSKV_ERR_UNKNOWN_DB;
         margo_respond(handle, &out);
         margo_free_input(handle, &in);
@@ -677,6 +679,7 @@ static void sdskv_put_ult(hg_handle_t handle)
     if(db->put(kdata, vdata)) {
         out.ret = SDSKV_SUCCESS;
     } else {
+        fprintf(stderr, "Error (sdskv_put_ult): put failed\n");
         out.ret = SDSKV_ERR_PUT;
     }
 

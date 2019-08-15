@@ -159,6 +159,10 @@ if test "x${bwtree_backend}" == xyes ; then
 	CXXFLAGS="-pthread -g -Wall -mcx16 -Wno-invalid-offsetof ${CXXFLAGS}"
 fi
 
+AM_CONDITIONAL([BUILD_BDB], [test "x${berkelydb_backend}" == xyes])
+AM_CONDITIONAL([BUILD_LEVELDB], [test "x${leveldb_backend}" == xyes])
+AM_CONDITIONAL([BUILD_BWTREE], [test "x${bwtree_backend}" == xyes])
+
 AC_ARG_ENABLE(remi,
               [AS_HELP_STRING([--enable-remi],[Enable REMI (migration) support @<:@default=no@:>@])],
               [case "${enableval}" in
@@ -182,9 +186,22 @@ else
 fi
 AC_SUBST(USE_REMI)
 
-AM_CONDITIONAL([BUILD_BDB], [test "x${berkelydb_backend}" == xyes])
-AM_CONDITIONAL([BUILD_LEVELDB], [test "x${leveldb_backend}" == xyes])
-AM_CONDITIONAL([BUILD_BWTREE], [test "x${bwtree_backend}" == xyes])
+AC_ARG_ENABLE(benchmark,
+              [AS_HELP_STRING([--enable-benchmark],[Build SDSKV benchmark @<:@default=no@:>@])],
+              [case "${enableval}" in
+                yes) enable_benchmark="yes" ;;
+                no) enable_benchmark="no" ;;
+                *) AC_MSG_ERROR(bad value ${enableval} for --enable-benchmark) ;;
+               esac],
+              [enable_benchmark="no"]
+)
+AM_CONDITIONAL(BUILD_BENCHMARK, test x$enable_benchmark = xyes)
+if test "$enable_benchmark" = "yes"; then
+        PKG_CHECK_MODULES(JSONCPP, jsoncpp)
+        LIBS="$JSONCPP_LIBS $LIBS"
+        CPPFLAGS="$JSONCPP_CFLAGS $CPPFLAGS"
+        CFLAGS="$JSONCPP_CFLAGS $CFLAGS"
+fi
 
 SERVER_LIBS="$SERVER_LIBS_PKG $SERVER_LIBS_EXT -lstdc++"
 

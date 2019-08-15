@@ -1,0 +1,77 @@
+{
+    "protocol" : "tcp",
+    "seed" : 0,
+    "server" : {
+        "use-progress-thread" : false,
+        "rpc-thread-count" : 0,
+        "database" : {
+            "type" : "map",
+            "name" : "benchmark-db",
+            "path" : "/dev/shm"
+        }
+    },
+    "benchmarks" : [
+        {
+            "type" : "put",
+            "repetitions" : 10,
+            "num-entries" : 30,
+            "key-sizes" : [ 8, 32 ],
+            "val-sizes" : [ 24, 48 ],
+            "erase-on-teardown" : true
+        },
+        {
+            "type" : "put-multi",
+            "repetitions" : 10,
+            "num-entries" : 30,
+            "key-sizes" : [ 8, 32 ],
+            "val-sizes" : [ 24, 48 ],
+            "erase-on-teardown" : true
+        },
+        {
+            "type" : "get",
+            "repetitions" : 10,
+            "num-entries" : 30,
+            "key-sizes" : 64,
+            "val-sizes" : 128,
+            "erase-on-teardown" : true
+        },
+        {
+            "type" : "get-multi",
+            "repetitions" : 10,
+            "num-entries" : 30,
+            "key-sizes" : 32,
+            "val-sizes" : [ 56, 64 ],
+            "erase-on-teardown" : true
+        },
+        {
+            "type" : "length",
+            "repetitions" : 10,
+            "num-entries" : 30,
+            "key-sizes" : 64,
+            "val-sizes" : 128,
+            "erase-on-teardown" : true
+        },
+        {
+            "type" : "length-multi",
+            "repetitions" : 10,
+            "num-entries" : 30,
+            "key-sizes" : 32,
+            "val-sizes" : [ 56, 64 ],
+            "erase-on-teardown" : true
+        },
+        {
+            "type" : "erase",
+            "repetitions" : 10,
+            "num-entries" : 30,
+            "key-sizes" : 64,
+            "val-sizes" : 128
+        },
+        {
+            "type" : "erase-multi",
+            "repetitions" : 10,
+            "num-entries" : 30,
+            "key-sizes" : 32,
+            "val-sizes" : [ 56, 64 ]
+        }
+    ]
+}

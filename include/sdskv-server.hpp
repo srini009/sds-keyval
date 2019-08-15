@@ -5,7 +5,7 @@
 #include <sdskv-common.hpp>
 
 #define _CHECK_RET(__ret) \
-            if(__ret != BAKE_SUCCESS) throw exception(__ret)
+            if(__ret != SDSKV_SUCCESS) throw exception(__ret)
 
 namespace sdskv {
 
@@ -15,7 +15,7 @@ namespace sdskv {
 class provider {
 
     margo_instance_id m_mid     = MARGO_INSTANCE_NULL;
-    sdskv_provider_t m_provider = SDSKV_PROVIDER_NULL;
+    sdskv_provider_t m_provider = NULL;
 
     /**
      * @brief Constructor is private. Use the create() factory method.
@@ -55,7 +55,8 @@ class provider {
                             ABT_pool pool = SDSKV_ABT_POOL_DEFAULT)
     {
         auto p = new provider(mid, provider_id, pool);
-        margo_provider_push_finalize_callback(mid, this, &finalize_callback, this);
+        margo_provider_push_finalize_callback(mid, p, &finalize_callback, p);
+        return p;
     }
 
     /**
@@ -82,7 +83,7 @@ class provider {
      * @brief Destructor. Deregisters the provider.
      */
     ~provider() {
-        margo_provider_pop_finalize_callback(mid, this);
+        margo_provider_pop_finalize_callback(m_mid, this);
         sdskv_provider_destroy(m_provider);
     }
 
@@ -191,5 +192,5 @@ class provider {
 };
 
 }
-
+#undef _CHECK_RET
 #endif
