@@ -55,7 +55,7 @@ inline void object_resize(std::vector<T>& v, size_t new_size) {
     v.resize(new_size);
 }
 
-inline void* object_resize(std::string& s, size_t new_size) {
+inline void object_resize(std::string& s, size_t new_size) {
     s.resize(new_size);
 }
 
