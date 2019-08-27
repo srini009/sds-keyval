@@ -42,7 +42,7 @@ class MapDataStore : public AbstractDataStore {
             ABT_rwlock_free(&_map_lock);
         }
 
-        virtual bool openDatabase(const std::string& db_name, const std::string& path) {
+        virtual bool openDatabase(const std::string& db_name, const std::string& path) override {
             _name = db_name;
             _path = path;
             ABT_rwlock_wrlock(_map_lock);
@@ -51,9 +51,9 @@ class MapDataStore : public AbstractDataStore {
             return true;
         }
 
-        virtual void sync() {}
+        virtual void sync() override {}
 
-        virtual bool put(const ds_bulk_t &key, const ds_bulk_t &data) {
+        virtual bool put(const ds_bulk_t &key, const ds_bulk_t &data) override {
             ABT_rwlock_wrlock(_map_lock);
             auto x = _map.count(key);
             if(_no_overwrite && (x != 0)) {
@@ -69,7 +69,29 @@ class MapDataStore : public AbstractDataStore {
             return true;
         }
 
-        virtual bool get(const ds_bulk_t &key, ds_bulk_t &data) {
+        virtual bool put(ds_bulk_t &&key, ds_bulk_t &&data) override {
+            ABT_rwlock_wrlock(_map_lock);
+            auto x = _map.count(key);
+            if(_no_overwrite && (x != 0)) {
+                ABT_rwlock_unlock(_map_lock);
+                return false;
+            }
+            if(_duplicates == Duplicates::IGNORE && (x != 0)) {
+                ABT_rwlock_unlock(_map_lock);
+                return false;
+            }
+            _map.insert(std::make_pair(std::move(key),std::move(data)));
+            ABT_rwlock_unlock(_map_lock);
+            return true;
+        }
+
+        virtual bool put(const void* key, size_t ksize, const void* value, size_t vsize) override {
+            ds_bulk_t k((const char*)key, ((const char*)key)+ksize);
+            ds_bulk_t v((const char*)value, ((const char*)value)+vsize);
+            return put(std::move(k), std::move(v));
+        }
+
+        virtual bool get(const ds_bulk_t &key, ds_bulk_t &data) override {
             ABT_rwlock_rdlock(_map_lock);
             auto it = _map.find(key);
             if(it == _map.end()) {
@@ -81,20 +103,24 @@ class MapDataStore : public AbstractDataStore {
             return true;
         }
 
-        virtual bool get(const ds_bulk_t &key, std::vector<ds_bulk_t>& values) {
+        virtual bool get(const ds_bulk_t &key, std::vector<ds_bulk_t>& values) override {
             values.clear();
             values.resize(1);
             return get(key, values[0]);
         }
 
-        virtual bool exists(const ds_bulk_t& key) {
+        virtual bool exists(const ds_bulk_t& key) const override {
             ABT_rwlock_rdlock(_map_lock);
             bool e = _map.count(key) > 0;
             ABT_rwlock_unlock(_map_lock);
             return e;
         }
 
-        virtual bool erase(const ds_bulk_t &key) {
+        virtual bool exists(const void* key, size_t ksize) const override {
+            return exists(ds_bulk_t((const char*)key, ((const char*)key)+ksize));
+        }
+
+        virtual bool erase(const ds_bulk_t &key) override {
             ABT_rwlock_wrlock(_map_lock);
             bool b = _map.find(key) != _map.end();
             _map.erase(key);
@@ -102,21 +128,21 @@ class MapDataStore : public AbstractDataStore {
             return b;
         }
 
-        virtual void set_in_memory(bool enable) {
+        virtual void set_in_memory(bool enable) override {
             _in_memory = enable;
         }
 
-        virtual void set_comparison_function(const std::string& name, comparator_fn less) {
+        virtual void set_comparison_function(const std::string& name, comparator_fn less) override {
            _comp_fun_name = name;
            _less = less; 
         }
 
-        virtual void set_no_overwrite() {
+        virtual void set_no_overwrite() override {
             _no_overwrite = true;
         }
 
 #ifdef USE_REMI
-        virtual remi_fileset_t create_and_populate_fileset() const {
+        virtual remi_fileset_t create_and_populate_fileset() const override {
             return REMI_FILESET_NULL;
         }
 #endif
@@ -124,7 +150,7 @@ class MapDataStore : public AbstractDataStore {
     protected:
 
         virtual std::vector<ds_bulk_t> vlist_keys(
-                const ds_bulk_t &start_key, size_t count, const ds_bulk_t &prefix) const {
+                const ds_bulk_t &start_key, size_t count, const ds_bulk_t &prefix) const override {
             ABT_rwlock_rdlock(_map_lock);
             std::vector<ds_bulk_t> result;
             decltype(_map.begin()) it;
@@ -149,7 +175,7 @@ class MapDataStore : public AbstractDataStore {
         }
 
         virtual std::vector<std::pair<ds_bulk_t,ds_bulk_t>> vlist_keyvals(
-                const ds_bulk_t &start_key, size_t count, const ds_bulk_t &prefix) const {
+                const ds_bulk_t &start_key, size_t count, const ds_bulk_t &prefix) const override {
             ABT_rwlock_rdlock(_map_lock);
             std::vector<std::pair<ds_bulk_t,ds_bulk_t>> result;
             decltype(_map.begin()) it;
@@ -174,7 +200,7 @@ class MapDataStore : public AbstractDataStore {
         }
 
         virtual std::vector<ds_bulk_t> vlist_key_range(
-                const ds_bulk_t &lower_bound, const ds_bulk_t &upper_bound, size_t max_keys) const {
+                const ds_bulk_t &lower_bound, const ds_bulk_t &upper_bound, size_t max_keys) const override {
             ABT_rwlock_rdlock(_map_lock);
             std::vector<ds_bulk_t> result;
             decltype(_map.begin()) it, ub;
@@ -198,7 +224,7 @@ class MapDataStore : public AbstractDataStore {
         }
 
         virtual std::vector<std::pair<ds_bulk_t,ds_bulk_t>> vlist_keyval_range(
-                const ds_bulk_t &lower_bound, const ds_bulk_t& upper_bound, size_t max_keys) const {
+                const ds_bulk_t &lower_bound, const ds_bulk_t& upper_bound, size_t max_keys) const override {
             ABT_rwlock_rdlock(_map_lock);
             std::vector<std::pair<ds_bulk_t,ds_bulk_t>> result;
             decltype(_map.begin()) it, ub;

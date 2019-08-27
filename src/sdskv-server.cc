@@ -779,13 +779,17 @@ static void sdskv_put_multi_ult(hg_handle_t handle)
     /* go through the key/value pairs and insert them */
     uint64_t keys_offset = sizeof(hg_size_t)*in.num_keys;
     uint64_t vals_offset = sizeof(hg_size_t)*in.num_keys;
+    std::vector<const void*> kptrs(in.num_keys);
+    std::vector<const void*> vptrs(in.num_keys);
     for(unsigned i=0; i < in.num_keys; i++) {
-        ds_bulk_t kdata(local_keys_buffer.data()+keys_offset, local_keys_buffer.data()+keys_offset+key_sizes[i]);
-        ds_bulk_t vdata(local_vals_buffer.data()+vals_offset, local_vals_buffer.data()+vals_offset+val_sizes[i]);
-        db->put(kdata, vdata);
+        kptrs[i] = local_keys_buffer.data()+keys_offset;
+        vptrs[i] = local_vals_buffer.data()+vals_offset;
         keys_offset += key_sizes[i];
         vals_offset += val_sizes[i];
     }
+    bool result = db->put_multi(in.num_keys, kptrs.data(), key_sizes, vptrs.data(), val_sizes);
+    if(not result)
+        out.ret = SDSKV_ERR_PUT;
 
     return;
 }
