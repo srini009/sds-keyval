@@ -20,17 +20,17 @@ LevelDBDataStore::LevelDBDataStore(Duplicates duplicates, bool eraseOnGet, bool 
   _dbm = NULL;
 };
   
-std::string LevelDBDataStore::toString(const ds_bulk_t &bulk_val) const {
+std::string LevelDBDataStore::toString(const ds_bulk_t &bulk_val) {
   std::string str_val(bulk_val.begin(), bulk_val.end());
   return str_val;
 };
 
-std::string LevelDBDataStore::toString(const char* buf, size_t buf_size) const {
+std::string LevelDBDataStore::toString(const char* buf, size_t buf_size) {
   std::string str_val(buf, buf_size);
   return str_val;
 };
 
-ds_bulk_t LevelDBDataStore::fromString(const std::string &str_val) const {
+ds_bulk_t LevelDBDataStore::fromString(const std::string &str_val) {
   ds_bulk_t bulk_val(str_val.begin(), str_val.end());
   return bulk_val;
 };
@@ -87,8 +87,8 @@ bool LevelDBDataStore::put(const void* key, size_t ksize, const void* value, siz
   // redundant put simply overwrites previous value which is fine when key/value is the same.
   if (_duplicates == Duplicates::IGNORE) {
     status = _dbm->Put(leveldb::WriteOptions(), 
-            leveldb::Slice(key, ksize),
-            leveldb::Slice(value, vsize);
+            leveldb::Slice((const char*)key, ksize),
+            leveldb::Slice((const char*)value, vsize));
     if (status.ok()) {
       success = true;
     }
@@ -108,14 +108,6 @@ bool LevelDBDataStore::put(const void* key, size_t ksize, const void* value, siz
   return success;
 };
 
-bool LevelDBDataStore::put(ds_bulk_t&& key, ds_bulk_t&& value) {
-    return put(key.data(), key.size(), value.data(), value.size());
-}
-
-bool LevelDBDataStore::put(const ds_bulk_t& key, const ds_bulk_t& value) {
-    return put(key.data(), key.size(), value.data(), value.size());
-}
-
 bool LevelDBDataStore::erase(const ds_bulk_t &key) {
     leveldb::Status status;
     status = _dbm->Delete(leveldb::WriteOptions(), toString(key));
@@ -125,7 +117,7 @@ bool LevelDBDataStore::erase(const ds_bulk_t &key) {
 bool LevelDBDataStore::exists(const void* key, size_t ksize) const {
     leveldb::Status status;
     std::string value;
-    status = _dbm->Get(leveldb::ReadOptions(), leveldb::Slice(key, ksize), &value);
+    status = _dbm->Get(leveldb::ReadOptions(), leveldb::Slice((const char*)key, ksize), &value);
     return status.ok();
 }
 

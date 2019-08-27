@@ -179,10 +179,18 @@ int main(int argc, char **argv)
                 return(-1);
             }
 
+            char* path = opts.db_names[i];
+            char* x = strrchr(path, '/');
+            char* db_name = path;
+            if(x != NULL) {
+                db_name = x+1;
+                *x = '\0';
+            }
+
             sdskv_database_id_t db_id;
             sdskv_config_t db_config = { 
-                .db_name = opts.db_names[i],
-                .db_path = "",
+                .db_name = db_name,
+                .db_path = (x == NULL ? "" : path),
                 .db_type = opts.db_types[i],
                 .db_comp_fn_name = SDSKV_COMPARE_DEFAULT,
                 .db_no_overwrite = 0
@@ -216,9 +224,16 @@ int main(int argc, char **argv)
 
         for(i=0; i < opts.num_db; i++) {
             sdskv_database_id_t db_id;
+            char* path = opts.db_names[i];
+            char* x = strrchr(path, '/');
+            char* db_name = path;
+            if(x != NULL) {
+                db_name = x+1;
+                *x = '\0';
+            }
             sdskv_config_t db_config = {
-                .db_name = opts.db_names[i],
-                .db_path = "",
+                .db_name = db_name,
+                .db_path = (x == NULL ? "" : path),
                 .db_type = opts.db_types[i],
                 .db_comp_fn_name = SDSKV_COMPARE_DEFAULT,
                 .db_no_overwrite = 0

@@ -46,7 +46,7 @@ class LevelDBDataStore : public AbstractDataStore {
         virtual bool put(const ds_bulk_t &key, const ds_bulk_t &data) override;
         virtual bool put(ds_bulk_t &&key, ds_bulk_t &&data) override;
         */
-        virtual bool put(const void* key, size_t ksize, const void* kdata, size_t kdata) override;
+        virtual bool put(const void* key, size_t ksize, const void* kdata, size_t dsize) override;
         virtual bool get(const ds_bulk_t &key, ds_bulk_t &data) override;
         virtual bool get(const ds_bulk_t &key, std::vector<ds_bulk_t> &data) override;
         virtual bool exists(const void* key, size_t ksize) const override;
@@ -71,9 +71,9 @@ class LevelDBDataStore : public AbstractDataStore {
                 const ds_bulk_t &lower_bound, const ds_bulk_t& upper_bound, size_t max_keys) const override;
         leveldb::DB *_dbm = NULL;
     private:
-        static std::string toString(const ds_bulk_t &key) const;
-        static std::string toString(const char* bug, size_t buf_size) const;
-        static ds_bulk_t fromString(const std::string &keystr) const;
+        static std::string toString(const ds_bulk_t &key);
+        static std::string toString(const char* bug, size_t buf_size);
+        static ds_bulk_t fromString(const std::string &keystr);
         AbstractDataStore::comparator_fn _less;
         LevelDBDataStoreComparator _keycmp;
 };
