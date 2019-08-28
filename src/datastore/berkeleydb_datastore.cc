@@ -89,6 +89,8 @@ bool BerkeleyDBDataStore::openDatabase(const std::string& db_name, const std::st
       _dbenv->set_lk_detect(DB_LOCK_MINWRITE);
       _dbenv->open(fullpath.c_str(), flags, 0644);
     }
+    _dbenv->set_flags(DB_TXN_WRITE_NOSYNC,1);
+    _dbenv->set_flags(DB_TXN_NOSYNC,1);
   }
   catch (DbException &e) {
     std::cerr << "BerkeleyDBDataStore::createDatabase: BerkeleyDB error on environment open = " 
@@ -141,12 +143,12 @@ void BerkeleyDBDataStore::set_comparison_function(const std::string& name, compa
     _wrapper->_less = less;
 }
 
-bool BerkeleyDBDataStore::put(const ds_bulk_t &key, const ds_bulk_t &data) {
+bool BerkeleyDBDataStore::put(const void* key, size_t ksize, const void* val, size_t vsize) {
   int status = 0;
   bool success = false;
 
   if(_no_overwrite) {
-    if(exists(key)) return false;
+    if(exists(key, ksize)) return false;
   }
 
   // IGNORE case deals with redundant puts (where key/value is the same). In BerkeleyDB a
@@ -154,13 +156,13 @@ bool BerkeleyDBDataStore::put(const ds_bulk_t &key, const ds_bulk_t &data) {
   // ALLOW case deals with actual duplicates (where key is the same but value is different).
   // This option might be used when eraseOnGet is set (e.g. ParSplice hotpoint use case).
   if (_duplicates == Duplicates::IGNORE || _duplicates == Duplicates::ALLOW) {
-    Dbt db_key((void*)&(key[0]), uint32_t(key.size()));
-    Dbt db_data((void*)&(data[0]), uint32_t(data.size()));
+    Dbt db_key((void*)key, ksize);
+    Dbt db_data((void*)val, vsize);
     db_key.set_flags(DB_DBT_USERMEM);
     db_data.set_flags(DB_DBT_USERMEM);
     status = _dbm->put(NULL, &db_key, &db_data, 0);
     if (status == 0 || 
-	(_duplicates == Duplicates::IGNORE && status == DB_KEYEXIST)) {
+    (_duplicates == Duplicates::IGNORE && status == DB_KEYEXIST)) {
       success = true;
     }
     else {
@@ -174,8 +176,50 @@ bool BerkeleyDBDataStore::put(const ds_bulk_t &key, const ds_bulk_t &data) {
   return success;
 };
 
-bool BerkeleyDBDataStore::exists(const ds_bulk_t &key) {
-    Dbt db_key((void*)key.data(), key.size());
+bool BerkeleyDBDataStore::put_multi(size_t num_items,
+        const void* const* keys,
+        const size_t* ksizes,
+        const void* const* values,
+        const size_t* vsizes)
+{
+    size_t sk = 0;
+    size_t sv = 0;
+    for(unsigned i = 0; i < num_items; i++) {
+        sk += ksizes[i];
+        sv += vsizes[i];
+    }
+    sk *= 2;
+    sv *= 2;
+    if(sk % 4 != 0) sk += (4 - (sk % 4));
+    if(sv % 4 != 0) sv += (4 - (sv % 4));
+
+
+    std::vector<char> kbuffer(sk);
+    std::vector<char> vbuffer(sv);
+
+    Dbt mkey, mdata;
+
+    mkey.set_ulen(kbuffer.size());
+    mkey.set_data(kbuffer.data());
+
+    mdata.set_ulen(vbuffer.size());
+    mdata.set_data(vbuffer.data());
+
+    DbMultipleDataBuilder keybuilder(mkey);
+    DbMultipleDataBuilder databuilder(mdata);
+
+    for(size_t i = 0; i < num_items; i++) {
+        keybuilder.append((void*)keys[i], ksizes[i]);
+        databuilder.append((void*)values[i], vsizes[i]);
+    }
+
+    int status = _dbm->put(NULL, &mkey, &mdata, DB_MULTIPLE);
+    return status == 0;
+}
+
+bool BerkeleyDBDataStore::exists(const void* key, size_t size) const {
+    Dbt db_key((void*)key, size);
+    db_key.set_flags(DB_DBT_USERMEM);
     int status = _dbm->exists(NULL, &db_key, 0);
     return status == 0;
 }

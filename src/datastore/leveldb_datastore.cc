@@ -25,6 +25,11 @@ std::string LevelDBDataStore::toString(const ds_bulk_t &bulk_val) {
   return str_val;
 };
 
+std::string LevelDBDataStore::toString(const char* buf, size_t buf_size) {
+  std::string str_val(buf, buf_size);
+  return str_val;
+};
+
 ds_bulk_t LevelDBDataStore::fromString(const std::string &str_val) {
   ds_bulk_t bulk_val(str_val.begin(), str_val.end());
   return bulk_val;
@@ -69,19 +74,21 @@ void LevelDBDataStore::set_comparison_function(const std::string& name, comparat
    _less = less; 
 }
 
-bool LevelDBDataStore::put(const ds_bulk_t &key, const ds_bulk_t &data) {
+bool LevelDBDataStore::put(const void* key, size_t ksize, const void* value, size_t vsize) {
   leveldb::Status status;
   bool success = false;
 
   if(_no_overwrite) {
-      if(exists(key)) return false;
+      if(exists(key, ksize)) return false;
   }
 
   //high_resolution_clock::time_point start = high_resolution_clock::now();
   // IGNORE case deals with redundant puts (where key/value is the same). In LevelDB a
   // redundant put simply overwrites previous value which is fine when key/value is the same.
   if (_duplicates == Duplicates::IGNORE) {
-    status = _dbm->Put(leveldb::WriteOptions(), toString(key), toString(data));
+    status = _dbm->Put(leveldb::WriteOptions(), 
+            leveldb::Slice((const char*)key, ksize),
+            leveldb::Slice((const char*)value, vsize));
     if (status.ok()) {
       success = true;
     }
@@ -107,10 +114,10 @@ bool LevelDBDataStore::erase(const ds_bulk_t &key) {
     return status.ok();
 }
 
-bool LevelDBDataStore::exists(const ds_bulk_t &key) {
+bool LevelDBDataStore::exists(const void* key, size_t ksize) const {
     leveldb::Status status;
     std::string value;
-    status = _dbm->Get(leveldb::ReadOptions(), toString(key), &value);
+    status = _dbm->Get(leveldb::ReadOptions(), leveldb::Slice((const char*)key, ksize), &value);
     return status.ok();
 }
 

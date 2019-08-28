@@ -23,10 +23,32 @@ class AbstractDataStore {
         AbstractDataStore(Duplicates duplicates, bool eraseOnGet, bool debug);
         virtual ~AbstractDataStore();
         virtual bool openDatabase(const std::string& db_name, const std::string& path)=0;
-        virtual bool put(const ds_bulk_t &key, const ds_bulk_t &data)=0;
+        virtual bool put(const void* kdata, size_t ksize, const void* vdata, size_t vsize)=0;
+        virtual bool put(const ds_bulk_t &key, const ds_bulk_t &data) {
+            return put(key.data(), key.size(), data.data(), data.size());
+        }
+        virtual bool put(ds_bulk_t&& key, ds_bulk_t&& data) {
+            return put(key.data(), key.size(), data.data(), data.size());
+        }
+        virtual bool put_multi(size_t num_items,
+                              const void* const* keys,
+                              const size_t* ksizes,
+                              const void* const* values,
+                              const size_t* vsizes)
+        {
+            bool b = true;
+            for(size_t i=0; i < num_items; i++) {
+                bool b2 = put(keys[i], ksizes[i], values[i], vsizes[i]);
+                b = b && b2;
+            }
+            return b;
+        }
         virtual bool get(const ds_bulk_t &key, ds_bulk_t &data)=0;
         virtual bool get(const ds_bulk_t &key, std::vector<ds_bulk_t> &data)=0;
-        virtual bool exists(const ds_bulk_t &key) = 0;
+        virtual bool exists(const void* key, size_t ksize) const = 0;
+        virtual bool exists(const ds_bulk_t &key) const {
+            return exists(key.data(), key.size());
+        }
         virtual bool erase(const ds_bulk_t &key) = 0;
         virtual void set_in_memory(bool enable)=0; // enable/disable in-memory mode (where supported)
         virtual void set_comparison_function(const std::string& name, comparator_fn less)=0;

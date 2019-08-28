@@ -56,7 +56,7 @@ function test_start_custom_server ()
 
 function find_db_name ()
 {
-    test_db_name=$TMPBASE/${SDSKV_TEST_DB_NAME:-"sdskv-test-db"}
+    test_db_name=${SDSKV_TEST_DB_NAME:-"sdskv-test-db"}
     test_db_type=${SDSKV_TEST_DB_TYPE:-"map"}
-    test_db_full="${test_db_name}:${test_db_type}"
+    test_db_full="${TMPBASE}/${test_db_name}:${test_db_type}"
 }
