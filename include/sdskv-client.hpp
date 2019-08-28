@@ -1306,6 +1306,14 @@ class database {
     }
 
     /**
+     * @brief @see client::exists
+     */
+    template<typename ... T>
+    decltype(auto) exists(T&& ... args) const {
+        return m_ph.m_client->exists(*this, std::forward<T>(args)...);
+    }
+
+    /**
      * @brief @see client::erase.
      */
     template<typename ... T>
