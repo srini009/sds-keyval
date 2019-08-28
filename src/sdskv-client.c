@@ -1143,6 +1143,10 @@ int sdskv_list_keys_with_prefix(sdskv_provider_handle_t provider,
     int ret = SDSKV_SUCCESS;
     int i;
 
+    if(*max_keys == 0) {
+        return SDSKV_SUCCESS;
+    }
+
     in.db_id = db_id;
     in.start_key.data = (kv_ptr_t) start_key;
     in.start_key.size = start_ksize;
@@ -1164,8 +1168,21 @@ int sdskv_list_keys_with_prefix(sdskv_provider_handle_t provider,
         goto finish;
     }
 
+    /* make sure none of the buffers is NULL or 0-sized */
+    int requesting_sizes = 0;
+    if(keys == NULL) {
+        requesting_sizes = 1;
+    } else {
+        for(i=0; i < *max_keys; i++) {
+            if(keys[i] == NULL || ksizes[i] == 0) {
+                requesting_sizes = 1;
+                break;
+            }
+        }
+    }
+
     /* create bulk handle to expose where the keys should be placed */
-    if(keys) {
+    if(!requesting_sizes) {
         hret = margo_bulk_create(provider->client->mid,
                              *max_keys, keys, ksizes,
                              HG_BULK_WRITE_ONLY,
