@@ -221,7 +221,7 @@ bool BerkeleyDBDataStore::exists(const void* key, size_t size) const {
     Dbt db_key((void*)key, size);
     db_key.set_flags(DB_DBT_USERMEM);
     int status = _dbm->exists(NULL, &db_key, 0);
-    return status == 0;
+    return status != DB_NOTFOUND;
 }
 
 bool BerkeleyDBDataStore::erase(const ds_bulk_t &key) {
