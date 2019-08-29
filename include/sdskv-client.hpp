@@ -314,11 +314,11 @@ class client {
         std::vector<hg_size_t> vsizes; vsizes.reserve(count);
         for(auto it = kbegin; it != kend; it++) {
             ksizes.push_back(object_size(*it));
-            kdata.push_back((const void*)(it->data()));
+            kdata.push_back(object_data(*it));
         }
         for(auto it = vbegin; it != vend; it++) {
             vsizes.push_back(object_size(*it));
-            vdata.push_back((const void*)(it->data()));
+            vdata.push_back(object_data(*it));
         }
         put(db, kdata, ksizes, vdata, vsizes);
     }
@@ -606,11 +606,11 @@ class client {
         std::vector<hg_size_t> vsizes; vsizes.reserve(count);
         for(auto it = kbegin; it != kend; it++) {
             ksizes.push_back(object_size(*it));
-            kdata.push_back((const void*)(it->data()));
+            kdata.push_back(object_data(*it));
         }
         for(auto it = vbegin; it != vend; it++) {
             vsizes.push_back(object_size(*it));
-            vdata.push_back((void*)(it->data()));
+            vdata.push_back(object_data(*it));
         }
         return get(db, kdata, ksizes, vdata, vsizes);
     }
@@ -667,7 +667,7 @@ class client {
      * @param key Key.
      */
     template<typename K>
-    inline void erase( const database& db,
+    inline void erase(const database& db,
                const K& key) const {
         erase(db, object_data(key), object_size(key));
     }
@@ -684,7 +684,7 @@ class client {
      * @param keys Array of keys.
      * @param ksizes Array of key sizes.
      */
-    void erase(const database& db,
+    void erase_multi(const database& db,
             hg_size_t num, const void* const* keys,
             const hg_size_t* ksizes) const;
 
@@ -698,7 +698,7 @@ class client {
      * @param keys Vector of keys to erase.
      */
     template<typename K>
-    inline void erase(const database& db,
+    inline void erase_multi(const database& db,
             const std::vector<K>& keys) const {
         std::vector<const void*> kdata; kdata.reserve(keys.size());
         std::vector<hg_size_t> ksizes; ksizes.reserve(keys.size());
@@ -706,7 +706,7 @@ class client {
             kdata.push_back(object_data(k));
             ksizes.push_back(object_size(k));
         }
-        return erase(db, keys.size(), kdata.data(), ksizes.data());
+        return erase_multi(db, keys.size(), kdata.data(), ksizes.data());
     }
 
     //////////////////////////
@@ -1322,6 +1322,14 @@ class database {
     }
 
     /**
+     * @brief @see client::erase_multi.
+     */
+    template<typename ... T>
+    void erase_multi(T&& ... args) const {
+        m_ph.m_client->erase_multi(*this, std::forward<T>(args)...);
+    }
+
+    /**
      * @brief @see client::list_keys.
      */
     template<typename ... T>
@@ -1449,7 +1457,7 @@ inline void client::erase(const database& db,
     _CHECK_RET(ret);
 }
 
-inline void client::erase(const database& db,
+inline void client::erase_multi(const database& db,
         hg_size_t num, const void* const* keys,
         const hg_size_t* ksizes) const {
     int ret = sdskv_erase_multi(db.m_ph.m_ph, db.m_db_id,

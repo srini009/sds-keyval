@@ -26,17 +26,15 @@ class BerkeleyDBDataStore : public AbstractDataStore {
 
     public:
         BerkeleyDBDataStore();
-        BerkeleyDBDataStore(Duplicates duplicates, bool eraseOnGet, bool debug);
+        BerkeleyDBDataStore(bool eraseOnGet, bool debug);
         virtual ~BerkeleyDBDataStore();
         virtual bool openDatabase(const std::string& db_name, const std::string& path) override;
-        virtual bool put(const void* key, size_t ksize, const void* value, size_t vsize) override;
-        virtual bool put_multi(size_t num_items,
+        virtual int put(const void* key, size_t ksize, const void* value, size_t vsize) override;
+        virtual int put_multi(size_t num_items,
                                const void* const* keys,
                                const size_t* ksizes,
                                const void* const* values,
                                const size_t* vsizes) override;
-        /* virtual bool put(const ds_bulk_t &key, const ds_bulk_t &data) override;
-        virtual bool put(ds_bulk_t &&key, ds_bulk_t &&data) override; */
         virtual bool get(const ds_bulk_t &key, ds_bulk_t &data) override;
         virtual bool get(const ds_bulk_t &key, std::vector<ds_bulk_t> &data) override;
         virtual bool exists(const void* key, size_t ksize) const override;

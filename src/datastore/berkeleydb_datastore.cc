@@ -11,14 +11,14 @@
 using namespace std::chrono;
 
 BerkeleyDBDataStore::BerkeleyDBDataStore() :
-  AbstractDataStore(Duplicates::IGNORE, false, false) {
+  AbstractDataStore(false, false) {
   _dbm = NULL;
   _dbenv = NULL;
   _in_memory = false;
 };
 
-BerkeleyDBDataStore::BerkeleyDBDataStore(Duplicates duplicates, bool eraseOnGet, bool debug) :
-  AbstractDataStore(duplicates, eraseOnGet, debug) {
+BerkeleyDBDataStore::BerkeleyDBDataStore(bool eraseOnGet, bool debug) :
+  AbstractDataStore(eraseOnGet, debug) {
   _dbm = NULL;
   _dbenv = NULL;
   _in_memory = false;
@@ -102,10 +102,6 @@ bool BerkeleyDBDataStore::openDatabase(const std::string& db_name, const std::st
     _wrapper = new DbWrapper(_dbenv, DB_CXX_NO_EXCEPTIONS);
     _dbm = &(_wrapper->_db);
 
-    if (_duplicates == Duplicates::ALLOW) {
-      _dbm->set_flags(DB_DUP); // Allow duplicate keys
-    }
-
     _dbm->set_bt_compare(&(BerkeleyDBDataStore::compkeys));
   
     uint32_t flags = DB_CREATE | DB_AUTO_COMMIT | DB_THREAD; // Allow database creation
@@ -143,40 +139,21 @@ void BerkeleyDBDataStore::set_comparison_function(const std::string& name, compa
     _wrapper->_less = less;
 }
 
-bool BerkeleyDBDataStore::put(const void* key, size_t ksize, const void* val, size_t vsize) {
+int BerkeleyDBDataStore::put(const void* key, size_t ksize, const void* val, size_t vsize) {
   int status = 0;
   bool success = false;
-
-  if(_no_overwrite) {
-    if(exists(key, ksize)) return false;
-  }
-
-  // IGNORE case deals with redundant puts (where key/value is the same). In BerkeleyDB a
-  // redundant may overwrite previous value which is fine when key/value is the same.
-  // ALLOW case deals with actual duplicates (where key is the same but value is different).
-  // This option might be used when eraseOnGet is set (e.g. ParSplice hotpoint use case).
-  if (_duplicates == Duplicates::IGNORE || _duplicates == Duplicates::ALLOW) {
-    Dbt db_key((void*)key, ksize);
-    Dbt db_data((void*)val, vsize);
-    db_key.set_flags(DB_DBT_USERMEM);
-    db_data.set_flags(DB_DBT_USERMEM);
-    status = _dbm->put(NULL, &db_key, &db_data, 0);
-    if (status == 0 || 
-    (_duplicates == Duplicates::IGNORE && status == DB_KEYEXIST)) {
-      success = true;
-    }
-    else {
-      std::cerr << "BerkeleyDBDataStore::put: BerkeleyDB error on put = " << status << std::endl;
-    }
-  }
-  else {
-    std::cerr << "BerkeleyDBDataStore::put: Unexpected Duplicates option = " << int32_t(_duplicates) << std::endl;
-  }
-
-  return success;
+  Dbt db_key((void*)key, ksize);
+  Dbt db_data((void*)val, vsize);
+  db_key.set_flags(DB_DBT_USERMEM);
+  db_data.set_flags(DB_DBT_USERMEM);
+  int flag = _no_overwrite ? DB_NOOVERWRITE : 0;
+  status = _dbm->put(NULL, &db_key, &db_data, flag);
+  if(status == 0) return SDSKV_SUCCESS;
+  if(status == DB_KEYEXIST) return SDSKV_ERR_KEYEXISTS;
+  return SDSKV_ERR_PUT;
 };
 
-bool BerkeleyDBDataStore::put_multi(size_t num_items,
+int BerkeleyDBDataStore::put_multi(size_t num_items,
         const void* const* keys,
         const size_t* ksizes,
         const void* const* values,
@@ -212,9 +189,12 @@ bool BerkeleyDBDataStore::put_multi(size_t num_items,
         keybuilder.append((void*)keys[i], ksizes[i]);
         databuilder.append((void*)values[i], vsizes[i]);
     }
-
-    int status = _dbm->put(NULL, &mkey, &mdata, DB_MULTIPLE);
-    return status == 0;
+    int flag = DB_MULTIPLE;
+    if(_no_overwrite) flag |= DB_NOOVERWRITE;
+    int status = _dbm->put(NULL, &mkey, &mdata, flag);
+    if(status == 0) return SDSKV_SUCCESS;
+    if(status == DB_KEYEXIST) return SDSKV_ERR_KEYEXISTS;
+    return SDSKV_ERR_PUT;
 }
 
 bool BerkeleyDBDataStore::exists(const void* key, size_t size) const {

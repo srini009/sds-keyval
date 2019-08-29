@@ -12,36 +12,34 @@
 
 #include <vector>
 
-enum class Duplicates : int {ALLOW, IGNORE};
-
 class AbstractDataStore {
     public:
 
         typedef int (*comparator_fn)(const void*, size_t, const void*, size_t);
 
         AbstractDataStore();
-        AbstractDataStore(Duplicates duplicates, bool eraseOnGet, bool debug);
+        AbstractDataStore(bool eraseOnGet, bool debug);
         virtual ~AbstractDataStore();
         virtual bool openDatabase(const std::string& db_name, const std::string& path)=0;
-        virtual bool put(const void* kdata, size_t ksize, const void* vdata, size_t vsize)=0;
-        virtual bool put(const ds_bulk_t &key, const ds_bulk_t &data) {
+        virtual int put(const void* kdata, size_t ksize, const void* vdata, size_t vsize)=0;
+        virtual int put(const ds_bulk_t &key, const ds_bulk_t &data) {
             return put(key.data(), key.size(), data.data(), data.size());
         }
-        virtual bool put(ds_bulk_t&& key, ds_bulk_t&& data) {
+        virtual int put(ds_bulk_t&& key, ds_bulk_t&& data) {
             return put(key.data(), key.size(), data.data(), data.size());
         }
-        virtual bool put_multi(size_t num_items,
+        virtual int put_multi(size_t num_items,
                               const void* const* keys,
                               const size_t* ksizes,
                               const void* const* values,
                               const size_t* vsizes)
         {
-            bool b = true;
+            int ret = 0;
             for(size_t i=0; i < num_items; i++) {
-                bool b2 = put(keys[i], ksizes[i], values[i], vsizes[i]);
-                b = b && b2;
+                int r = put(keys[i], ksizes[i], values[i], vsizes[i]);
+                ret = ret == 0 ? r : 0;
             }
-            return b;
+            return ret;
         }
         virtual bool get(const ds_bulk_t &key, ds_bulk_t &data)=0;
         virtual bool get(const ds_bulk_t &key, std::vector<ds_bulk_t> &data)=0;
@@ -95,7 +93,6 @@ class AbstractDataStore {
         std::string _path;
         std::string _name;
         std::string _comp_fun_name;
-        Duplicates _duplicates;
         bool _no_overwrite = false;
         bool _eraseOnGet;
         bool _debug;

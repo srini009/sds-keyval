@@ -38,6 +38,7 @@ typedef uint64_t sdskv_database_id_t;
 #define SDSKV_ERR_COMP_FUNC   -14 /* Comparison function does not exist */
 #define SDSKV_ERR_REMI        -15 /* REMI-related error */
 #define SDSKV_ERR_ARGOBOTS    -16 /* Argobots related error */
+#define SDSKV_ERR_KEYEXISTS   -17 /* Put operation would override data */
 
 #if defined(__cplusplus)
 }

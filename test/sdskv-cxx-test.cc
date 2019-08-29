@@ -182,7 +182,11 @@ static int put_get_erase_multi_test(sdskv::database& DB, uint32_t num_keys) {
         std::cout << "      " << k << std::endl;
         keys_subset.push_back(k);
     }
-    std::vector<std::string> vals_subset(keys_subset.size(), std::string(max_value_size, 0));
+    std::vector<std::string> vals_subset;
+    for(unsigned i=0; i < keys_subset.size(); i++) {
+        vals_subset.push_back(std::string(max_value_size, 0));
+    }
+
     DB.get(keys_subset, vals_subset);
 
     for(unsigned i=0; i < keys_subset.size(); i++) {
@@ -196,10 +200,11 @@ static int put_get_erase_multi_test(sdskv::database& DB, uint32_t num_keys) {
     
 
     /* erase keys */
-    for(unsigned i=0; i < num_keys; i++) {
-        DB.erase(keys[i]);
-    }
-
+    /*
+    for(auto& k : keys)
+        DB.erase(k);
+    */
+    DB.erase_multi(keys);
     return 0;
 }
 

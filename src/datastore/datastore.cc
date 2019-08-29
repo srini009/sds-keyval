@@ -8,14 +8,12 @@
 using namespace std::chrono;
 
 AbstractDataStore::AbstractDataStore() {
-  _duplicates = Duplicates::IGNORE;
   _eraseOnGet = false;
   _debug = false;
   _in_memory = false;
 };
 
-AbstractDataStore::AbstractDataStore(Duplicates duplicates, bool eraseOnGet, bool debug) {
-  _duplicates = duplicates;
+AbstractDataStore::AbstractDataStore(bool eraseOnGet, bool debug) {
   _eraseOnGet = eraseOnGet;
   _debug = debug;
   _in_memory = false;

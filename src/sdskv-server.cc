@@ -676,12 +676,7 @@ static void sdskv_put_ult(hg_handle_t handle)
     ds_bulk_t kdata(in.key.data, in.key.data+in.key.size);
     ds_bulk_t vdata(in.value.data, in.value.data+in.value.size);
 
-    if(db->put(kdata, vdata)) {
-        out.ret = SDSKV_SUCCESS;
-    } else {
-        fprintf(stderr, "Error (sdskv_put_ult): put failed\n");
-        out.ret = SDSKV_ERR_PUT;
-    }
+    out.ret = db->put(kdata, vdata);
 
     margo_respond(handle, &out);
     margo_free_input(handle, &in);
@@ -712,7 +707,6 @@ static void sdskv_put_multi_ult(hg_handle_t handle)
         out.ret = SDSKV_ERR_UNKNOWN_PR;
         return;
     }
-
 
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
@@ -787,9 +781,7 @@ static void sdskv_put_multi_ult(hg_handle_t handle)
         keys_offset += key_sizes[i];
         vals_offset += val_sizes[i];
     }
-    bool result = db->put_multi(in.num_keys, kptrs.data(), key_sizes, vptrs.data(), val_sizes);
-    if(not result)
-        out.ret = SDSKV_ERR_PUT;
+    out.ret = db->put_multi(in.num_keys, kptrs.data(), key_sizes, vptrs.data(), val_sizes);
 
     return;
 }
@@ -1029,6 +1021,7 @@ static void sdskv_get_multi_ult(hg_handle_t handle)
         ds_bulk_t vdata;
         size_t client_allocated_value_size = val_sizes[i];
         if(db->get(kdata, vdata)) {
+            size_t old_vsize = val_sizes[i];
             if(vdata.size() > val_sizes[i]) {
                 val_sizes[i] = 0;
             } else {
@@ -1039,7 +1032,7 @@ static void sdskv_get_multi_ult(hg_handle_t handle)
             val_sizes[i] = 0;
         }
         packed_keys += key_sizes[i];
-        packed_values += val_sizes[i]; //client_allocated_value_size;
+        packed_values += val_sizes[i];
     }
 
     /* do a PUSH operation to push back the values to the client */
@@ -1240,13 +1233,7 @@ static void sdskv_bulk_put_ult(hg_handle_t handle)
 
     ds_bulk_t kdata(in.key.data, in.key.data+in.key.size);
 
-    auto b = db->put(kdata, vdata);
-
-    if(b) {
-        out.ret = SDSKV_SUCCESS;
-    } else {
-        out.ret = SDSKV_ERR_PUT;
-    }
+    out.ret = db->put(kdata, vdata);
 
     margo_respond(handle, &out);
     margo_free_input(handle, &in);
@@ -1464,6 +1451,14 @@ static void sdskv_erase_multi_ult(hg_handle_t handle)
         return;
     }
     auto r6 = at_exit([&local_keys_bulk_handle]() { margo_bulk_free(local_keys_bulk_handle); });
+
+    /* transfer keys */
+    hret = margo_bulk_transfer(mid, HG_BULK_PULL, info->addr, in.keys_bulk_handle, 0,
+            local_keys_bulk_handle, 0, in.keys_bulk_size);
+    if(hret != HG_SUCCESS) {
+        out.ret = SDSKV_ERR_MERCURY;
+        return;
+    }
 
     /* interpret beginning of the key buffer as a list of key sizes */
     hg_size_t* key_sizes = (hg_size_t*)local_keys_buffer.data();

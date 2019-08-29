@@ -105,10 +105,10 @@ int main(int argc, char *argv[])
         // half of the entries will be put using bulk
         auto v = gen_random_string(i*8000/num_keys);
         ret = sdskv_put(kvph, db_id,
-                (const void *)k.data(), k.size()+1,
-                (const void *)v.data(), v.size()+1);
+                (const void *)k.data(), k.size(),
+                (const void *)v.data(), v.size());
         if(ret != 0) {
-            fprintf(stderr, "Error: sdskv_put() failed (iteration %d)\n", i);
+            fprintf(stderr, "Error: sdskv_put() failed (iteration %d, ret = %d)\n", i, ret);
             sdskv_shutdown_service(kvcl, svr_addr);
             sdskv_provider_handle_release(kvph);
             margo_addr_free(mid, svr_addr);

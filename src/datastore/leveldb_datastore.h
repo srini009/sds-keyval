@@ -39,14 +39,10 @@ class LevelDBDataStore : public AbstractDataStore {
 
     public:
         LevelDBDataStore();
-        LevelDBDataStore(Duplicates duplicates, bool eraseOnGet, bool debug);
+        LevelDBDataStore(bool eraseOnGet, bool debug);
         virtual ~LevelDBDataStore();
         virtual bool openDatabase(const std::string& db_name, const std::string& path) override;
-        /*
-        virtual bool put(const ds_bulk_t &key, const ds_bulk_t &data) override;
-        virtual bool put(ds_bulk_t &&key, ds_bulk_t &&data) override;
-        */
-        virtual bool put(const void* key, size_t ksize, const void* kdata, size_t dsize) override;
+        virtual int put(const void* key, size_t ksize, const void* kdata, size_t dsize) override;
         virtual bool get(const ds_bulk_t &key, ds_bulk_t &data) override;
         virtual bool get(const ds_bulk_t &key, std::vector<ds_bulk_t> &data) override;
         virtual bool exists(const void* key, size_t ksize) const override;

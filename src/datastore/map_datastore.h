@@ -33,8 +33,8 @@ class MapDataStore : public AbstractDataStore {
             ABT_rwlock_create(&_map_lock);
         }
 
-        MapDataStore(Duplicates duplicates, bool eraseOnGet, bool debug)
-            : AbstractDataStore(duplicates, eraseOnGet, debug), _less(nullptr), _map(keycmp(this)){
+        MapDataStore(bool eraseOnGet, bool debug)
+            : AbstractDataStore(eraseOnGet, debug), _less(nullptr), _map(keycmp(this)){
             ABT_rwlock_create(&_map_lock);
         }
 
@@ -53,39 +53,31 @@ class MapDataStore : public AbstractDataStore {
 
         virtual void sync() override {}
 
-        virtual bool put(const ds_bulk_t &key, const ds_bulk_t &data) override {
+        virtual int put(const ds_bulk_t &key, const ds_bulk_t &data) override {
             ABT_rwlock_wrlock(_map_lock);
             auto x = _map.count(key);
             if(_no_overwrite && (x != 0)) {
                 ABT_rwlock_unlock(_map_lock);
-                return false;
-            }
-            if(_duplicates == Duplicates::IGNORE && (x != 0)) {
-                ABT_rwlock_unlock(_map_lock);
-                return false;
+                return SDSKV_ERR_KEYEXISTS;
             }
             _map.insert(std::make_pair(key,data));
             ABT_rwlock_unlock(_map_lock);
-            return true;
+            return SDSKV_SUCCESS;
         }
 
-        virtual bool put(ds_bulk_t &&key, ds_bulk_t &&data) override {
+        virtual int put(ds_bulk_t &&key, ds_bulk_t &&data) override {
             ABT_rwlock_wrlock(_map_lock);
             auto x = _map.count(key);
             if(_no_overwrite && (x != 0)) {
                 ABT_rwlock_unlock(_map_lock);
-                return false;
-            }
-            if(_duplicates == Duplicates::IGNORE && (x != 0)) {
-                ABT_rwlock_unlock(_map_lock);
-                return false;
+                return SDSKV_ERR_KEYEXISTS;
             }
             _map.insert(std::make_pair(std::move(key),std::move(data)));
             ABT_rwlock_unlock(_map_lock);
-            return true;
+            return SDSKV_SUCCESS;
         }
 
-        virtual bool put(const void* key, size_t ksize, const void* value, size_t vsize) override {
+        virtual int put(const void* key, size_t ksize, const void* value, size_t vsize) override {
             ds_bulk_t k((const char*)key, ((const char*)key)+ksize);
             ds_bulk_t v((const char*)value, ((const char*)value)+vsize);
             return put(std::move(k), std::move(v));

@@ -11,12 +11,12 @@
 using namespace std::chrono;
 
 LevelDBDataStore::LevelDBDataStore() :
-  AbstractDataStore(Duplicates::IGNORE, false, false), _less(nullptr), _keycmp(this) {
+  AbstractDataStore(false, false), _less(nullptr), _keycmp(this) {
   _dbm = NULL;
 };
 
-LevelDBDataStore::LevelDBDataStore(Duplicates duplicates, bool eraseOnGet, bool debug) :
-  AbstractDataStore(duplicates, eraseOnGet, debug), _less(nullptr), _keycmp(this) {
+LevelDBDataStore::LevelDBDataStore(bool eraseOnGet, bool debug) :
+  AbstractDataStore(eraseOnGet, debug), _less(nullptr), _keycmp(this) {
   _dbm = NULL;
 };
   
@@ -74,38 +74,19 @@ void LevelDBDataStore::set_comparison_function(const std::string& name, comparat
    _less = less; 
 }
 
-bool LevelDBDataStore::put(const void* key, size_t ksize, const void* value, size_t vsize) {
+int LevelDBDataStore::put(const void* key, size_t ksize, const void* value, size_t vsize) {
   leveldb::Status status;
   bool success = false;
 
   if(_no_overwrite) {
-      if(exists(key, ksize)) return false;
+      if(exists(key, ksize)) return SDSKV_ERR_KEYEXISTS;
   }
 
-  //high_resolution_clock::time_point start = high_resolution_clock::now();
-  // IGNORE case deals with redundant puts (where key/value is the same). In LevelDB a
-  // redundant put simply overwrites previous value which is fine when key/value is the same.
-  if (_duplicates == Duplicates::IGNORE) {
-    status = _dbm->Put(leveldb::WriteOptions(), 
+  status = _dbm->Put(leveldb::WriteOptions(), 
             leveldb::Slice((const char*)key, ksize),
             leveldb::Slice((const char*)value, vsize));
-    if (status.ok()) {
-      success = true;
-    }
-    else {
-      std::cerr << "LevelDBDataStore::put: LevelDB error on Put = " << status.ToString() << std::endl;
-    }
-  }
-  else if (_duplicates == Duplicates::ALLOW) {
-    std::cerr << "LevelDBDataStore::put: Duplicates::ALLOW set, LevelDB does not support duplicates" << std::endl;
-  }
-  else {
-    std::cerr << "LevelDBDataStore::put: Unexpected Duplicates option = " << int32_t(_duplicates) << std::endl;
-  }
-//  uint64_t elapsed = duration_cast<microseconds>(high_resolution_clock::now()-start).count();
-//  std::cout << "LevelDBDataStore::put time = " << elapsed << " microseconds" << std::endl;
-
-  return success;
+  if (status.ok()) return SDSKV_SUCCESS;
+  return SDSKV_ERR_PUT;
 };
 
 bool LevelDBDataStore::erase(const ds_bulk_t &key) {
