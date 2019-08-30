@@ -188,6 +188,9 @@ int sdskv_put_multi(sdskv_provider_handle_t provider,
  * If value is NULL, the call will be equivalent
  * to sdskv_length and put the length of the value in *vsize.
  *
+ * If the call returns SDSKV_ERR_SIZE, the value will be
+ * unchanged but the vsize will be set to the required size.
+ *
  * @param[in] provider provider handle
  * @param[in] db_id database id of the target database
  * @param[in] key key to lookup

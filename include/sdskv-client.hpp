@@ -480,7 +480,16 @@ class client {
             s = length(db, key);
             object_resize(value, s);
         }
-        get(db, object_data(key), object_size(key), object_data(value), &s);
+        try {
+            get(db, object_data(key), object_size(key), object_data(value), &s);
+        } catch(exception& ex) {
+            if(ex.error() == SDSKV_ERR_SIZE) {
+                object_resize(value, s);
+                get(db, object_data(key), object_size(key), object_data(value), &s);
+            } else {
+                throw;
+            }
+        }
         object_resize(value, s);
         return true;
     }

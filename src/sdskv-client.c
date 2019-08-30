@@ -609,7 +609,7 @@ int sdskv_get(sdskv_provider_handle_t provider,
         ret = out.ret;
         *vsize = (hg_size_t)out.value.size;
 
-        if (out.value.size > 0) {
+        if (out.value.size > 0 && out.ret == SDSKV_SUCCESS) {
             memcpy(value, out.value.data, out.value.size);
         }
 
