@@ -607,10 +607,14 @@ int sdskv_get(sdskv_provider_handle_t provider,
         }
 
         ret = out.ret;
-        *vsize = (hg_size_t)out.value.size;
-
-        if (out.value.size > 0 && out.ret == SDSKV_SUCCESS) {
-            memcpy(value, out.value.data, out.value.size);
+    
+        if(ret == SDSKV_SUCCESS) {
+            *vsize = out.vsize;
+            if (out.value.size > 0) {
+                memcpy(value, out.value.data, out.value.size);
+            }
+        } else if(ret == SDSKV_ERR_SIZE) {
+            *vsize = out.vsize;
         }
 
         margo_free_output(handle, &out);
@@ -655,7 +659,7 @@ int sdskv_get(sdskv_provider_handle_t provider,
         }
 
         ret = out.ret;
-        *vsize = (hg_size_t)out.size;
+        *vsize = out.vsize;
 
         margo_free_output(handle, &out);
         margo_bulk_free(in.handle);

@@ -871,6 +871,7 @@ static void sdskv_get_ult(hg_handle_t handle)
         out.ret = SDSKV_ERR_MERCURY;
         out.value.data = nullptr;
         out.value.size = 0;
+        out.vsize = 0;
         margo_respond(handle, &out);
         margo_destroy(handle);
         return;
@@ -883,6 +884,7 @@ static void sdskv_get_ult(hg_handle_t handle)
         out.ret = SDSKV_ERR_UNKNOWN_DB;
         out.value.data = nullptr;
         out.value.size = 0;
+        out.vsize = 0;
         margo_respond(handle, &out);
         margo_free_input(handle, &in);
         margo_destroy(handle);
@@ -896,15 +898,18 @@ static void sdskv_get_ult(hg_handle_t handle)
     ds_bulk_t vdata;
     if(db->get(kdata, vdata)) {
         if(vdata.size() <= in.vsize) {
+            out.vsize = vdata.size();
             out.value.size = vdata.size();
             out.value.data = vdata.data();
             out.ret = SDSKV_SUCCESS;
         } else {
+            out.vsize = vdata.size();
             out.value.size = 0;
             out.value.data = nullptr;
             out.ret = SDSKV_ERR_SIZE;
         }
     } else {
+        out.vsize = 0;
         out.value.size = 0;
         out.value.data = nullptr;
         out.ret   = SDSKV_ERR_UNKNOWN_KEY;
@@ -1290,8 +1295,17 @@ static void sdskv_bulk_get_ult(hg_handle_t handle)
     ds_bulk_t vdata;
     auto b = db->get(kdata, vdata);
 
-    if(!b || vdata.size() > in.vsize) {
-        out.size = 0;
+    if(!b) {
+        out.vsize = 0;
+        out.ret = SDSKV_ERR_UNKNOWN_KEY;
+        margo_respond(handle, &out);
+        margo_free_input(handle, &in);
+        margo_destroy(handle);
+        return;
+    }
+
+    if(vdata.size() > in.vsize) {
+        out.vsize = vdata.size();
         out.ret = SDSKV_ERR_SIZE;
         margo_respond(handle, &out);
         margo_free_input(handle, &in);
@@ -1305,7 +1319,7 @@ static void sdskv_bulk_get_ult(hg_handle_t handle)
         hret = margo_bulk_create(mid, 1, (void**)&buffer, &size,
                 HG_BULK_READ_ONLY, &bulk_handle);
         if(hret != HG_SUCCESS) {
-            out.size = 0;
+            out.vsize = 0;
             out.ret = SDSKV_ERR_MERCURY;
             margo_respond(handle, &out);
             margo_free_input(handle, &in);
@@ -1316,7 +1330,7 @@ static void sdskv_bulk_get_ult(hg_handle_t handle)
         hret = margo_bulk_transfer(mid, HG_BULK_PUSH, info->addr, in.handle, 0,
                 bulk_handle, 0, vdata.size());
         if(hret != HG_SUCCESS) {
-            out.size = 0;
+            out.vsize = 0;
             out.ret = SDSKV_ERR_MERCURY;
             margo_respond(handle, &out);
             margo_free_input(handle, &in);
@@ -1328,7 +1342,7 @@ static void sdskv_bulk_get_ult(hg_handle_t handle)
         margo_bulk_free(bulk_handle);
     }
 
-    out.size = size;
+    out.vsize = size;
     out.ret  = SDSKV_SUCCESS;
 
     margo_respond(handle, &out);

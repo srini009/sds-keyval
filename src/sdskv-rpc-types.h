@@ -24,14 +24,13 @@ static inline hg_return_t hg_proc_kv_data_t(hg_proc_t proc, void *arg)
 {
   hg_return_t ret;
   kv_data_t *in = (kv_data_t*)arg;
-
   ret = hg_proc_hg_size_t(proc, &in->size);
   if(ret != HG_SUCCESS) return ret;
   if (in->size) {
     switch (hg_proc_get_op(proc)) {
     case HG_ENCODE:
-      ret = hg_proc_raw(proc, in->data, in->size);
-      if(ret != HG_SUCCESS) return ret;
+        ret = hg_proc_raw(proc, in->data, in->size);
+        if(ret != HG_SUCCESS) return ret;
       break;
     case HG_DECODE:
       in->data = (kv_ptr_t)malloc(in->size);
@@ -133,7 +132,8 @@ MERCURY_GEN_PROC(get_in_t, ((uint64_t)(db_id))\
         ((hg_size_t)(vsize)))
 
 MERCURY_GEN_PROC(get_out_t, ((int32_t)(ret))\
-        ((kv_data_t)(value)))
+        ((kv_data_t)(value))\
+        ((hg_size_t)(vsize)))
 
 // ------------- LENGTH ------------- //
 MERCURY_GEN_PROC(length_in_t, ((uint64_t)(db_id))((kv_data_t)(key)))
@@ -179,7 +179,7 @@ MERCURY_GEN_PROC(bulk_get_in_t, ((uint64_t)(db_id))\
         ((kv_data_t)(key))\
         ((hg_size_t)(vsize))\
         ((hg_bulk_t)(handle)))
-MERCURY_GEN_PROC(bulk_get_out_t, ((hg_size_t)(size)) ((int32_t)(ret)))
+MERCURY_GEN_PROC(bulk_get_out_t, ((hg_size_t)(vsize)) ((int32_t)(ret)))
 
 // ------------- PUT MULTI ------------- //
 MERCURY_GEN_PROC(put_multi_in_t, \
