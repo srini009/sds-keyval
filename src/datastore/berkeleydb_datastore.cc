@@ -190,7 +190,7 @@ int BerkeleyDBDataStore::put_multi(size_t num_items,
         databuilder.append((void*)values[i], vsizes[i]);
     }
     int flag = DB_MULTIPLE;
-    if(_no_overwrite) flag |= DB_NOOVERWRITE;
+    if(!_no_overwrite) flag |=  DB_OVERWRITE_DUP;
     int status = _dbm->put(NULL, &mkey, &mdata, flag);
     if(status == 0) return SDSKV_SUCCESS;
     if(status == DB_KEYEXIST) return SDSKV_ERR_KEYEXISTS;
