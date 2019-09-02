@@ -182,6 +182,9 @@ int BerkeleyDBDataStore::put_multi(size_t num_items,
     mdata.set_ulen(vbuffer.size());
     mdata.set_data(vbuffer.data());
 
+    std::cerr << "mkey has length " << kbuffer.size() << std::endl;
+    std::cerr << "mdata has length " << vbuffer.size() << std::endl;
+
     DbMultipleDataBuilder keybuilder(mkey);
     DbMultipleDataBuilder databuilder(mdata);
 
