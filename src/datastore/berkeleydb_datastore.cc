@@ -163,7 +163,7 @@ int BerkeleyDBDataStore::put_multi(size_t num_items,
     size_t sv = 0;
     for(unsigned i = 0; i < num_items; i++) {
         sk += ksizes[i];
-        sv += vsizes[i];
+        sv += vsizes[i]+8;
     }
     sk *= 2;
     sv *= 2;
@@ -178,12 +178,11 @@ int BerkeleyDBDataStore::put_multi(size_t num_items,
 
     mkey.set_ulen(kbuffer.size());
     mkey.set_data(kbuffer.data());
+    mkey.set_flags(DB_DBT_USERMEM);
 
     mdata.set_ulen(vbuffer.size());
     mdata.set_data(vbuffer.data());
-
-    std::cerr << "mkey has length " << kbuffer.size() << std::endl;
-    std::cerr << "mdata has length " << vbuffer.size() << std::endl;
+    mdata.set_flags(DB_DBT_USERMEM);
 
     DbMultipleDataBuilder keybuilder(mkey);
     DbMultipleDataBuilder databuilder(mdata);
@@ -195,9 +194,9 @@ int BerkeleyDBDataStore::put_multi(size_t num_items,
     int flag = DB_MULTIPLE;
     if(!_no_overwrite) flag |=  DB_OVERWRITE_DUP;
     int status = _dbm->put(NULL, &mkey, &mdata, flag);
-    if(status == 0) return SDSKV_SUCCESS;
     if(status == DB_KEYEXIST) return SDSKV_ERR_KEYEXISTS;
-    return SDSKV_ERR_PUT;
+    if(status != 0) return SDSKV_ERR_PUT;
+    return SDSKV_SUCCESS;
 }
 
 bool BerkeleyDBDataStore::exists(const void* key, size_t size) const {

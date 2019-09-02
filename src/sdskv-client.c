@@ -476,6 +476,20 @@ int sdskv_put_multi(sdskv_provider_handle_t provider,
     in.vals_bulk_handle = HG_BULK_NULL;
     in.vals_bulk_size   = 0;
 
+    /* check that none of the keys have a size of 0 */
+    int i;
+    for(i=0; i < num; i++) {
+        if(ksizes[i] == 0) return SDSKV_ERR_INVALID_ARG;
+    }
+
+    int non_empty_values = 0;
+    /* check if we are trying to write some empty values */
+    /* XXX normally we shouldn't have to do that but Mercury
+       bugs if we try to expose empty segments for RDMA. */
+    for(i=0; i < num; i++) {
+        if(vsizes[i] != 0) non_empty_values += 1;
+    }
+
     /* create an array of key sizes and key pointers */
     key_seg_sizes       = malloc(sizeof(hg_size_t)*(num+1));
     key_seg_sizes[0]    = num*sizeof(hg_size_t);
@@ -483,18 +497,28 @@ int sdskv_put_multi(sdskv_provider_handle_t provider,
     key_seg_ptrs        = malloc(sizeof(void*)*(num+1));
     key_seg_ptrs[0]     = (void*)ksizes;
     memcpy(key_seg_ptrs+1, keys, num*sizeof(void*));
-    int i;
     for(i=0; i < num+1; i++) {
         in.keys_bulk_size += key_seg_sizes[i];
     }
-    /* create an array of val sizes and val pointers */
-    val_seg_sizes       = malloc(sizeof(hg_size_t)*(num+1));
-    val_seg_sizes[0]    = num*sizeof(hg_size_t);
-    memcpy(val_seg_sizes+1, vsizes, num*sizeof(hg_size_t));
-    val_seg_ptrs        = malloc(sizeof(void*)*(num+1));
-    val_seg_ptrs[0]     = (void*)vsizes;
-    memcpy(val_seg_ptrs+1, values, num*sizeof(void*));
-    for(i=0; i < num+1; i++) {
+    val_seg_sizes = malloc(sizeof(hg_size_t)*(non_empty_values+1));
+    val_seg_sizes[0] = num*sizeof(hg_size_t);
+    int j = 1;
+    for(i=0; i < num; i++) {
+        if(vsizes[i] != 0) {
+            val_seg_sizes[j] = vsizes[i];
+            j++;
+        }
+    }
+    val_seg_ptrs = malloc(sizeof(void*)*(non_empty_values+1));
+    val_seg_ptrs[0] = (void*)vsizes;
+    j = 1;
+    for(i=0; i < num; i++) {
+        if(vsizes[i] != 0) {
+            val_seg_ptrs[j] = (void*)values[i];
+            j++;
+        }
+    }
+    for(i=0; i < non_empty_values+1; i++) {
         in.vals_bulk_size += val_seg_sizes[i];
     }
 
@@ -508,7 +532,7 @@ int sdskv_put_multi(sdskv_provider_handle_t provider,
     }
 
     /* create the bulk handle to access the values */
-    hret = margo_bulk_create(provider->client->mid, num+1, val_seg_ptrs, val_seg_sizes,
+    hret = margo_bulk_create(provider->client->mid, non_empty_values+1, val_seg_ptrs, val_seg_sizes,
             HG_BULK_READ_ONLY, &in.vals_bulk_handle);
     if(hret != HG_SUCCESS) {
         fprintf(stderr,"[SDSKV] margo_bulk_create() failed in sdskv_put_multi()\n");

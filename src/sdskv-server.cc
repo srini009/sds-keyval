@@ -777,7 +777,7 @@ static void sdskv_put_multi_ult(hg_handle_t handle)
     std::vector<const void*> vptrs(in.num_keys);
     for(unsigned i=0; i < in.num_keys; i++) {
         kptrs[i] = local_keys_buffer.data()+keys_offset;
-        vptrs[i] = local_vals_buffer.data()+vals_offset;
+        vptrs[i] = val_sizes[i] == 0 ? nullptr : local_vals_buffer.data()+vals_offset;
         keys_offset += key_sizes[i];
         vals_offset += val_sizes[i];
     }
