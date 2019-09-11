@@ -469,7 +469,7 @@ class EraseMultiBenchmark : public EraseBenchmark {
 
     virtual void execute() override {
         auto& db = remoteDatabase();
-        db.erase(m_keys);
+        db.erase_multi(m_keys);
     }
 };
 REGISTER_BENCHMARK("erase-multi", EraseMultiBenchmark);
