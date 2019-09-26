@@ -25,7 +25,7 @@ std::string LevelDBDataStore::toString(const ds_bulk_t &bulk_val) {
   return str_val;
 };
 
-std::string LevelDBDataStore::toString(const char* buf, size_t buf_size) {
+std::string LevelDBDataStore::toString(const char* buf, hg_size_t buf_size) {
   std::string str_val(buf, buf_size);
   return str_val;
 };
@@ -74,7 +74,7 @@ void LevelDBDataStore::set_comparison_function(const std::string& name, comparat
    _less = less; 
 }
 
-int LevelDBDataStore::put(const void* key, size_t ksize, const void* value, size_t vsize) {
+int LevelDBDataStore::put(const void* key, hg_size_t ksize, const void* value, hg_size_t vsize) {
   leveldb::Status status;
   bool success = false;
 
@@ -95,7 +95,7 @@ bool LevelDBDataStore::erase(const ds_bulk_t &key) {
     return status.ok();
 }
 
-bool LevelDBDataStore::exists(const void* key, size_t ksize) const {
+bool LevelDBDataStore::exists(const void* key, hg_size_t ksize) const {
     leveldb::Status status;
     std::string value;
     status = _dbm->Get(leveldb::ReadOptions(), leveldb::Slice((const char*)key, ksize), &value);
@@ -140,7 +140,7 @@ void LevelDBDataStore::set_in_memory(bool enable)
 {};
 
 std::vector<ds_bulk_t> LevelDBDataStore::vlist_keys(
-        const ds_bulk_t &start, size_t count, const ds_bulk_t &prefix) const
+        const ds_bulk_t &start, hg_size_t count, const ds_bulk_t &prefix) const
 {
     std::vector<ds_bulk_t> keys;
 
@@ -176,7 +176,7 @@ std::vector<ds_bulk_t> LevelDBDataStore::vlist_keys(
 }
 
 std::vector<std::pair<ds_bulk_t,ds_bulk_t>> LevelDBDataStore::vlist_keyvals(
-        const ds_bulk_t &start, size_t count, const ds_bulk_t &prefix) const
+        const ds_bulk_t &start, hg_size_t count, const ds_bulk_t &prefix) const
 {
     std::vector<std::pair<ds_bulk_t,ds_bulk_t>> result;
 
@@ -215,7 +215,7 @@ std::vector<std::pair<ds_bulk_t,ds_bulk_t>> LevelDBDataStore::vlist_keyvals(
 }
 
 std::vector<ds_bulk_t> LevelDBDataStore::vlist_key_range(
-        const ds_bulk_t &lower_bound, const ds_bulk_t &upper_bound, size_t max_keys) const {
+        const ds_bulk_t &lower_bound, const ds_bulk_t &upper_bound, hg_size_t max_keys) const {
     std::vector<ds_bulk_t> result;
     // TODO implement this function
     throw SDSKV_OP_NOT_IMPL;
@@ -223,7 +223,7 @@ std::vector<ds_bulk_t> LevelDBDataStore::vlist_key_range(
 }
 
 std::vector<std::pair<ds_bulk_t,ds_bulk_t>> LevelDBDataStore::vlist_keyval_range(
-        const ds_bulk_t &lower_bound, const ds_bulk_t &upper_bound, size_t max_keys) const {
+        const ds_bulk_t &lower_bound, const ds_bulk_t &upper_bound, hg_size_t max_keys) const {
     std::vector<std::pair<ds_bulk_t,ds_bulk_t>> result;
     // TODO implement this function
     throw SDSKV_OP_NOT_IMPL;

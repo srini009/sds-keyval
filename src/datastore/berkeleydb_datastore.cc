@@ -139,7 +139,7 @@ void BerkeleyDBDataStore::set_comparison_function(const std::string& name, compa
     _wrapper->_less = less;
 }
 
-int BerkeleyDBDataStore::put(const void* key, size_t ksize, const void* val, size_t vsize) {
+int BerkeleyDBDataStore::put(const void* key, hg_size_t ksize, const void* val, hg_size_t vsize) {
   int status = 0;
   bool success = false;
   Dbt db_key((void*)key, ksize);
@@ -153,14 +153,14 @@ int BerkeleyDBDataStore::put(const void* key, size_t ksize, const void* val, siz
   return SDSKV_ERR_PUT;
 };
 
-int BerkeleyDBDataStore::put_multi(size_t num_items,
+int BerkeleyDBDataStore::put_multi(hg_size_t num_items,
         const void* const* keys,
-        const size_t* ksizes,
+        const hg_size_t* ksizes,
         const void* const* values,
-        const size_t* vsizes)
+        const hg_size_t* vsizes)
 {
-    size_t sk = 0;
-    size_t sv = 0;
+    hg_size_t sk = 0;
+    hg_size_t sv = 0;
     for(unsigned i = 0; i < num_items; i++) {
         sk += ksizes[i];
         sv += vsizes[i]+8;
@@ -187,7 +187,7 @@ int BerkeleyDBDataStore::put_multi(size_t num_items,
     DbMultipleDataBuilder keybuilder(mkey);
     DbMultipleDataBuilder databuilder(mdata);
 
-    for(size_t i = 0; i < num_items; i++) {
+    for(hg_size_t i = 0; i < num_items; i++) {
         keybuilder.append((void*)keys[i], ksizes[i]);
         databuilder.append((void*)values[i], vsizes[i]);
     }
@@ -199,7 +199,7 @@ int BerkeleyDBDataStore::put_multi(size_t num_items,
     return SDSKV_SUCCESS;
 }
 
-bool BerkeleyDBDataStore::exists(const void* key, size_t size) const {
+bool BerkeleyDBDataStore::exists(const void* key, hg_size_t size) const {
     Dbt db_key((void*)key, size);
     db_key.set_flags(DB_DBT_USERMEM);
     int status = _dbm->exists(NULL, &db_key, 0);
@@ -274,7 +274,7 @@ void BerkeleyDBDataStore::set_in_memory(bool enable) {
 };
 
 std::vector<ds_bulk_t> BerkeleyDBDataStore::vlist_keys(
-        const ds_bulk_t &start, size_t count, const ds_bulk_t &prefix) const
+        const ds_bulk_t &start, hg_size_t count, const ds_bulk_t &prefix) const
 {
     std::vector<ds_bulk_t> keys;
     Dbc * cursorp;
@@ -324,7 +324,7 @@ std::vector<ds_bulk_t> BerkeleyDBDataStore::vlist_keys(
 }
 
 std::vector<std::pair<ds_bulk_t,ds_bulk_t>> BerkeleyDBDataStore::vlist_keyvals(
-        const ds_bulk_t &start, size_t count, const ds_bulk_t &prefix) const
+        const ds_bulk_t &start, hg_size_t count, const ds_bulk_t &prefix) const
 {
     std::vector<std::pair<ds_bulk_t,ds_bulk_t>> result;
     Dbc * cursorp;
@@ -378,7 +378,7 @@ std::vector<std::pair<ds_bulk_t,ds_bulk_t>> BerkeleyDBDataStore::vlist_keyvals(
 }
 
 std::vector<ds_bulk_t> BerkeleyDBDataStore::vlist_key_range(
-        const ds_bulk_t &lower_bound, const ds_bulk_t &upper_bound, size_t max_keys) const {
+        const ds_bulk_t &lower_bound, const ds_bulk_t &upper_bound, hg_size_t max_keys) const {
     std::vector<ds_bulk_t> result;
     // TODO implement this function
     throw SDSKV_OP_NOT_IMPL;
@@ -386,20 +386,20 @@ std::vector<ds_bulk_t> BerkeleyDBDataStore::vlist_key_range(
 }
 
 std::vector<std::pair<ds_bulk_t,ds_bulk_t>> BerkeleyDBDataStore::vlist_keyval_range(
-        const ds_bulk_t &lower_bound, const ds_bulk_t &upper_bound, size_t max_keys) const {
+        const ds_bulk_t &lower_bound, const ds_bulk_t &upper_bound, hg_size_t max_keys) const {
     std::vector<std::pair<ds_bulk_t,ds_bulk_t>> result;
     // TODO implement this function
     throw SDSKV_OP_NOT_IMPL;
     return result;
 }
 
-int BerkeleyDBDataStore::compkeys(Db *db, const Dbt *dbt1, const Dbt *dbt2, size_t *locp) {
+int BerkeleyDBDataStore::compkeys(Db *db, const Dbt *dbt1, const Dbt *dbt2, hg_size_t *locp) {
     DbWrapper* _wrapper = (DbWrapper*)(((char*)db) - offsetof(BerkeleyDBDataStore::DbWrapper, _db));
     if(_wrapper->_less) {
         return (_wrapper->_less)(dbt1->get_data(), dbt1->get_size(), 
                 dbt2->get_data(), dbt2->get_size());
     } else {
-        size_t s = dbt1->get_size() > dbt2->get_size() ? dbt2->get_size() : dbt1->get_size();
+        hg_size_t s = dbt1->get_size() > dbt2->get_size() ? dbt2->get_size() : dbt1->get_size();
         int c = std::memcmp(dbt1->get_data(), dbt2->get_data(), s);
         if(c != 0) return c;
         if(dbt1->get_size() < dbt2->get_size()) return -1;
