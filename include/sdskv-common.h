@@ -40,6 +40,28 @@ typedef uint64_t sdskv_database_id_t;
 #define SDSKV_ERR_REMI        -15 /* REMI-related error */
 #define SDSKV_ERR_ARGOBOTS    -16 /* Argobots related error */
 #define SDSKV_ERR_KEYEXISTS   -17 /* Put operation would override data */
+#define SDSKV_ERR_END         -18 /* End of range for valid error codes */
+
+const char* const sdskv_error_messages[] = {
+    "",
+    "Allocation error",
+    "Invalid argument",
+    "Mercury error",
+    "Could not create database",
+    "Invalid database name",
+    "Invalid database id",
+    "Invalid provider id",
+    "Error writing in the database",
+    "Unknown key",
+    "Provided buffer size too small",
+    "Error erasing from the database",
+    "Migration error",
+    "Function not implemented",
+    "Invalid comparison function",
+    "REMI error",
+    "Argobots error",
+    "Key exists"
+};
 
 #if defined(__cplusplus)
 }

@@ -5,27 +5,6 @@
 
 namespace sdskv {
 
-const char* const sdskv_error_messages[] = {
-    "",
-    "Allocation error",
-    "Invalid argument",
-    "Mercury error",
-    "Could not create database",
-    "Invalid database name",
-    "Invalid database id",
-    "Invalid provider id",
-    "Error writing in the database",
-    "Unknown key",
-    "Provided buffer size too small",
-    "Error erasing from the database",
-    "Migration error",
-    "Function not implemented",
-    "Invalid comparison function",
-    "REMI error",
-    "Argobots error",
-    "Key exists"
-};
-
 /**
  * @brief Exception thrown when an sdskv call fails with a return code != 0.
  */
@@ -38,7 +17,7 @@ class exception : public std::exception {
 
     exception(int error)
     : m_error(error) {
-        if(error < 0 && error >= -16) {
+        if(error < 0 && error > SDSKV_ERR_END) {
             m_msg = std::string("[SDSKV] ") + sdskv_error_messages[-error];
         } else {
             m_msg = std::string("[SDSKV] Unknown error code ") + std::to_string(error);
