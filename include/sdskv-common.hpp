@@ -36,8 +36,13 @@ class exception : public std::exception {
     public:
 
     exception(int error)
-    : m_msg(std::string("[SDSKV] ") + sdskv_error_messages[-error])
-    , m_error(error) {}
+    : m_error(error) {
+        if(error < 0 && error >= -16) {
+            m_msg = std::string("[SDSKV] ") + sdskv_error_messages[-error];
+        } else {
+            m_msg = std::string("[SDSKV] Unknown error code ") + std::to_string(error);
+        }
+    }
 
     virtual const char* what() const noexcept override {
         return m_msg.c_str();
