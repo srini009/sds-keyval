@@ -78,9 +78,15 @@ class MapDataStore : public AbstractDataStore {
         }
 
         virtual int put(const void* key, size_t ksize, const void* value, size_t vsize) override {
-            ds_bulk_t k((const char*)key, ((const char*)key)+ksize);
-            ds_bulk_t v((const char*)value, ((const char*)value)+vsize);
-            return put(std::move(k), std::move(v));
+            if(vsize != 0) {
+                ds_bulk_t k((const char*)key, ((const char*)key)+ksize);
+                ds_bulk_t v((const char*)value, ((const char*)value)+vsize);
+                return put(std::move(k), std::move(v));
+            } else {
+                ds_bulk_t k((const char*)key, ((const char*)key)+ksize);
+                ds_bulk_t v;
+                return put(std::move(k), std::move(v));
+            }
         }
 
         virtual bool get(const ds_bulk_t &key, ds_bulk_t &data) override {
