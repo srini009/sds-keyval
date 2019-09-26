@@ -22,7 +22,8 @@ const char* const sdskv_error_messages[] = {
     "Function not implemented",
     "Invalid comparison function",
     "REMI error",
-    "Argobots error"
+    "Argobots error",
+    "Key exists"
 };
 
 /**
