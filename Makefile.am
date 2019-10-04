@@ -96,8 +96,6 @@ include_HEADERS = include/sdskv-client.h \
 		  include/sdskv-common.hpp
 
 noinst_HEADERS = src/bulk.h \
-		 src/sds-keyval.h \
-		 src/sds-keyval-group.h \
 		 src/sdskv-rpc-types.h \
 		 src/datastore/datastore.h \
 		 src/datastore/map_datastore.h \
@@ -105,11 +103,13 @@ noinst_HEADERS = src/bulk.h \
 		 src/datastore/leveldb_datastore.h \
 		 src/datastore/berkeleydb_datastore.h \
 		 src/datastore/datastore_factory.h \
-		 src/keyval-internal.h \
 		 src/BwTree/src/bwtree.h \
 		 src/BwTree/src/atomic_stack.h\
 		 src/BwTree/src/bloom_filter.h \
 		 src/BwTree/src/sorted_small_set.h
+#		 src/sds-keyval.h \
+#		 src/sds-keyval-group.h \
+#		 src/keyval-internal.h 
 
 #lib_libkvgroupserver_la_SOURCES = src/kvgroup-server.cc
 

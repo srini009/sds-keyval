@@ -6,7 +6,7 @@ AC_INIT([sds-keyval], [0.1.4], [robl@mcs.anl.gov])
 AM_INIT_AUTOMAKE([1.13.4 -Wall -Werror foreign subdir-objects silent-rules])
 AM_SILENT_RULES([yes])
 AC_CONFIG_MACRO_DIR([m4])
-AC_CONFIG_SRCDIR([src/sds-keyval.h])
+AC_CONFIG_SRCDIR([src/sdskv-rpc-types.h])
 AC_CONFIG_HEADERS([src/kv-config.h])
 LT_PREREQ([2.2])
 # LT_INIT needs to know about AR
