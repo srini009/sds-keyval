@@ -72,6 +72,24 @@
             "num-entries" : 30,
             "key-sizes" : 32,
             "val-sizes" : [ 56, 64 ]
+        },
+        {
+            "type" : "list-keys",
+            "repetitions" : 10,
+            "num-entries" : 30,
+            "key-sizes" : 32,
+            "val-sizes" : [ 56, 64 ],
+            "batch-size" : 8,
+            "erase-on-teardown" : true
+        },
+        {
+            "type" : "list-keyvals",
+            "repetitions" : 10,
+            "num-entries" : 30000,
+            "key-sizes" : 32,
+            "val-sizes" : [ 56, 64 ],
+            "batch-size" : 8,
+            "erase-on-teardown" : true
         }
     ]
 }

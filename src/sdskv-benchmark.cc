@@ -474,6 +474,100 @@ class EraseMultiBenchmark : public EraseBenchmark {
 };
 REGISTER_BENCHMARK("erase-multi", EraseMultiBenchmark);
 
+/**
+ * ListKeysBenchmark executes a series of LIST KEYS operations and measures their duration.
+ */
+class ListKeysBenchmark : public AbstractAccessBenchmark {
+
+    protected:
+
+    std::vector<std::string>  m_keys;
+    std::vector<std::string>  m_vals;
+    size_t                    m_batch_size;
+
+    public:
+
+    template<typename ... T>
+    ListKeysBenchmark(Json::Value& config, T&& ... args)
+    : AbstractAccessBenchmark(config, std::forward<T>(args)...) {
+        m_batch_size = config.get("batch-size", 8).asUInt();
+    }
+
+    virtual void setup() override {
+        // generate key/value pairs and store them in the local
+        m_keys.reserve(m_num_entries);
+        m_vals.reserve(m_num_entries);
+        for(unsigned i=0; i < m_num_entries; i++) {
+            size_t ksize = m_key_size_range.first + (rand() % (m_key_size_range.second - m_key_size_range.first));
+            m_keys.push_back(gen_random_string(ksize));
+            size_t vsize = m_val_size_range.first + (rand() % (m_val_size_range.second - m_val_size_range.first));
+            m_vals.push_back(gen_random_string(vsize));
+        }
+        // execute PUT operations (not part of the measure)
+        auto& db = remoteDatabase();
+        db.put(m_keys, m_vals);
+    }
+
+    virtual void execute() override {
+        // execute LIST KEYS operations
+        auto& db = remoteDatabase();
+        std::vector<std::string> keys(m_batch_size, std::string(m_key_size_range.second-1, 0));
+        std::string start_key = "";
+        do {
+            db.list_keys(start_key, keys);
+            if(keys.size() > 0)
+                start_key = keys[keys.size()-1];
+            for(auto& k : keys) {
+                k.resize(m_key_size_range.second-1);
+            }
+        } while(keys.size() == m_batch_size);
+    }
+
+    virtual void teardown() override {
+        if(m_erase_on_teardown) {
+            // erase all the keys from the database
+            auto& db = remoteDatabase();
+            db.erase_multi(m_keys);
+        }
+        // erase keys and values from the local vectors
+        m_keys.resize(0);
+        m_vals.resize(0);
+    }
+};
+REGISTER_BENCHMARK("list-keys", ListKeysBenchmark);
+
+/**
+ * ListKeysBenchmark executes a series of LIST KEYVALS operations and measures their duration.
+ */
+class ListKeyValsBenchmark : public ListKeysBenchmark {
+
+    public:
+
+    template<typename ... T>
+    ListKeyValsBenchmark(T&& ... args)
+    : ListKeysBenchmark(std::forward<T>(args)...) {}
+
+    virtual void execute() override {
+        // execute LIST KEYVALS operations
+        auto& db = remoteDatabase();
+        std::vector<std::string> keys(m_batch_size, std::string(m_key_size_range.second-1, 0));
+        std::vector<std::string> vals(m_batch_size, std::string(m_val_size_range.second-1, 0));
+        std::string start_key = "";
+        do {
+            db.list_keyvals(start_key, keys, vals);
+            if(keys.size() > 0)
+                start_key = keys[keys.size()-1];
+            for(auto& k : keys) {
+                k.resize(m_key_size_range.second-1);
+            }
+            for(auto& v : vals) {
+                v.resize(m_val_size_range.second-1);
+            }
+        } while(keys.size() == m_batch_size);
+    }
+};
+REGISTER_BENCHMARK("list-keyvals", ListKeyValsBenchmark);
+
 static void run_server(MPI_Comm comm, Json::Value& config);
 static void run_client(MPI_Comm comm, Json::Value& config);
 static sdskv_db_type_t database_type_from_string(const std::string& type);
