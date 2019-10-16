@@ -223,12 +223,15 @@ class GetBenchmark : public AbstractAccessBenchmark {
 
     std::vector<std::string>  m_keys;
     std::vector<std::string>  m_vals;
+    bool                      m_reuse_buffer = false;
 
     public:
 
     template<typename ... T>
-    GetBenchmark(T&& ... args)
-    : AbstractAccessBenchmark(std::forward<T>(args)...) {}
+    GetBenchmark(Json::Value& config, T&& ... args)
+    : AbstractAccessBenchmark(config, std::forward<T>(args)...) {
+        m_reuse_buffer = config.get("reuse-buffer", false).asBool();
+    }
 
     virtual void setup() override {
         // generate key/value pairs and store them in the local
@@ -252,11 +255,18 @@ class GetBenchmark : public AbstractAccessBenchmark {
     virtual void execute() override {
         // execute GET operations
         auto& db = remoteDatabase();
-        std::string val(m_val_size_range.second-1, 0);
+        std::string val;
+        if(m_reuse_buffer)
+            val.resize(m_val_size_range.second-1, 0);
+        else
+            val.resize((m_val_size_range.second-1)*m_num_entries, 0);
+        size_t offset = 0;
         for(unsigned i=0; i < m_num_entries; i++) {
             auto& key = m_keys[i];
-            db.get(key, val);
-            val.resize(m_val_size_range.second-1, 0);
+            hg_size_t vsize = m_val_size_range.second-1;
+            db.get((const void*)key.data(), key.size(), (void*)(val.data() + offset), &vsize);
+            if(!m_reuse_buffer)
+                offset += m_val_size_range.second-1;
         }
     }
 
