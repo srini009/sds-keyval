@@ -138,7 +138,7 @@ class AbstractAccessBenchmark : public AbstractBenchmark {
         } else {
             throw std::range_error("invalid val-sizes range or value");
         }
-        m_erase_on_teardown = config["erase-on-teardown"].asBool();
+        m_erase_on_teardown = config.get("erase-on-teardown", true).asBool();
     }
 };
 
@@ -184,13 +184,11 @@ class PutBenchmark : public AbstractAccessBenchmark {
         if(m_erase_on_teardown) {
             // erase all the keys from the database
             auto& db = remoteDatabase();
-            for(unsigned i=0; i < m_num_entries; i++) {
-                db.erase(m_keys[i]);
-            }
+            db.erase_multi(m_keys);
         }
         // erase keys and values from the local vectors
-        m_keys.resize(0);
-        m_vals.resize(0);
+        m_keys.resize(0); m_keys.shrink_to_fit();
+        m_vals.resize(0); m_vals.shrink_to_fit();
     }
 };
 REGISTER_BENCHMARK("put", PutBenchmark);
@@ -201,15 +199,60 @@ REGISTER_BENCHMARK("put", PutBenchmark);
  */
 class PutMultiBenchmark : public PutBenchmark {
     
+    protected:
+
+    size_t m_batch_size;
+    std::vector<hg_size_t>   m_ksizes;
+    std::vector<const void*> m_kptrs;
+    std::vector<hg_size_t>   m_vsizes;
+    std::vector<const void*> m_vptrs;
+
     public:
 
     template<typename ... T>
-    PutMultiBenchmark(T&& ... args)
-    : PutBenchmark(std::forward<T>(args)...) {}
+    PutMultiBenchmark(Json::Value& config, T&& ... args)
+    : PutBenchmark(config, std::forward<T>(args)...) {
+        m_batch_size = config.get("batch-size", m_num_entries).asUInt();
+    }
+
+    virtual void setup() override {
+        PutBenchmark::setup();
+        m_ksizes.resize(m_batch_size);
+        m_kptrs.resize(m_batch_size);
+        m_vsizes.resize(m_batch_size);
+        m_vptrs.resize(m_batch_size);
+    }
 
     virtual void execute() override {
         auto& db = remoteDatabase();
+        size_t remaining = m_num_entries;
+        unsigned j = 0;
+        while(remaining != 0) {
+            size_t count = std::min<size_t>(remaining, m_batch_size);
+            for(unsigned i=0; i<count; i++) {
+                m_ksizes[i] = m_keys[i+j].size();
+                m_kptrs[i]  = m_keys[i+j].data();
+                m_vsizes[i] = m_vals[i+j].size();
+                m_vptrs[i]  = m_vals[i+j].data();
+            }
+            if(count != m_batch_size) {
+                m_ksizes.resize(count);
+                m_kptrs.resize(count);
+                m_vsizes.resize(count);
+                m_vptrs.resize(count);
+            }
+            db.put(m_kptrs, m_ksizes, m_vptrs, m_vsizes);
+            remaining -= count;
+        }
         db.put(m_keys, m_vals);
+    }
+
+    virtual void teardown() override {
+        PutBenchmark::teardown();
+        m_ksizes.resize(0); m_ksizes.shrink_to_fit();
+        m_kptrs.resize(0);  m_kptrs.shrink_to_fit();
+        m_vsizes.resize(0); m_vsizes.shrink_to_fit();
+        m_vptrs.resize(0);  m_vptrs.shrink_to_fit();
     }
 };
 REGISTER_BENCHMARK("put-multi", PutMultiBenchmark);
@@ -222,7 +265,7 @@ class GetBenchmark : public AbstractAccessBenchmark {
     protected:
 
     std::vector<std::string>  m_keys;
-    std::vector<std::string>  m_vals;
+    std::vector<std::string>  m_vals_buffer;
     bool                      m_reuse_buffer = false;
 
     public:
@@ -230,43 +273,50 @@ class GetBenchmark : public AbstractAccessBenchmark {
     template<typename ... T>
     GetBenchmark(Json::Value& config, T&& ... args)
     : AbstractAccessBenchmark(config, std::forward<T>(args)...) {
-        m_reuse_buffer = config.get("reuse-buffer", false).asBool();
+        if(config.isMember("reuse-buffer")) {
+            m_reuse_buffer = config["reuse-buffer"].asBool();
+        }
     }
 
     virtual void setup() override {
         // generate key/value pairs and store them in the local
         m_keys.reserve(m_num_entries);
-        m_vals.reserve(m_num_entries);
+        std::vector<std::string> vals;
+        vals.reserve(m_num_entries);
         for(unsigned i=0; i < m_num_entries; i++) {
             size_t ksize = m_key_size_range.first + (rand() % (m_key_size_range.second - m_key_size_range.first));
             m_keys.push_back(gen_random_string(ksize));
             size_t vsize = m_val_size_range.first + (rand() % (m_val_size_range.second - m_val_size_range.first));
-            m_vals.push_back(gen_random_string(vsize));
+            vals.push_back(gen_random_string(vsize));
         }
         // execute PUT operations (not part of the measure)
         auto& db = remoteDatabase();
         for(unsigned i=0; i < m_num_entries; i++) {
             auto& key = m_keys[i];
-            auto& val = m_vals[i];
+            auto& val = vals[i];
             db.put(key, val);
         }
+        // make a copy of the keys so we don't reuse the same memory
+        auto keys_cpy = m_keys;
+        m_keys = std::move(keys_cpy);
+        // prepare buffer to get values
+        if(m_reuse_buffer)
+            m_vals_buffer.resize(1, std::string(m_val_size_range.second-1, 0));
+        else
+            m_vals_buffer.resize(m_num_entries, std::string(m_val_size_range.second-1, 0));
     }
 
     virtual void execute() override {
         // execute GET operations
         auto& db = remoteDatabase();
-        std::string val;
-        if(m_reuse_buffer)
-            val.resize(m_val_size_range.second-1, 0);
-        else
-            val.resize((m_val_size_range.second-1)*m_num_entries, 0);
-        size_t offset = 0;
+        unsigned j = 0;
         for(unsigned i=0; i < m_num_entries; i++) {
             auto& key = m_keys[i];
+            auto& val = m_vals_buffer[j];
             hg_size_t vsize = m_val_size_range.second-1;
-            db.get((const void*)key.data(), key.size(), (void*)(val.data() + offset), &vsize);
+            db.get((const void*)key.data(), key.size(), (void*)val.data(), &vsize);
             if(!m_reuse_buffer)
-                offset += m_val_size_range.second-1;
+                j += 1;
         }
     }
 
@@ -279,8 +329,8 @@ class GetBenchmark : public AbstractAccessBenchmark {
             }
         }
         // erase keys and values from the local vectors
-        m_keys.resize(0);
-        m_vals.resize(0);
+        m_keys.resize(0); m_keys.shrink_to_fit();
+        m_vals_buffer.resize(0); m_vals_buffer.shrink_to_fit();
     }
 };
 REGISTER_BENCHMARK("get", GetBenchmark);
@@ -291,16 +341,65 @@ REGISTER_BENCHMARK("get", GetBenchmark);
  */
 class GetMultiBenchmark : public GetBenchmark {
     
+    protected:
+
+    size_t m_batch_size;
+    std::vector<hg_size_t>   m_ksizes;
+    std::vector<const void*> m_kptrs;
+    std::vector<hg_size_t>   m_vsizes;
+    std::vector<void*>       m_vptrs;
+
     public:
 
     template<typename ... T>
-    GetMultiBenchmark(T&& ... args)
-    : GetBenchmark(std::forward<T>(args)...) {}
+    GetMultiBenchmark(Json::Value& config, T&& ... args)
+    : GetBenchmark(config, std::forward<T>(args)...) {
+        m_batch_size = config.get("batch-size", m_num_entries).asUInt();
+    }
+
+    virtual void setup() override {
+        GetBenchmark::setup();
+        m_ksizes.resize(m_batch_size);
+        m_kptrs.resize(m_batch_size);
+        m_vsizes.resize(m_batch_size);
+        m_vptrs.resize(m_batch_size);
+        if(m_vals_buffer.size() != m_batch_size && m_reuse_buffer) {
+            m_vals_buffer.resize(m_batch_size, std::string(m_val_size_range.second-1, 0));
+        }
+    }
 
     virtual void execute() override {
         auto& db = remoteDatabase();
-        std::vector<std::string> vals(m_num_entries, std::string(m_val_size_range.second-1, 0));
-        db.get(m_keys, vals);
+        size_t remaining = m_num_entries;
+        unsigned j = 0, k = 0;
+        while(remaining != 0) {
+            size_t count = std::min<size_t>(remaining, m_batch_size);
+            for(unsigned i=0; i < count; i++) {
+                m_ksizes[i] = m_keys[j+i].size();
+                m_kptrs[i]  = (const void*)m_keys[i+j].data();
+                m_vsizes[i] = m_vals_buffer[i+k].size();
+                m_vptrs[i]  = (void*)m_vals_buffer[i+k].data();
+            }
+            if(count != m_batch_size) {
+                m_ksizes.resize(count);
+                m_kptrs.resize(count);
+                m_vsizes.resize(count);
+                m_vptrs.resize(count);
+            }
+            db.get(m_kptrs, m_ksizes, m_vptrs, m_vsizes);
+            if(!m_reuse_buffer)
+                k += count;
+            j += count;
+            remaining -= count;
+        }
+    }
+
+    virtual void teardown() override {
+        GetBenchmark::teardown();
+        m_ksizes.resize(0); m_ksizes.shrink_to_fit();
+        m_kptrs.resize(0);  m_kptrs.shrink_to_fit();
+        m_vsizes.resize(0); m_vsizes.shrink_to_fit();
+        m_vptrs.resize(0);  m_vptrs.shrink_to_fit();
     }
 };
 REGISTER_BENCHMARK("get-multi", GetMultiBenchmark);
@@ -308,37 +407,13 @@ REGISTER_BENCHMARK("get-multi", GetMultiBenchmark);
 /**
  * LengthBenchmark executes a series of LENGTH operations and measures their duration.
  */
-class LengthBenchmark : public AbstractAccessBenchmark {
-
-    protected:
-
-    std::vector<std::string>  m_keys;
-    std::vector<std::string>  m_vals;
+class LengthBenchmark : public GetBenchmark {
 
     public:
 
     template<typename ... T>
     LengthBenchmark(T&& ... args)
-    : AbstractAccessBenchmark(std::forward<T>(args)...) {}
-
-    virtual void setup() override {
-        // generate key/value pairs and store them in the local
-        m_keys.reserve(m_num_entries);
-        m_vals.reserve(m_num_entries);
-        for(unsigned i=0; i < m_num_entries; i++) {
-            size_t ksize = m_key_size_range.first + (rand() % (m_key_size_range.second - m_key_size_range.first));
-            m_keys.push_back(gen_random_string(ksize));
-            size_t vsize = m_val_size_range.first + (rand() % (m_val_size_range.second - m_val_size_range.first));
-            m_vals.push_back(gen_random_string(vsize));
-        }
-        // execute PUT operations (not part of the measure)
-        auto& db = remoteDatabase();
-        for(unsigned i=0; i < m_num_entries; i++) {
-            auto& key = m_keys[i];
-            auto& val = m_vals[i];
-            db.put(key, val);
-        }
-    }
+    : GetBenchmark(std::forward<T>(args)...) {}
 
     virtual void execute() override {
         // execute LENGTH operations
@@ -347,19 +422,6 @@ class LengthBenchmark : public AbstractAccessBenchmark {
             auto& key = m_keys[i];
             db.length(key);
         }
-    }
-
-    virtual void teardown() override {
-        if(m_erase_on_teardown) {
-            // erase all the keys from the database
-            auto& db = remoteDatabase();
-            for(unsigned i=0; i < m_num_entries; i++) {
-                db.erase(m_keys[i]);
-            }
-        }
-        // erase keys and values from the local vectors
-        m_keys.resize(0);
-        m_vals.resize(0);
     }
 };
 REGISTER_BENCHMARK("length", LengthBenchmark);
@@ -370,16 +432,55 @@ REGISTER_BENCHMARK("length", LengthBenchmark);
  */
 class LengthMultiBenchmark : public LengthBenchmark {
     
+
+    protected:
+
+    size_t                   m_batch_size;
+    std::vector<hg_size_t>   m_ksizes;
+    std::vector<const void*> m_kptrs;
+    std::vector<hg_size_t>   m_vsizes;
+
     public:
 
     template<typename ... T>
-    LengthMultiBenchmark(T&& ... args)
-    : LengthBenchmark(std::forward<T>(args)...) {}
+    LengthMultiBenchmark(Json::Value& config, T&& ... args)
+    : LengthBenchmark(config, std::forward<T>(args)...) {
+         m_batch_size = config.get("batch-size", m_num_entries).asUInt();
+    }
+
+    virtual void setup() override {
+        LengthBenchmark::setup();
+        if(m_reuse_buffer)
+            m_vsizes.resize(m_batch_size);
+        else
+            m_vsizes.resize(m_num_entries);
+        m_ksizes.resize(m_batch_size);
+        m_kptrs.resize(m_batch_size);
+    }
 
     virtual void execute() override {
         auto& db = remoteDatabase();
-        std::vector<hg_size_t> sizes(m_num_entries); 
-        db.length(m_keys, sizes);
+        size_t remaining = m_num_entries;
+        unsigned j = 0, k = 0;
+        while(remaining != 0) {
+            size_t count = std::min<size_t>(remaining, m_batch_size);
+            for(unsigned i=0; i < count; i++) {
+                m_ksizes[i] = m_keys[i+j].size();
+                m_kptrs[i] = (const void*)m_keys[i+j].data();
+            }
+            db.length(count, m_kptrs.data(), m_ksizes.data(), m_vsizes.data()+k);
+            remaining -= count;
+            j += count;
+            if(!m_reuse_buffer)
+                k += count;
+        }
+    }
+
+    virtual void teardown() override {
+        LengthBenchmark::teardown();
+        m_ksizes.resize(0); m_ksizes.shrink_to_fit();
+        m_kptrs.resize(0);  m_kptrs.shrink_to_fit();
+        m_vsizes.resize(0); m_vsizes.shrink_to_fit();
     }
 };
 REGISTER_BENCHMARK("length-multi", LengthMultiBenchmark);
@@ -387,65 +488,17 @@ REGISTER_BENCHMARK("length-multi", LengthMultiBenchmark);
 /**
  * EraseBenchmark executes a series of ERASE operations and measures their duration.
  */
-class EraseBenchmark : public AbstractBenchmark {
-
-    protected:
-
-    uint64_t                  m_num_entries = 0;
-    std::pair<size_t, size_t> m_key_size_range;
-    std::pair<size_t, size_t> m_val_size_range;
-
-    std::vector<std::string>  m_keys;
-    std::vector<std::string>  m_vals;
+class EraseBenchmark : public GetBenchmark {
 
     public:
 
     template<typename ... T>
-    EraseBenchmark(Json::Value& config, T&& ... args)
-    : AbstractBenchmark(std::forward<T>(args)...) {
-        // read the configuration
-        m_num_entries = config["num-entries"].asUInt64();
-        if(config["key-sizes"].isIntegral()) {
-            auto x = config["key-sizes"].asUInt64();
-            m_key_size_range = { x, x+1 };
-        } else if(config["key-sizes"].isArray() && config["key-sizes"].size() == 2) {
-            auto x = config["key-sizes"][0].asUInt64();
-            auto y = config["key-sizes"][1].asUInt64();
-            if(x > y) throw std::range_error("invalid key-sizes range");
-            m_key_size_range = { x, y };
-        } else {
-            throw std::range_error("invalid key-sizes range or value");
-        }
-        if(config["val-sizes"].isIntegral()) {
-            auto x = config["val-sizes"].asUInt64();
-            m_val_size_range = { x, x+1 };
-        } else if(config["val-sizes"].isArray() && config["val-sizes"].size() == 2) {
-            auto x = config["val-sizes"][0].asUInt64();
-            auto y = config["val-sizes"][1].asUInt64();
-            if(x >= y) throw std::range_error("invalid val-sizes range");
-            m_val_size_range = { x, y };
-        } else {
-            throw std::range_error("invalid val-sizes range or value");
-        }
-    }
+    EraseBenchmark(T&& ... args)
+    : GetBenchmark(std::forward<T>(args)...) {}
 
     virtual void setup() override {
-        // generate key/value pairs and store them in the local
-        m_keys.reserve(m_num_entries);
-        m_vals.reserve(m_num_entries);
-        for(unsigned i=0; i < m_num_entries; i++) {
-            size_t ksize = m_key_size_range.first + (rand() % (m_key_size_range.second - m_key_size_range.first));
-            m_keys.push_back(gen_random_string(ksize));
-            size_t vsize = m_val_size_range.first + (rand() % (m_val_size_range.second - m_val_size_range.first));
-            m_vals.push_back(gen_random_string(vsize));
-        }
-        // execute PUT operations (not part of the measure)
-        auto& db = remoteDatabase();
-        for(unsigned i=0; i < m_num_entries; i++) {
-            auto& key = m_keys[i];
-            auto& val = m_vals[i];
-            db.put(key, val);
-        }
+        GetBenchmark::setup();
+        m_vals_buffer.resize(0);
     }
 
     virtual void execute() override {
@@ -459,8 +512,8 @@ class EraseBenchmark : public AbstractBenchmark {
 
     virtual void teardown() override {
         // erase keys and values from the local vectors
-        m_keys.resize(0);
-        m_vals.resize(0);
+        m_keys.resize(0); m_keys.shrink_to_fit();
+        m_vals_buffer.resize(0); m_vals_buffer.shrink_to_fit(); 
     }
 };
 REGISTER_BENCHMARK("erase", EraseBenchmark);
@@ -470,16 +523,47 @@ REGISTER_BENCHMARK("erase", EraseBenchmark);
  * executes a ERASE-MULTI instead of a ERASE.
  */
 class EraseMultiBenchmark : public EraseBenchmark {
-    
+   
+    protected:
+
+    size_t                   m_batch_size;
+    std::vector<hg_size_t>   m_ksizes;
+    std::vector<const void*> m_kptrs;
+
     public:
 
     template<typename ... T>
-    EraseMultiBenchmark(T&& ... args)
-    : EraseBenchmark(std::forward<T>(args)...) {}
+    EraseMultiBenchmark(Json::Value& config, T&& ... args)
+    : EraseBenchmark(config, std::forward<T>(args)...) {
+         m_batch_size = config.get("batch-size", m_num_entries).asUInt();
+    }
+
+    virtual void setup() override {
+        EraseBenchmark::setup();
+        m_ksizes.resize(m_batch_size);
+        m_kptrs.resize(m_batch_size);
+    }
 
     virtual void execute() override {
         auto& db = remoteDatabase();
-        db.erase_multi(m_keys);
+        size_t remaining = m_num_entries;
+        unsigned j = 0;
+        while(remaining != 0) {
+            size_t count = std::min<size_t>(remaining, m_batch_size);
+            for(unsigned i=0; i < count; i++) {
+                m_ksizes[i] = m_keys[i+j].size();
+                m_kptrs[i] = (const void*)m_keys[i+j].data();
+            }
+            db.erase_multi(count, m_kptrs.data(), m_ksizes.data());
+            remaining -= count;
+            j += count;
+        }
+    }
+
+    virtual void teardown() override {
+        EraseBenchmark::teardown();
+        m_ksizes.resize(0); m_ksizes.shrink_to_fit();
+        m_kptrs.resize(0);  m_kptrs.shrink_to_fit();
     }
 };
 REGISTER_BENCHMARK("erase-multi", EraseMultiBenchmark);
@@ -487,61 +571,61 @@ REGISTER_BENCHMARK("erase-multi", EraseMultiBenchmark);
 /**
  * ListKeysBenchmark executes a series of LIST KEYS operations and measures their duration.
  */
-class ListKeysBenchmark : public AbstractAccessBenchmark {
+class ListKeysBenchmark : public GetBenchmark {
 
     protected:
 
-    std::vector<std::string>  m_keys;
-    std::vector<std::string>  m_vals;
     size_t                    m_batch_size;
+    std::vector<std::string>  m_keys_buffer;
+    std::vector<hg_size_t>    m_ksizes;
+    std::vector<void*>        m_kptrs;
 
     public:
 
     template<typename ... T>
     ListKeysBenchmark(Json::Value& config, T&& ... args)
-    : AbstractAccessBenchmark(config, std::forward<T>(args)...) {
+    : GetBenchmark(config, std::forward<T>(args)...) {
         m_batch_size = config.get("batch-size", 8).asUInt();
     }
 
     virtual void setup() override {
-        // generate key/value pairs and store them in the local
-        m_keys.reserve(m_num_entries);
-        m_vals.reserve(m_num_entries);
-        for(unsigned i=0; i < m_num_entries; i++) {
-            size_t ksize = m_key_size_range.first + (rand() % (m_key_size_range.second - m_key_size_range.first));
-            m_keys.push_back(gen_random_string(ksize));
-            size_t vsize = m_val_size_range.first + (rand() % (m_val_size_range.second - m_val_size_range.first));
-            m_vals.push_back(gen_random_string(vsize));
-        }
-        // execute PUT operations (not part of the measure)
-        auto& db = remoteDatabase();
-        db.put(m_keys, m_vals);
+        GetBenchmark::setup();
+        if(m_reuse_buffer)
+            m_keys_buffer.resize(m_batch_size, std::string(m_key_size_range.second-1, 0));
+        else
+            m_keys_buffer.resize(m_num_entries, std::string(m_key_size_range.second-1, 0));
+        m_ksizes.resize(m_batch_size);
+        m_kptrs.resize(m_batch_size);
     }
 
     virtual void execute() override {
-        // execute LIST KEYS operations
         auto& db = remoteDatabase();
-        std::vector<std::string> keys(m_batch_size, std::string(m_key_size_range.second-1, 0));
+        size_t remaining = m_num_entries;
+        unsigned k = 0;
         std::string start_key = "";
-        do {
-            db.list_keys(start_key, keys);
-            if(keys.size() > 0)
-                start_key = keys[keys.size()-1];
-            for(auto& k : keys) {
-                k.resize(m_key_size_range.second-1);
+        while(remaining != 0) {
+            hg_size_t count = std::min<size_t>(remaining, m_batch_size);
+            for(unsigned i=0; i < count; i++) {
+                m_ksizes[i] = m_keys_buffer[i+k].size();
+                m_kptrs[i]  = (void*)m_keys_buffer[i+k].data();
             }
-        } while(keys.size() == m_batch_size);
+            db.list_keys(start_key.data(), start_key.size(),
+                    (void**)m_kptrs.data(), (hg_size_t*)m_ksizes.data(),
+                    &count);
+            if(count > 0) {
+                start_key = std::string((const char*)m_kptrs[count-1], m_ksizes[count-1]);
+            }
+            if(!m_reuse_buffer)
+                k += count;
+            remaining -= count;
+        }
     }
 
     virtual void teardown() override {
-        if(m_erase_on_teardown) {
-            // erase all the keys from the database
-            auto& db = remoteDatabase();
-            db.erase_multi(m_keys);
-        }
-        // erase keys and values from the local vectors
-        m_keys.resize(0);
-        m_vals.resize(0);
+        GetBenchmark::teardown();
+        m_keys_buffer.resize(0); m_keys_buffer.shrink_to_fit();
+        m_ksizes.resize(0); m_ksizes.shrink_to_fit();
+        m_kptrs.resize(0); m_kptrs.shrink_to_fit();
     }
 };
 REGISTER_BENCHMARK("list-keys", ListKeysBenchmark);
@@ -551,29 +635,57 @@ REGISTER_BENCHMARK("list-keys", ListKeysBenchmark);
  */
 class ListKeyValsBenchmark : public ListKeysBenchmark {
 
+    protected:
+
+    std::vector<hg_size_t>    m_vsizes;
+    std::vector<void*>        m_vptrs;
+
     public:
 
     template<typename ... T>
     ListKeyValsBenchmark(T&& ... args)
     : ListKeysBenchmark(std::forward<T>(args)...) {}
 
+    virtual void setup() override {
+        ListKeysBenchmark::setup();
+        if(m_reuse_buffer)
+            m_vals_buffer.resize(m_batch_size, std::string(m_key_size_range.second-1, 0));
+        else
+            m_vals_buffer.resize(m_num_entries, std::string(m_key_size_range.second-1, 0));
+        m_vsizes.resize(m_batch_size);
+        m_vptrs.resize(m_batch_size);
+    }
+
     virtual void execute() override {
-        // execute LIST KEYVALS operations
         auto& db = remoteDatabase();
-        std::vector<std::string> keys(m_batch_size, std::string(m_key_size_range.second-1, 0));
-        std::vector<std::string> vals(m_batch_size, std::string(m_val_size_range.second-1, 0));
+        size_t remaining = m_num_entries;
+        unsigned k = 0;
         std::string start_key = "";
-        do {
-            db.list_keyvals(start_key, keys, vals);
-            if(keys.size() > 0)
-                start_key = keys[keys.size()-1];
-            for(auto& k : keys) {
-                k.resize(m_key_size_range.second-1);
+        while(remaining != 0) {
+            hg_size_t count = std::min<size_t>(remaining, m_batch_size);
+            for(unsigned i=0; i < count; i++) {
+                m_ksizes[i] = m_keys_buffer[i+k].size();
+                m_kptrs[i]  = (void*)m_keys_buffer[i+k].data();
+                m_vsizes[i] = m_vals_buffer[i+k].size();
+                m_vptrs[i]  = (void*)m_vals_buffer[i+k].data();
             }
-            for(auto& v : vals) {
-                v.resize(m_val_size_range.second-1);
+            db.list_keyvals(start_key.data(), start_key.size(),
+                    (void**)m_kptrs.data(), (hg_size_t*)m_ksizes.data(),
+                    (void**)m_vptrs.data(), (hg_size_t*)m_vsizes.data(),
+                    &count);
+            if(count > 0) {
+                start_key = std::string((const char*)m_kptrs[count-1], m_ksizes[count-1]);
             }
-        } while(keys.size() == m_batch_size);
+            if(!m_reuse_buffer)
+                k += count;
+            remaining -= count;
+        }
+    }
+
+    virtual void teardown() override {
+        ListKeysBenchmark::teardown();
+        m_vsizes.resize(0); m_vsizes.shrink_to_fit();
+        m_vptrs.resize(0);  m_vptrs.shrink_to_fit();
     }
 };
 REGISTER_BENCHMARK("list-keyvals", ListKeyValsBenchmark);
