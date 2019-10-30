@@ -692,6 +692,7 @@ REGISTER_BENCHMARK("list-keyvals", ListKeyValsBenchmark);
 
 static void run_server(MPI_Comm comm, Json::Value& config);
 static void run_client(MPI_Comm comm, Json::Value& config);
+static void run_single_node(Json::Value& config);
 static sdskv_db_type_t database_type_from_string(const std::string& type);
 
 /**
@@ -721,13 +722,17 @@ int main(int argc, char** argv) {
     Json::Value config;
     reader.parse(config_file, config);
 
-    MPI_Comm comm;
-    MPI_Comm_split(MPI_COMM_WORLD, rank == 0 ? 0 : 1, rank, &comm);
-
-    if(rank == 0) {
-        run_server(comm, config);
+    MPI_Comm comm = MPI_COMM_WORLD;
+    bool single_node = (size == 1);
+    if(!single_node) {
+        MPI_Comm_split(MPI_COMM_WORLD, rank == 0 ? 0 : 1, rank, &comm);
+        if(rank == 0) {
+            run_server(comm, config);
+        } else {
+            run_client(comm, config);
+        }
     } else {
-        run_client(comm, config);
+        run_single_node(config);
     }
 
     MPI_Finalize();
@@ -859,7 +864,7 @@ static void run_client(MPI_Comm comm, Json::Value& config) {
                 std::sort(global_timings.begin(), global_timings.end());
                 double min = global_timings[0];
                 double max = global_timings[global_timings.size()-1];
-                double median = (n % 2) ? global_timings[n/2] : ((global_timings[n/2] + global_timings[n/2 + 1])/2.0);
+                double median = (n % 2) ? global_timings[n/2] : ((global_timings[n/2] + global_timings[n/2 - 1])/2.0);
                 double q1 = global_timings[n/4];
                 double q3 = global_timings[(3*n)/4];
                 std::cout << std::setprecision(9) << std::fixed;
@@ -884,6 +889,106 @@ static void run_client(MPI_Comm comm, Json::Value& config) {
     margo_finalize(mid);
 }
 
+static void run_single_node(Json::Value& config) {
+    Json::StyledStreamWriter styledStream;
+    // initialize Margo
+    margo_instance_id mid = MARGO_INSTANCE_NULL;
+    std::string protocol = config["protocol"].asString();
+    auto& server_config = config["server"];
+    bool use_progress_thread = server_config["use-progress-thread"].asBool();
+    int  rpc_thread_count = server_config["rpc-thread-count"].asInt();
+    mid = margo_init(protocol.c_str(), MARGO_SERVER_MODE, use_progress_thread, rpc_thread_count);
+    // serialize server address
+    hg_addr_t server_addr = HG_ADDR_NULL;
+    margo_addr_self(mid, &server_addr);
+    // initialize sdskv provider
+    auto provider = sdskv::provider::create(mid);
+    // initialize database
+    auto& database_config = server_config["database"];
+    std::string db_name = database_config["name"].asString();
+    std::string db_path = database_config["path"].asString();
+    sdskv_db_type_t db_type = database_type_from_string(database_config["type"].asString());
+    sdskv_config_t db_config = {
+        .db_name = db_name.c_str(),
+        .db_path = db_path.c_str(),
+        .db_type = db_type,
+        .db_comp_fn_name = nullptr,
+        .db_no_overwrite = 0
+    };
+    provider->attach_database(db_config);
+    // initialize and start client
+    {
+        // open remote database
+        sdskv::client client(mid);
+        sdskv::provider_handle ph(client, server_addr);
+        RemoteDatabase db = client.open(ph, db_name);
+        // initialize the RNG seed
+        int seed = config["seed"].asInt();
+        // initialize benchmark instances
+        std::vector<std::unique_ptr<AbstractBenchmark>> benchmarks;
+        std::vector<unsigned> repetitions;
+        std::vector<std::string> types;
+        benchmarks.reserve(config["benchmarks"].size());
+        repetitions.reserve(config["benchmarks"].size());
+        types.reserve(config["benchmarks"].size());
+        for(auto& bench_config : config["benchmarks"]) {
+            std::string type = bench_config["type"].asString();
+            types.push_back(type);
+            benchmarks.push_back(AbstractBenchmark::create(type, bench_config, MPI_COMM_WORLD, db));
+            repetitions.push_back(bench_config["repetitions"].asUInt());
+        }
+        // main execution loop
+        for(unsigned i = 0; i < benchmarks.size(); i++) {
+            auto& bench  = benchmarks[i];
+            unsigned rep = repetitions[i];
+            // reset the RNG
+            srand(seed);
+            std::vector<double> local_timings(rep);
+            for(unsigned j = 0; j < rep; j++) {
+                // benchmark setup
+                bench->setup();
+                // benchmark execution
+                double t_start = MPI_Wtime();
+                bench->execute();
+                double t_end = MPI_Wtime();
+                local_timings[j] = t_end - t_start;
+                // teardown
+                bench->teardown();
+            }
+            std::vector<double> global_timings(rep);
+            std::copy(local_timings.begin(), local_timings.end(), global_timings.begin());
+            // print report
+            size_t n = global_timings.size();
+            std::cout << "================ " << types[i] << " ================" << std::endl;
+            styledStream.write(std::cout, config["benchmarks"][i]);
+            std::cout << "-----------------" << std::string(types[i].size(),'-') << "-----------------" << std::endl;
+            double average  = std::accumulate(global_timings.begin(), global_timings.end(), 0.0) / n;
+            double variance = std::accumulate(global_timings.begin(), global_timings.end(), 0.0, [average](double acc, double x) {
+                    return acc + std::pow((x - average),2);
+                    });
+            variance /= n;
+            double stddev = std::sqrt(variance);
+            std::sort(global_timings.begin(), global_timings.end());
+            double min = global_timings[0];
+            double max = global_timings[global_timings.size()-1];
+            double median = (n % 2) ? global_timings[n/2] : ((global_timings[n/2] + global_timings[n/2 - 1])/2.0);
+            double q1 = global_timings[n/4];
+            double q3 = global_timings[(3*n)/4];
+            std::cout << std::setprecision(9) << std::fixed;
+            std::cout << "Samples         : " << n << std::endl;
+            std::cout << "Average(sec)    : " << average << std::endl;
+            std::cout << "Variance(sec^2) : " << variance << std::endl;
+            std::cout << "StdDev(sec)     : " << stddev << std::endl;
+            std::cout << "Minimum(sec)    : " << min << std::endl;
+            std::cout << "Q1(sec)         : " << q1 << std::endl;
+            std::cout << "Median(sec)     : " << median << std::endl;
+            std::cout << "Q3(sec)         : " << q3 << std::endl;
+            std::cout << "Maximum(sec)    : " << max << std::endl;
+        }
+    }
+    margo_addr_free(mid, server_addr);
+    margo_finalize(mid);
+}
 static sdskv_db_type_t database_type_from_string(const std::string& type) {
     if(type == "map") {
         return KVDB_MAP;

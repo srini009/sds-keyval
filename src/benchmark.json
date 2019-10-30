@@ -85,7 +85,7 @@
         {
             "type" : "list-keyvals",
             "repetitions" : 10,
-            "num-entries" : 30000,
+            "num-entries" : 30,
             "key-sizes" : 32,
             "val-sizes" : [ 56, 64 ],
             "batch-size" : 8,
