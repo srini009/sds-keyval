@@ -154,8 +154,8 @@ int main(int argc, char *argv[])
         // half of the entries will be put using bulk
         auto v = gen_random_string(3+i*(max_value_size-3)/num_keys);
         ret = sdskv_put(kvphA, db_idA,
-                (const void *)k.data(), k.size()+1,
-                (const void *)v.data(), v.size()+1);
+                (const void *)k.data(), k.size(),
+                (const void *)v.data(), v.size());
         keys.push_back(k);
         data.push_back(v);
         if(ret != 0) {
@@ -190,7 +190,7 @@ int main(int argc, char *argv[])
         size_t value_size = max_value_size;
         std::vector<char> v(max_value_size);
         ret = sdskv_get(kvphB, db_idB,
-                (const void *)k.data(), k.size()+1,
+                (const void *)k.data(), k.size(),
                 (void *)v.data(), &value_size);
         if(ret != SDSKV_SUCCESS) {
             fprintf(stderr,"Error: sdskv_get() failed\n");

@@ -109,8 +109,8 @@ int main(int argc, char *argv[])
         // half of the entries will be put using bulk
         auto v = gen_random_string(rand() % max_value_size);
         ret = sdskv_put(kvph, db_id,
-                (const void *)k.data(), k.size()+1,
-                (const void *)v.data(), v.size()+1);
+                (const void *)k.data(), k.size(),
+                (const void *)v.data(), v.size());
         if(ret != 0) {
             fprintf(stderr, "Error: sdskv_put() failed (iteration %d)\n", i);
             sdskv_shutdown_service(kvcl, svr_addr);
@@ -130,7 +130,7 @@ int main(int argc, char *argv[])
         auto k = keys[rand() % keys.size()];
         size_t value_size = 0;
         ret = sdskv_length(kvph, db_id,
-                (const void *)k.data(), k.size()+1, &value_size);
+                (const void *)k.data(), k.size(), &value_size);
         if(ret != 0) {
             fprintf(stderr, "Error: sdskv_length() failed (key was %s)\n", k.c_str());
             sdskv_shutdown_service(kvcl, svr_addr);
@@ -140,9 +140,9 @@ int main(int argc, char *argv[])
             margo_finalize(mid);
             return -1;
         }
-        if(value_size != reference[k].size()+1) {
+        if(value_size != reference[k].size()) {
             fprintf(stderr, "Error: sdskv_length() returned a value different from the reference\n");
-            fprintf(stderr, "       (expected %ld, got %ld)\n", reference[k].size()+1, value_size);
+            fprintf(stderr, "       (expected %ld, got %ld)\n", reference[k].size(), value_size);
             sdskv_shutdown_service(kvcl, svr_addr);
             sdskv_provider_handle_release(kvph);
             margo_addr_free(mid, svr_addr);

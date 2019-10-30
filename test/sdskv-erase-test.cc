@@ -109,8 +109,8 @@ int main(int argc, char *argv[])
         // half of the entries will be put using bulk
         auto v = gen_random_string(i*max_value_size/num_keys);
         ret = sdskv_put(kvph, db_id,
-                (const void *)k.data(), k.size()+1,
-                (const void *)v.data(), v.size()+1);
+                (const void *)k.data(), k.size(),
+                (const void *)v.data(), v.size());
         if(ret != 0) {
             fprintf(stderr, "Error: sdskv_put() failed (iteration %d)\n", i);
             sdskv_shutdown_service(kvcl, svr_addr);
@@ -129,7 +129,7 @@ int main(int argc, char *argv[])
     for(unsigned i=0; i < num_keys; i += 2) {
         const auto& k = keys[i];
         ret = sdskv_erase(kvph, db_id,
-                (const void *)k.data(), k.size()+1);
+                (const void *)k.data(), k.size());
         if(ret != 0) {
             fprintf(stderr, "Error: sdskv_erase() failed (key was %s)\n", k.c_str());
             sdskv_shutdown_service(kvcl, svr_addr);
@@ -147,7 +147,7 @@ int main(int argc, char *argv[])
         size_t value_size = max_value_size;
         std::vector<char> v(max_value_size);
         ret = sdskv_get(kvph, db_id,
-                (const void *)k.data(), k.size()+1,
+                (const void *)k.data(), k.size(),
                 (void *)v.data(), &value_size);
         if(i % 2 == 0) { /* key is supposed to be erased */
             if(ret == 0) {

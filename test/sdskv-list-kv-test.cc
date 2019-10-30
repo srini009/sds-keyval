@@ -111,8 +111,8 @@ int main(int argc, char *argv[])
         // half of the entries will be put using bulk
         auto v = gen_random_string(i*max_value_size/num_keys);
         ret = sdskv_put(kvph, db_id,
-                (const void *)k.data(), k.size()+1,
-                (const void *)v.data(), v.size()+1);
+                (const void *)k.data(), k.size(),
+                (const void *)v.data(), v.size());
         if(ret != 0) {
             fprintf(stderr, "Error: sdskv_put() failed (iteration %d)\n", i);
             sdskv_shutdown_service(kvcl, svr_addr);
@@ -135,8 +135,8 @@ int main(int argc, char *argv[])
     auto keys_after = keys[i1-1];
     hg_size_t max_keys = i2-i1;
 
-    std::vector<std::vector<char>> key_strings(max_keys, std::vector<char>(max_key_size+1));
-    std::vector<std::vector<char>> val_strings(max_keys, std::vector<char>(max_value_size+1));
+    std::vector<std::vector<char>> key_strings(max_keys, std::vector<char>(max_key_size));
+    std::vector<std::vector<char>> val_strings(max_keys, std::vector<char>(max_value_size));
     std::vector<void*> keys_addr(max_keys);
     std::vector<void*> vals_addr(max_keys);
     std::vector<hg_size_t> ksizes(max_keys, max_key_size+1);
@@ -148,7 +148,7 @@ int main(int argc, char *argv[])
     }
 
     ret = sdskv_list_keyvals(kvph, db_id,
-                (const void*)keys_after.c_str(), keys_after.size()+1,
+                (const void*)keys_after.c_str(), keys_after.size(),
                 keys_addr.data(), ksizes.data(), 
                 vals_addr.data(), vsizes.data(),
                 &max_keys);
