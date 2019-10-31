@@ -649,9 +649,8 @@ class ListKeyValsBenchmark : public ListKeysBenchmark {
     virtual void setup() override {
         ListKeysBenchmark::setup();
         if(m_reuse_buffer)
-            m_vals_buffer.resize(m_batch_size, std::string(m_key_size_range.second-1, 0));
-        else
-            m_vals_buffer.resize(m_num_entries, std::string(m_key_size_range.second-1, 0));
+            m_vals_buffer.resize(m_batch_size, std::string(m_val_size_range.second-1, 0));
+        // if !m_reuse_buffer the m_vals_buffer vector already has the right size
         m_vsizes.resize(m_batch_size);
         m_vptrs.resize(m_batch_size);
     }
