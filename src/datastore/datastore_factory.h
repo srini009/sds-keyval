@@ -10,6 +10,7 @@
 #include "datastore.h"
 
 #include "map_datastore.h"
+#include "null_datastore.h"
 
 #ifdef USE_BWTREE
 #include "bwtree_datastore.h"
@@ -28,6 +29,17 @@ class datastore_factory {
     static AbstractDataStore* open_map_datastore(
             const std::string& name, const std::string& path) {
         auto db = new MapDataStore();
+        if(db->openDatabase(name, path)) {
+            return db;
+        } else {
+            delete db;
+            return nullptr;
+        }
+    }
+
+    static AbstractDataStore* open_null_datastore(
+            const std::string& name, const std::string& path) {
+        auto db = new NullDataStore();
         if(db->openDatabase(name, path)) {
             return db;
         } else {
@@ -96,6 +108,8 @@ class datastore_factory {
 #endif
     {
         switch(type) {
+            case KVDB_NULL:
+                return open_null_datastore(name, path);
             case KVDB_MAP:
                 return open_map_datastore(name, path);
             case KVDB_BWTREE:

@@ -43,7 +43,9 @@ static sdskv_db_type_t parse_db_type(char* db_fullname) {
     }
     *column = '\0';
     char* db_type = column + 1;
-    if(strcmp(db_type, "map") == 0) {
+    if(strcmp(db_type, "null") == 0) {
+        return KVDB_NULL;
+    } else if(strcmp(db_type, "map") == 0) {
         return KVDB_MAP;
     } else if(strcmp(db_type, "bwt") == 0) {
         return KVDB_BWTREE;

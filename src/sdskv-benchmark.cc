@@ -716,9 +716,8 @@ int main(int argc, char** argv) {
         MPI_Abort(MPI_COMM_WORLD, -1);
     }
 
-    Json::Reader reader;
     Json::Value config;
-    reader.parse(config_file, config);
+    config_file >> config;
 
     MPI_Comm comm = MPI_COMM_WORLD;
     bool single_node = (size == 1);
@@ -988,7 +987,9 @@ static void run_single_node(Json::Value& config) {
     margo_finalize(mid);
 }
 static sdskv_db_type_t database_type_from_string(const std::string& type) {
-    if(type == "map") {
+    if(type == "null") {
+        return KVDB_NULL;
+    } else if(type == "map") {
         return KVDB_MAP;
     } else if(type == "leveldb" || type == "ldb") {
         return KVDB_LEVELDB;
