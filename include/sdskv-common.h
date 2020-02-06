@@ -43,7 +43,7 @@ typedef uint64_t sdskv_database_id_t;
 #define SDSKV_ERR_KEYEXISTS   -17 /* Put operation would override data */
 #define SDSKV_ERR_END         -18 /* End of range for valid error codes */
 
-const char* const sdskv_error_messages[] = {
+static const char* const sdskv_error_messages[] = {
     "",
     "Allocation error",
     "Invalid argument",
