@@ -1240,17 +1240,15 @@ class database {
     provider_handle     m_ph;
     sdskv_database_id_t m_db_id;
 
+    public:
+
     /**
-     * @brief Private constructor used by client::open.
-     *
      * @param ph Provider handle.
      * @param db_id Database id.
      */
     database(const provider_handle& ph, sdskv_database_id_t db_id)
     : m_ph(ph)
     , m_db_id(db_id) {}
-
-    public:
 
     /**
      * @brief Default constructor.
