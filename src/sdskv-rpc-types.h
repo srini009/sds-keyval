@@ -191,6 +191,14 @@ MERCURY_GEN_PROC(put_multi_in_t, \
         ((hg_size_t)(vals_bulk_size)))
 MERCURY_GEN_PROC(put_multi_out_t, ((int32_t)(ret)))
 
+// ------------- PUT PACKED MULTI ------------- //
+MERCURY_GEN_PROC(put_packed_in_t, \
+        ((uint64_t)(db_id))\
+        ((hg_size_t)(num_keys))\
+        ((hg_size_t)(bulk_size))\
+        ((hg_bulk_t)(bulk_handle)))
+MERCURY_GEN_PROC(put_packed_out_t, ((int32_t)(ret)))
+
 // ------------- GET MULTI ------------- //
 MERCURY_GEN_PROC(get_multi_in_t, \
         ((uint64_t)(db_id))\

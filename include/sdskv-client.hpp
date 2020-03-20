@@ -325,6 +325,39 @@ class client {
     }
 
     //////////////////////////
+    // PUT_PACKED methods
+    //////////////////////////
+
+    /**
+     * @brief Equivalent to sdskv_put_packed.
+     *
+     * @param db Database instance.
+     * @param count Number of key/val pairs.
+     * @param keys Buffer of keys.
+     * @param ksizes Array of key sizes.
+     * @param values Buffer of values.
+     * @param vsizes Array of value sizes.
+     */
+    void put_packed(const database& db,
+             hg_size_t count, const void* keys, const hg_size_t* ksizes,
+             const void* values, const hg_size_t *vsizes) const;
+
+    /**
+     * @brief Version of put taking std::strings instead of pointers.
+     *
+     * @param db Database instance.
+     * @param keys Vector of pointers to keys.
+     * @param ksizes Vector of key sizes.
+     * @param values Vector of pointers to values.
+     * @param vsizes Vector of value sizes.
+     */
+    inline void put_packed(const database& db,
+             const std::string& packed_keys, const std::vector<hg_size_t>& ksizes,
+             const std::string& packed_values, const  std::vector<hg_size_t>& vsizes) const {
+        put_packed(db, ksizes.size(), packed_keys.data(),  ksizes.data(), packed_values.data(), vsizes.data());
+    }
+
+    //////////////////////////
     // EXISTS methods
     //////////////////////////
 
@@ -1306,6 +1339,14 @@ class database {
     }
 
     /**
+     * @brief @see client::put_packed.
+     */
+    template<typename ... T>
+    void put_packed(T&& ... args) const {
+        m_ph.m_client->put_packed(*this, std::forward<T>(args)...);
+    }
+
+    /**
      * @brief @see client::length.
      */
     template<typename ... T>
@@ -1434,6 +1475,14 @@ inline void client::put_multi(const database& db,
         hg_size_t count, const void* const* keys, const hg_size_t* ksizes,
         const void* const* values, const hg_size_t *vsizes) const {
     int ret = sdskv_put_multi(db.m_ph.m_ph, db.m_db_id,
+            count, keys, ksizes, values, vsizes);
+     _CHECK_RET(ret);
+}
+
+inline void client::put_packed(const database& db,
+        hg_size_t count, const void* keys, const hg_size_t* ksizes,
+        const void* values, const hg_size_t *vsizes) const {
+    int ret = sdskv_put_packed(db.m_ph.m_ph, db.m_db_id,
             count, keys, ksizes, values, vsizes);
      _CHECK_RET(ret);
 }

@@ -179,6 +179,28 @@ int sdskv_put_multi(sdskv_provider_handle_t provider,
         const void* const* values, const hg_size_t *vsizes);
 
 /**
+ * @brief Puts multiple key/value pairs into the database.
+ * This method will send all the key/value pairs in batch,
+ * thus optimizing transfers by avoiding many RPC round trips.
+ * This version of put_multi assumes that the keys are packed
+ * in back to back in a single buffer, and so are the values.
+ *
+ * @param provider provider handle managing the database
+ * @param db_id targeted database id
+ * @param num number of key/value pairs to put
+ * @param packed_keys buffer containing the keys
+ * @param ksizes array of key sizes
+ * @param packed_values buffer containing the values
+ * @param vsizes array of value sizes
+ *
+ * @return SDSKV_SUCCESS or error code defined in sdskv-common.h
+ */
+int sdskv_put_packed(sdskv_provider_handle_t provider,
+        sdskv_database_id_t db_id,
+        size_t num, const void* packed_keys, const hg_size_t *ksizes,
+        const void* packed_values, const hg_size_t *vsizes);
+
+/**
  * @brief Gets the value associated with a given key.
  * vsize needs to be set to the current size of the allocated
  * value buffer. After a succesful call to sdskv_get, vsize
