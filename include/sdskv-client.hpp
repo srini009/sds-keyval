@@ -498,12 +498,10 @@ class client {
     /**
      * Version of length_packed that takes an std::string as packed buffer.
      *
-     * @tparam K Type of keys.
      * @param db Database instance.
      * @param keys Packed keys.
      * @param vsizes Resulting vector of value sizes.
      */
-    template<typename K>
     inline bool length_multi(const database& db,
             const std::string& keys,
             const std::vector<hg_size_t>& ksizes,
@@ -718,6 +716,49 @@ class client {
         get_multi(db, keys, values);
         return values;
     }
+
+    //////////////////////////
+    // GET_PACKED methods
+    //////////////////////////
+
+    /**
+     * @brief Equivalent to sdskv_get_packed.
+     *
+     * @param db Database instance.
+     * @param count Number of key/val pairs.
+     * @param keys Buffer of packed keys.
+     * @param ksizes Array of key sizes.
+     * @param valbufsize Size of the value buffer.
+     * @param values Buffer of packed values.
+     * @param vsizes Array of sizes of value buffers.
+     */
+    bool get_packed(const database& db,
+             hg_size_t* count, const void* keys, const hg_size_t* ksizes,
+             hg_size_t valbufsize, void* values, hg_size_t *vsizes) const;
+
+    /**
+     * @brief Get multiple key/val pairs using std::string packed buffers
+     * and std::vector<hg_size_t> of sizes. The value buffer must be
+     * pre-allocated. vsizes will be resized to the right number of retrieved
+     * values.
+     *
+     * @param db Database instance.
+     * @param keys Vector of key addresses.
+     * @param ksizes Vector of key sizes.
+     * @param values Vector of value addresses.
+     * @param vsizes Vector of value sizes.
+     */
+    inline bool get_packed(const database& db,
+             const std::string& packed_keys, const std::vector<hg_size_t>& ksizes,
+             std::string& packed_values, std::vector<hg_size_t>& vsizes) const {
+        hg_size_t count = ksizes.size();
+        vsizes.resize(count);
+        bool b = get_packed(db, &count, packed_keys.data(), ksizes.data(),
+                packed_values.size(), const_cast<char*>(packed_values.data()), vsizes.data());
+        vsizes.resize(count);
+        return b;
+    }
+
 
     //////////////////////////
     // ERASE methods
@@ -1419,6 +1460,15 @@ class database {
     decltype(auto) get_multi(T&& ... args) const {
         return m_ph.m_client->get_multi(*this, std::forward<T>(args)...);
     }
+    
+    /**
+     * @brief @see client::get_packed.
+     */
+    template<typename ... T>
+    decltype(auto) get_packed(T&& ... args) const {
+        return m_ph.m_client->get_packed(*this, std::forward<T>(args)...);
+    }
+
 
     /**
      * @brief @see client::exists
@@ -1577,6 +1627,15 @@ inline bool client::get_multi(const database& db,
         void** values, hg_size_t *vsizes) const {
     int ret = sdskv_get_multi(db.m_ph.m_ph, db.m_db_id,
             count, keys, ksizes, values, vsizes);
+    _CHECK_RET(ret);
+    return true;
+}
+
+inline bool client::get_packed(const database& db,
+        hg_size_t* count, const void* keys, const hg_size_t* ksizes,
+        hg_size_t valbufsize, void* values, hg_size_t *vsizes) const {
+    int ret = sdskv_get_packed(db.m_ph.m_ph, db.m_db_id,
+            count, keys, ksizes, valbufsize, values, vsizes);
     _CHECK_RET(ret);
     return true;
 }
