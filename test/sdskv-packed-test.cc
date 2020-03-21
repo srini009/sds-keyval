@@ -138,7 +138,7 @@ int main(int argc, char *argv[])
             packed_keys.data(), packed_key_sizes.data(),
             rval_len.data());
     if(ret != 0) {
-        fprintf(stderr, "Error: sdskv_length_multi() failed\n");
+        fprintf(stderr, "Error: sdskv_length_packed() failed\n");
         sdskv_shutdown_service(kvcl, svr_addr);
         sdskv_provider_handle_release(kvph);
         margo_addr_free(mid, svr_addr);
@@ -161,23 +161,38 @@ int main(int argc, char *argv[])
         }
     }
 
-#if 0
-    {
-        /* **** get keys **** */
-        std::vector<std::vector<char>> read_values(num_keys);
-        for(unsigned i=0; i < num_keys; i++) {
-            read_values[i].resize(rval_len[i]);
-        }
-        std::vector<void*> read_values_ptr(num_keys);
-        for(unsigned i=0; i < num_keys; i++) {
-            read_values_ptr[i] = read_values[i].data();
-        }
+    /* **** get keys **** */
+    /* figure out the total size needed */
+    unsigned total_read_size = 0;
+    for(auto& l : rval_len) total_read_size += l;
 
-        ret = sdskv_get_multi(kvph, db_id, num_keys,
-                keys_ptr.data(), keys_size.data(), 
-                read_values_ptr.data(), rval_len.data());
-        if(ret != 0) {
-            fprintf(stderr, "Error: sdskv_get_multi() failed\n");
+    std::vector<char> read_values(total_read_size);
+    std::vector<hg_size_t> read_value_sizes(num_keys);
+
+    hg_size_t num_keys_read = num_keys;
+    ret = sdskv_get_packed(kvph, db_id, &num_keys_read, 
+            packed_keys.data(), packed_key_sizes.data(),
+            total_read_size, read_values.data(), read_value_sizes.data());
+    if(ret != 0) {
+        fprintf(stderr, "Error: sdskv_get_packed() failed\n");
+        sdskv_shutdown_service(kvcl, svr_addr);
+        sdskv_provider_handle_release(kvph);
+        margo_addr_free(mid, svr_addr);
+        sdskv_client_finalize(kvcl);
+        margo_finalize(mid);
+        return -1;
+    }
+
+    /* check the keys we received against reference */
+    size_t koffset = 0, voffset = 0;
+    for(unsigned i=0; i < num_keys; i++) {
+        std::string vstring(read_values.data() + voffset, read_value_sizes[i]);
+        std::string k(packed_keys.data() + koffset, packed_key_sizes[i]);
+        std::cout << "Got " << k << " ===> " << vstring << "\t(size = " << vstring.size() 
+            << ") expected: " << reference[k] << " (size = " << reference[k].size() << ")"
+            <<  std::endl;
+        if(vstring != reference[k]) {
+            fprintf(stderr, "Error: sdskv_get_packed() returned a value different from the reference\n");
             sdskv_shutdown_service(kvcl, svr_addr);
             sdskv_provider_handle_release(kvph);
             margo_addr_free(mid, svr_addr);
@@ -185,27 +200,9 @@ int main(int argc, char *argv[])
             margo_finalize(mid);
             return -1;
         }
-
-        /* check the keys we received against reference */
-        for(unsigned i=0; i < num_keys; i++) {
-            std::string vstring(read_values[i].data());
-            vstring.resize(rval_len[i]);
-            auto& k = keys[i];
-            std::cout << "Got " << k << " ===> " << vstring << "\t(size = " << vstring.size() 
-                << ") expected: " << reference[k] << " (size = " << reference[k].size() << ")"
-                <<  std::endl;
-            if(vstring != reference[k]) {
-                fprintf(stderr, "Error: sdskv_get_multi() returned a value different from the reference\n");
-                sdskv_shutdown_service(kvcl, svr_addr);
-                sdskv_provider_handle_release(kvph);
-                margo_addr_free(mid, svr_addr);
-                sdskv_client_finalize(kvcl);
-                margo_finalize(mid);
-                return -1;
-            }
-        }
+        koffset += packed_key_sizes[i];
+        voffset += read_value_sizes[i];
     }
-#endif
     /* shutdown the server */
     ret = sdskv_shutdown_service(kvcl, svr_addr);
 

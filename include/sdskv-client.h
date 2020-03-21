@@ -259,6 +259,25 @@ int sdskv_get_multi(sdskv_provider_handle_t provider,
         void** values, hg_size_t *vsizes);
 
 /**
+ * @brief Get multiple values into a single packed buffer.
+ *
+ * @param[in] provider provider handle
+ * @param[in] db_id database id
+ * @param[inout] num number of values to retrieve, number of values actually retrieved
+ * @param[in] keys buffer of packed keys to retrieve
+ * @param[in] ksizes size of the keys
+ * @param[in] vbufsize size of the buffer allocated for the values
+ * @param[out] values buffer allocated to receive packed values
+ * @param[out] vsizes sizes of the values
+ *
+ * @return SDSKV_SUCCESS or error code defined in sdskv-common.h
+ */
+int sdskv_get_packed(sdskv_provider_handle_t provider,
+        sdskv_database_id_t db_id,
+        size_t* num, const void* packed_keys, const hg_size_t* ksizes,
+        hg_size_t vbufsize, void* packed_values, hg_size_t *vsizes);
+
+/**
  * @brief Gets the length of a value associated with a given key.
  *
  * @param[in] handle provider handle
