@@ -294,6 +294,26 @@ int sdskv_length_multi(sdskv_provider_handle_t handle,
         hg_size_t *vsizes);
 
 /**
+ * @brief Gets the length of values associated with multiple keys.
+ * If a particular key does not exists, this function will set the length
+ * of its value to 0 (so the user needs another way to differenciate 
+ * between a key that does not exists and a 0-sized value).
+ *
+ * @param[in] handle provider handle
+ * @param[in] db_id database id
+ * @param[in] num number of keys
+ * @param[in] keys buffer of packed keys
+ * @param[in] ksizes array of key sizes
+ * @param[out] vsizes array where to put value sizes
+ *
+ * @return SDSKV_SUCCESS or error code defined in sdskv-common.h
+ */
+int sdskv_length_packed(sdskv_provider_handle_t handle,
+        sdskv_database_id_t db_id, size_t num,
+        const void* packed_keys, const hg_size_t* ksizes,
+        hg_size_t *vsizes);
+
+/**
  * @brief Checks if the given key exists in the database.
  *
  * @param[in] handle provider handle
