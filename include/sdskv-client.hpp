@@ -479,6 +479,40 @@ class client {
     }
 
     //////////////////////////
+    // LENGTH_PACKED methods
+    //////////////////////////
+
+    /**
+     * @brief Equivalent to sdskv_length_packed.
+     *
+     * @param db Database instance.
+     * @param num Number of keys.
+     * @param keys Packed keys.
+     * @param ksizes Array of key sizes.
+     * @param vsizes Resulting value sizes.
+     */
+    bool length_packed(const database& db,
+            hg_size_t num, const void* keys,
+            const hg_size_t* ksizes, hg_size_t* vsizes) const;
+
+    /**
+     * Version of length_packed that takes an std::string as packed buffer.
+     *
+     * @tparam K Type of keys.
+     * @param db Database instance.
+     * @param keys Packed keys.
+     * @param vsizes Resulting vector of value sizes.
+     */
+    template<typename K>
+    inline bool length_multi(const database& db,
+            const std::string& keys,
+            const std::vector<hg_size_t>& ksizes,
+            std::vector<hg_size_t>& vsizes) const {
+        vsizes.resize(ksizes.size());
+        return length_packed(db, ksizes.size(), keys.data(), ksizes.data(), vsizes.data());
+    }
+
+    //////////////////////////
     // GET methods
     //////////////////////////
 
@@ -1363,6 +1397,14 @@ class database {
     }
 
     /**
+     * @brief @see client::length_packed.
+     */
+    template<typename ... T>
+    decltype(auto) length_packed(T&& ... args) const {
+        return m_ph.m_client->length_packed(*this, std::forward<T>(args)...);
+    }
+
+    /**
      * @brief @see client::get.
      */
     template<typename ... T>
@@ -1507,6 +1549,15 @@ inline bool client::length_multi(const database& db,
         hg_size_t num, const void* const* keys,
         const hg_size_t* ksizes, hg_size_t* vsizes) const {
     int ret = sdskv_length_multi(db.m_ph.m_ph, db.m_db_id,
+            num, keys, ksizes, vsizes);
+    _CHECK_RET(ret);
+    return true;
+}
+
+inline bool client::length_packed(const database& db,
+        hg_size_t num, const void* keys,
+        const hg_size_t* ksizes, hg_size_t* vsizes) const {
+    int ret = sdskv_length_packed(db.m_ph.m_ph, db.m_db_id,
             num, keys, ksizes, vsizes);
     _CHECK_RET(ret);
     return true;
