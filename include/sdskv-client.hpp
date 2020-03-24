@@ -357,6 +357,18 @@ class client {
         put_packed(db, ksizes.size(), packed_keys.data(),  ksizes.data(), packed_values.data(), vsizes.data());
     }
 
+    /**
+     * @brief Equivalent of sdskv_proxy_put_packed.
+     *
+     * @param db Database.
+     * @param origin_addr Address to which the bulk handle belongs.
+     * @param count number of key/val pairs.
+     * @param packed_data Bulk handle exposing packed data.
+     * @param packed_data_size Size of bulk region.
+     */
+    inline void put_packed(const database& db, const std::string& origin_addr,
+            hg_size_t count, hg_bulk_t packed_data, hg_size_t packed_data_size) const;
+
     //////////////////////////
     // EXISTS methods
     //////////////////////////
@@ -1576,6 +1588,13 @@ inline void client::put_packed(const database& db,
         const void* values, const hg_size_t *vsizes) const {
     int ret = sdskv_put_packed(db.m_ph.m_ph, db.m_db_id,
             count, keys, ksizes, values, vsizes);
+     _CHECK_RET(ret);
+}
+
+inline void client::put_packed(const database& db, const std::string& origin_addr,
+        hg_size_t count, hg_bulk_t bulk_handle, hg_size_t bulk_handle_size) const {
+    int ret = sdskv_proxy_put_packed(db.m_ph.m_ph, db.m_db_id, origin_addr.c_str(),
+            count, bulk_handle, bulk_handle_size);
      _CHECK_RET(ret);
 }
 
