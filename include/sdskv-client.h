@@ -201,6 +201,34 @@ int sdskv_put_packed(sdskv_provider_handle_t provider,
         const void* packed_values, const hg_size_t *vsizes);
 
 /**
+ * @brief Puts multiple key/value pairs into the database.
+ * This method will send all the key/value pairs in batch,
+ * thus optimizing transfers by avoiding many RPC round trips.
+ * This version of put_multi assumes that the keys are packed
+ * in back to back in a single buffer, and so are the values.
+ * This proxy version takes a bulk handle instead of the 4
+ * buffers of sdskv_put_packed. The bulk handle should point
+ * to memory with the following layout:
+ * [num key sizes][ packed keys ][num val sizes][ packed values ]
+ * Where the key sizes and value sizes are of type hg_size_t.
+ *
+ * If the origin_addr is NULL, the server will consider that the
+ * bulk handle points to the sender's memory and will use the sender's
+ * address.
+ *
+ * @param provider provider handle managing the database
+ * @param db_id targeted database id
+ * @param origin_addr Mercury address of the process owning the bulk handles
+ * @param num number of key/value pairs to put
+ * @param packed_data bulk handle to a buffer containing the key sizes, keys, value sizes, and values
+ *
+ * @return SDSKV_SUCCESS or error code defined in sdskv-common.h
+ */
+int sdskv_proxy_put_packed(sdskv_provider_handle_t provider,
+        sdskv_database_id_t db_id, const char* origin_addr,
+        size_t num, hg_bulk_t packed_data, hg_size_t packed_data_size);
+
+/**
  * @brief Gets the value associated with a given key.
  * vsize needs to be set to the current size of the allocated
  * value buffer. After a succesful call to sdskv_get, vsize

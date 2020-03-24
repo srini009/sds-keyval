@@ -601,13 +601,7 @@ int sdskv_put_packed(sdskv_provider_handle_t provider,
 {
     hg_return_t hret;
     int ret = SDSKV_SUCCESS;
-    hg_handle_t handle;
-
-    put_packed_in_t in;
-    put_packed_out_t out;
-
-    in.db_id = db_id;
-    in.num_keys = num;
+    hg_bulk_t bulk_handle = HG_BULK_NULL;
 
     hg_size_t keys_buffer_size = 0;
     hg_size_t vals_buffer_size = 0;
@@ -616,18 +610,41 @@ int sdskv_put_packed(sdskv_provider_handle_t provider,
         keys_buffer_size += ksizes[i];
         vals_buffer_size += vsizes[i];
     }
-    in.bulk_size = keys_buffer_size + vals_buffer_size + 2*num*sizeof(size_t);
+    hg_size_t bulk_size = keys_buffer_size + vals_buffer_size + 2*num*sizeof(size_t);
 
     hg_size_t seg_sizes[4] = { num*sizeof(size_t), num*sizeof(size_t), keys_buffer_size, vals_buffer_size };
     void* seg_ptrs[4] = { (void*)ksizes, (void*)vsizes, (void*)packed_keys, (void*)packed_values };
     int num_seg = vals_buffer_size == 0 ? 3 : 4;
 
     hret = margo_bulk_create(provider->client->mid, num_seg, seg_ptrs, seg_sizes,
-                             HG_BULK_READ_ONLY, &in.bulk_handle);
+                             HG_BULK_READ_ONLY, &bulk_handle);
     if(hret != HG_SUCCESS) {
         fprintf(stderr,"[SDSKV] margo_bulk_create() failed in sdskv_put_packed()\n");
         return SDSKV_ERR_MERCURY;
     }
+
+    ret = sdskv_proxy_put_packed(provider, db_id, NULL,
+            num, bulk_handle, bulk_size);
+    margo_bulk_free(bulk_handle);
+    return ret;
+}
+
+int sdskv_proxy_put_packed(sdskv_provider_handle_t provider,
+        sdskv_database_id_t db_id, const char* origin_addr,
+        size_t num, hg_bulk_t packed_data, hg_size_t bulk_data_size)
+{
+    hg_return_t hret;
+    int ret = SDSKV_SUCCESS;
+    hg_handle_t handle;
+
+    put_packed_in_t in;
+    put_packed_out_t out;
+
+    in.db_id = db_id;
+    in.num_keys = num;
+    in.origin_addr = (char*)origin_addr;
+    in.bulk_handle = packed_data;
+    in.bulk_size = bulk_data_size;
 
     /* create handle */
     hret = margo_create(
@@ -659,7 +676,6 @@ int sdskv_put_packed(sdskv_provider_handle_t provider,
 
     ret = out.ret;
     margo_free_output(handle, &out);
-    margo_bulk_free(in.bulk_handle);
 
     margo_destroy(handle);
     return ret;

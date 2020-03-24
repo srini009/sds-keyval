@@ -194,6 +194,7 @@ MERCURY_GEN_PROC(put_multi_out_t, ((int32_t)(ret)))
 // ------------- PUT PACKED ------------- //
 MERCURY_GEN_PROC(put_packed_in_t, \
         ((uint64_t)(db_id))\
+        ((hg_string_t)(origin_addr))\
         ((hg_size_t)(num_keys))\
         ((hg_size_t)(bulk_size))\
         ((hg_bulk_t)(bulk_handle)))
