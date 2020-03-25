@@ -400,6 +400,43 @@ class client {
     }
 
     //////////////////////////
+    // EXISTS MULTI methods
+    //////////////////////////
+
+    /**
+     * @brief Equivalent of sdskv_exists_multi.
+     *
+     * @param db Database instance.
+     * @param num Number of keys.
+     * @param keys Keys.
+     * @param ksizes Size of the keys.
+     *
+     * @return an std::vector<bool> v where v[i] is true iff key i exists.
+     */
+    std::vector<bool> exists_multi(const database& db, size_t num, const void* const* key, const hg_size_t* ksize) const;
+
+    /**
+     * @brief Templated version of exists_multi method, meant to work with
+     * std::string and std::vector<X>. X must be a standard layout type.
+     *
+     * @tparam K Key type.
+     * @param db Database instance.
+     * @param keys Keys.
+     *
+     * @return an std::vector<bool> v where v[i] is true iff key i exists.
+     */
+    template<typename K>
+    inline std::vector<bool> exists_multi(const database& db, const std::vector<K>& keys) const {
+        std::vector<const void*> key_addr(keys.size());
+        std::vector<hg_size_t> key_sizes(keys.size());
+        for(unsigned i=0; i < keys.size(); i++) {
+            key_addr[i] = object_data(keys[i]);
+            key_sizes[i] = object_size(keys[i]);
+        }
+        return exists_multi(db, keys.size(), key_addr.data(), key_sizes.data());
+    }
+
+    //////////////////////////
     // LENGTH methods
     //////////////////////////
 
@@ -1491,6 +1528,14 @@ class database {
     }
 
     /**
+     * @brief @see client::exists_multi
+     */
+    template<typename ... T>
+    decltype(auto) exists_multi(T&& ... args) const {
+        return m_ph.m_client->exists_multi(*this, std::forward<T>(args)...);
+    }
+
+    /**
      * @brief @see client::erase.
      */
     template<typename ... T>
@@ -1612,6 +1657,17 @@ inline bool client::exists(const database& db, const void* key, hg_size_t ksize)
     int ret = sdskv_exists(db.m_ph.m_ph, db.m_db_id, key, ksize, &flag);
     _CHECK_RET(ret);
     return flag;
+}
+
+inline std::vector<bool> client::exists_multi(const database& db, size_t num, 
+        const void* const* keys, const hg_size_t* ksizes) const {
+    int flag;
+    std::vector<int> flags(num);
+    int ret = sdskv_exists_multi(db.m_ph.m_ph, db.m_db_id, num, keys, ksizes, flags.data());
+    _CHECK_RET(ret);
+    std::vector<bool> result(num);
+    for(unsigned i=0; i < num; i++) result[i] = flags[i];
+    return result;
 }
 
 inline bool client::length_multi(const database& db,

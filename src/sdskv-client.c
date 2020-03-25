@@ -20,6 +20,7 @@ struct sdskv_client {
     hg_id_t sdskv_get_multi_id;
     hg_id_t sdskv_get_packed_id;
     hg_id_t sdskv_exists_id;
+    hg_id_t sdskv_exists_multi_id;
     hg_id_t sdskv_erase_id;
     hg_id_t sdskv_erase_multi_id;
     hg_id_t sdskv_length_id;
@@ -70,6 +71,7 @@ static int sdskv_client_register(sdskv_client_t client, margo_instance_id mid)
         margo_registered_name(mid, "sdskv_erase_rpc",                 &client->sdskv_erase_id,                 &flag);
         margo_registered_name(mid, "sdskv_erase_multi_rpc",           &client->sdskv_erase_multi_id,           &flag);
         margo_registered_name(mid, "sdskv_exists_rpc",                &client->sdskv_exists_id,                &flag);
+        margo_registered_name(mid, "sdskv_exists_multi_rpc",          &client->sdskv_exists_multi_id,          &flag);
         margo_registered_name(mid, "sdskv_length_rpc",                &client->sdskv_length_id,                &flag);
         margo_registered_name(mid, "sdskv_length_multi_rpc",          &client->sdskv_length_multi_id,          &flag);
         margo_registered_name(mid, "sdskv_length_packed_rpc",         &client->sdskv_length_packed_id,         &flag);
@@ -110,6 +112,8 @@ static int sdskv_client_register(sdskv_client_t client, margo_instance_id mid)
             MARGO_REGISTER(mid, "sdskv_erase_multi_rpc", erase_multi_in_t, erase_multi_out_t, NULL);
         client->sdskv_exists_id =
             MARGO_REGISTER(mid, "sdskv_exists_rpc", exists_in_t, exists_out_t, NULL);
+        client->sdskv_exists_multi_id =
+            MARGO_REGISTER(mid, "sdskv_exists_multi_rpc", exists_multi_in_t, exists_multi_out_t, NULL);
         client->sdskv_length_id =
             MARGO_REGISTER(mid, "sdskv_length_rpc", length_in_t, length_out_t, NULL);
         client->sdskv_length_multi_id = 
@@ -964,6 +968,112 @@ int sdskv_exists(sdskv_provider_handle_t provider,
     if(ret == 0) *flag = out.flag;
 
     margo_free_output(handle, &out);
+    margo_destroy(handle);
+    return ret;
+}
+
+int sdskv_exists_multi(sdskv_provider_handle_t provider, 
+        sdskv_database_id_t db_id, size_t num,
+        const void* const* keys, const hg_size_t* ksizes, int *flags)
+{
+    hg_return_t     hret;
+    int             ret;
+    hg_handle_t     handle = HG_HANDLE_NULL;
+    exists_multi_in_t  in;
+    exists_multi_out_t out;
+    void**          key_seg_ptrs  = NULL;
+    hg_size_t*      key_seg_sizes = NULL;
+
+    in.db_id    = db_id;
+    in.num_keys = num;
+    in.keys_bulk_handle = HG_BULK_NULL;
+    in.keys_bulk_size   = 0;
+    in.flags_bulk_handle = HG_BULK_NULL;
+
+    /* create an array of key sizes and key pointers */
+    key_seg_sizes       = malloc(sizeof(hg_size_t)*(num+1));
+    key_seg_sizes[0]    = num*sizeof(hg_size_t);
+    memcpy(key_seg_sizes+1, ksizes, num*sizeof(hg_size_t));
+    key_seg_ptrs        = malloc(sizeof(void*)*(num+1));
+    key_seg_ptrs[0]     = (void*)ksizes;
+    memcpy(key_seg_ptrs+1, keys, num*sizeof(void*));
+
+    int i;
+    for(i=0; i<num+1; i++) {
+        in.keys_bulk_size += key_seg_sizes[i];
+    }
+
+    /* create the bulk handle to access the keys */
+    hret = margo_bulk_create(provider->client->mid, num+1, key_seg_ptrs, key_seg_sizes,
+            HG_BULK_READ_ONLY, &in.keys_bulk_handle);
+    if(hret != HG_SUCCESS) {
+        fprintf(stderr,"[SDSKV] margo_bulk_create() for keys failed in sdskv_exists_multi()\n");
+        out.ret = SDSKV_ERR_MERCURY;
+        goto finish;
+    }
+
+    /* create the bulk handle for the server to whether the keys exist */
+    hg_size_t exist_size = num/8 + (num % 8 == 0 ? 0 : 1);
+    uint8_t* exist = calloc(exist_size,1);
+    hret = margo_bulk_create(provider->client->mid, 1, (void**)&exist, &exist_size,
+            HG_BULK_WRITE_ONLY, &in.flags_bulk_handle);
+    if(hret != HG_SUCCESS) {
+        fprintf(stderr,"[SDSKV] margo_bulk_create() for vsizes failed in sdskv_exists_multi()\n");
+        out.ret = SDSKV_ERR_MERCURY;
+        goto finish;
+    }
+
+    /* create a RPC handle */
+    hret = margo_create(
+            provider->client->mid,
+            provider->addr,
+            provider->client->sdskv_exists_multi_id,
+            &handle);
+    if(hret != HG_SUCCESS) {
+        fprintf(stderr,"[SDSKV] margo_create() failed in sdskv_exists_multi()\n");
+        out.ret = SDSKV_ERR_MERCURY;
+        goto finish;
+    }
+
+    /* forward the RPC handle */
+    hret = margo_provider_forward(provider->provider_id, handle, &in);
+    if(hret != HG_SUCCESS) {
+        fprintf(stderr,"[SDSKV] margo_forward() failed in sdskv_exists_multi()\n");
+        out.ret = SDSKV_ERR_MERCURY;
+        goto finish;
+    }
+
+    /* get the response */
+    hret = margo_get_output(handle, &out);
+    if(hret != HG_SUCCESS) {
+        fprintf(stderr,"[SDSKV] margo_get_output() failed in sdskv_exists_multi()\n");
+        out.ret = SDSKV_ERR_MERCURY;
+        goto finish;
+    }
+
+    ret = out.ret;
+    if(out.ret != SDSKV_SUCCESS) {
+        goto finish;
+    }
+    
+    uint8_t mask = 1;
+    for(i = 0; i < num; i++) {
+        uint8_t c = exist[i/8];
+        *(flags+i) = c & mask ? 1 : 0;
+        if(i % 8 == 7) {
+            mask = 1;
+        } else {
+            mask = mask << 1;
+        }
+    }
+
+finish:
+    margo_free_output(handle, &out);
+    margo_bulk_free(in.keys_bulk_handle);
+    margo_bulk_free(in.flags_bulk_handle);
+    free(key_seg_sizes);
+    free(key_seg_ptrs);
+    free(exist);
     margo_destroy(handle);
     return ret;
 }

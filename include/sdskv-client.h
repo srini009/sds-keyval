@@ -374,6 +374,24 @@ int sdskv_length_packed(sdskv_provider_handle_t handle,
 int sdskv_exists(sdskv_provider_handle_t handle,
         sdskv_database_id_t db_id, const void *key,
         hg_size_t ksize, int* flag);
+
+/**
+ * @brief Checks if the given key exists in the database.
+ *
+ * @param[in] handle provider handle
+ * @param[in] db_id database id
+ * @param[in] count number of keys
+ * @param[in] keys keys to lookup
+ * @param[in] ksizes size of the keys
+ * @param[out] array of count flags containing 1 if the key exists, 0 otherwise
+ *
+ * @return SDSKV_SUCCESS or error code defined in sdskv-common.h
+ */
+int sdskv_exists_multi(sdskv_provider_handle_t handle,
+        sdskv_database_id_t db_id, size_t count,
+        const void* const *keys,
+        const hg_size_t *ksizes, int* flags);
+
 /**
  * @brief Erases the key/value pair pointed by the given key.
  *

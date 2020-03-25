@@ -139,6 +139,32 @@ int main(int argc, char *argv[])
     }
     printf("Successfuly inserted %d keys\n", num_keys);
 
+    /* check that the values exist */
+    std::vector<int> keys_exist(num_keys);
+
+    ret = sdskv_exists_multi(kvph, db_id, num_keys, 
+            keys_ptr.data(), keys_size.data(), keys_exist.data());
+    if(ret != 0) {
+        fprintf(stderr, "Error: sdskv_length_multi() failed\n");
+        sdskv_shutdown_service(kvcl, svr_addr);
+        sdskv_provider_handle_release(kvph);
+        margo_addr_free(mid, svr_addr);
+        sdskv_client_finalize(kvcl);
+        margo_finalize(mid);
+        return -1;
+    }
+    for(auto& k : keys_exist) {
+        if(k != 1) {
+            fprintf(stderr, "Error: sdskv_exists_multi() failed (one flag is not 1)\n");
+            sdskv_shutdown_service(kvcl, svr_addr);
+            sdskv_provider_handle_release(kvph);
+            margo_addr_free(mid, svr_addr);
+            sdskv_client_finalize(kvcl);
+            margo_finalize(mid);
+            return -1;
+        }
+    }
+
     /* retrieve the length of the values */
     std::vector<hg_size_t> rval_len(num_keys);
 

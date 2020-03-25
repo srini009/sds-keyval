@@ -240,6 +240,15 @@ MERCURY_GEN_PROC(length_packed_in_t, \
         ((hg_bulk_t)(out_bulk_handle)))
 MERCURY_GEN_PROC(length_packed_out_t, ((int32_t)(ret)))
 
+// ------------- EXIST MULTI ------------- //
+MERCURY_GEN_PROC(exists_multi_in_t, \
+        ((uint64_t)(db_id))\
+        ((hg_size_t)(num_keys))\
+        ((hg_bulk_t)(keys_bulk_handle))\
+        ((hg_size_t)(keys_bulk_size))\
+        ((hg_bulk_t)(flags_bulk_handle)))
+MERCURY_GEN_PROC(exists_multi_out_t, ((int32_t)(ret)))
+
 // ------------- ERASE MULTI ------------- //
 MERCURY_GEN_PROC(erase_multi_in_t, \
         ((uint64_t)(db_id))\
