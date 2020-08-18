@@ -130,7 +130,7 @@ extern "C" int sdskv_provider_register(
         margo_provider_registered_name(mid, "sdskv_put_rpc", provider_id, &id, &flag);
         if(flag == HG_TRUE) {
             fprintf(stderr, "sdskv_provider_register(): a provider with the same provider id (%d) already exists\n", provider_id);
-            return SDSKV_ERR_MERCURY;
+            return SDSKV_ERR_PR_EXISTS;
         }
     }
 
@@ -155,7 +155,7 @@ extern "C" int sdskv_provider_register(
     ret = ABT_rwlock_create(&(tmp_svr_ctx->lock));
     if(ret != ABT_SUCCESS) {
         free(tmp_svr_ctx);
-        return SDSKV_ERR_ARGOBOTS;
+        return SDSKV_MAKE_ABT_ERROR(ret);
     }
 
     /* register RPCs */
@@ -544,7 +544,7 @@ static void sdskv_open_ult(hg_handle_t handle)
 
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         margo_respond(handle, &out);
         margo_destroy(handle);
         return;
@@ -626,7 +626,7 @@ static void sdskv_list_db_ult(hg_handle_t handle)
 
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         margo_respond(handle, &out);
         margo_destroy(handle);
         return;
@@ -685,7 +685,7 @@ static void sdskv_put_ult(hg_handle_t handle)
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
         fprintf(stderr, "Error (sdskv_put_ult): margo_get_input failed with error %d\n", hret);
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         margo_respond(handle, &out);
         margo_destroy(handle);
         return;
@@ -742,7 +742,7 @@ static void sdskv_put_multi_ult(hg_handle_t handle)
 
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
     auto r3 = at_exit([&handle,&in]() { margo_free_input(handle, &in); });
@@ -767,7 +767,7 @@ static void sdskv_put_multi_ult(hg_handle_t handle)
     hret = margo_bulk_create(mid, 1, keys_addr.data(), &in.keys_bulk_size,
             HG_BULK_WRITE_ONLY, &local_keys_bulk_handle);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
     auto r6 = at_exit([&local_keys_bulk_handle]() { margo_bulk_free(local_keys_bulk_handle); });
@@ -776,7 +776,7 @@ static void sdskv_put_multi_ult(hg_handle_t handle)
     hret = margo_bulk_create(mid, 1, vals_addr.data(), &in.vals_bulk_size,
             HG_BULK_WRITE_ONLY, &local_vals_bulk_handle);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
     auto r7 = at_exit([&local_vals_bulk_handle]() { margo_bulk_free(local_vals_bulk_handle); });
@@ -785,7 +785,7 @@ static void sdskv_put_multi_ult(hg_handle_t handle)
     hret = margo_bulk_transfer(mid, HG_BULK_PULL, info->addr, in.keys_bulk_handle, 0,
             local_keys_bulk_handle, 0, in.keys_bulk_size);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
 
@@ -793,7 +793,7 @@ static void sdskv_put_multi_ult(hg_handle_t handle)
     hret = margo_bulk_transfer(mid, HG_BULK_PULL, info->addr, in.vals_bulk_handle, 0,
             local_vals_bulk_handle, 0, in.vals_bulk_size);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
 
@@ -843,7 +843,7 @@ static void sdskv_put_packed_ult(hg_handle_t handle)
 
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
     auto r3 = at_exit([&handle,&in]() { margo_free_input(handle, &in); });
@@ -865,7 +865,7 @@ static void sdskv_put_packed_ult(hg_handle_t handle)
         hret = margo_addr_dup(mid, info->addr, &origin_addr);
     }
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
     auto r4 = at_exit([&origin_addr,&mid]() { margo_addr_free(mid, origin_addr); });
@@ -879,7 +879,7 @@ static void sdskv_put_packed_ult(hg_handle_t handle)
     hret = margo_bulk_create(mid, 1, &buf_ptr, &buf_size,
             HG_BULK_WRITE_ONLY, &local_bulk_handle);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
     auto r5 = at_exit([&local_bulk_handle]() { margo_bulk_free(local_bulk_handle); });
@@ -888,7 +888,7 @@ static void sdskv_put_packed_ult(hg_handle_t handle)
     hret = margo_bulk_transfer(mid, HG_BULK_PULL, origin_addr, in.bulk_handle, 0,
             local_bulk_handle, 0, in.bulk_size);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
 
@@ -932,7 +932,7 @@ static void sdskv_length_ult(hg_handle_t handle)
 
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         margo_respond(handle, &out);
         margo_destroy(handle);
         return;
@@ -992,7 +992,7 @@ static void sdskv_get_ult(hg_handle_t handle)
 
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         out.value.data = nullptr;
         out.value.size = 0;
         out.vsize = 0;
@@ -1075,7 +1075,7 @@ static void sdskv_get_multi_ult(hg_handle_t handle)
     /* deserialize input */
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
     auto r3 = at_exit([&handle,&in]() { margo_free_input(handle, &in); });
@@ -1100,7 +1100,7 @@ static void sdskv_get_multi_ult(hg_handle_t handle)
     hret = margo_bulk_create(mid, 1, keys_addr.data(), &in.keys_bulk_size,
             HG_BULK_WRITE_ONLY, &local_keys_bulk_handle);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
     auto r6 = at_exit([&local_keys_bulk_handle]() { margo_bulk_free(local_keys_bulk_handle); });
@@ -1114,7 +1114,7 @@ static void sdskv_get_multi_ult(hg_handle_t handle)
     hret = margo_bulk_create(mid, 1, vals_addr.data(), &in.vals_bulk_size,
             HG_BULK_READWRITE, &local_vals_bulk_handle);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
     auto r7 = at_exit([&local_vals_bulk_handle]() { margo_bulk_free(local_vals_bulk_handle); });
@@ -1123,7 +1123,7 @@ static void sdskv_get_multi_ult(hg_handle_t handle)
     hret = margo_bulk_transfer(mid, HG_BULK_PULL, info->addr, in.keys_bulk_handle, 0,
             local_keys_bulk_handle, 0, in.keys_bulk_size);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
 
@@ -1131,7 +1131,7 @@ static void sdskv_get_multi_ult(hg_handle_t handle)
     hret = margo_bulk_transfer(mid, HG_BULK_PULL, info->addr, in.vals_bulk_handle, 0,
             local_vals_bulk_handle, 0, in.num_keys*sizeof(hg_size_t));
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
 
@@ -1168,7 +1168,7 @@ static void sdskv_get_multi_ult(hg_handle_t handle)
     hret = margo_bulk_transfer(mid, HG_BULK_PUSH, info->addr, in.vals_bulk_handle, 0,
             local_vals_bulk_handle, 0, in.vals_bulk_size);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
 
@@ -1204,7 +1204,7 @@ static void sdskv_get_packed_ult(hg_handle_t handle)
     /* deserialize input */
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
     auto r3 = at_exit([&handle,&in]() { margo_free_input(handle, &in); });
@@ -1229,7 +1229,7 @@ static void sdskv_get_packed_ult(hg_handle_t handle)
     hret = margo_bulk_create(mid, 1, keys_addr.data(), &in.keys_bulk_size,
             HG_BULK_WRITE_ONLY, &local_keys_bulk_handle);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
     auto r6 = at_exit([&local_keys_bulk_handle]() { margo_bulk_free(local_keys_bulk_handle); });
@@ -1243,7 +1243,7 @@ static void sdskv_get_packed_ult(hg_handle_t handle)
     hret = margo_bulk_create(mid, 1, vals_addr.data(), &in.vals_bulk_size,
             HG_BULK_READ_ONLY, &local_vals_bulk_handle);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
     auto r7 = at_exit([&local_vals_bulk_handle]() { margo_bulk_free(local_vals_bulk_handle); });
@@ -1252,7 +1252,7 @@ static void sdskv_get_packed_ult(hg_handle_t handle)
     hret = margo_bulk_transfer(mid, HG_BULK_PULL, info->addr, in.keys_bulk_handle, 0,
             local_keys_bulk_handle, 0, in.keys_bulk_size);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
 
@@ -1296,7 +1296,7 @@ static void sdskv_get_packed_ult(hg_handle_t handle)
     hret = margo_bulk_transfer(mid, HG_BULK_PUSH, info->addr, in.vals_bulk_handle, 0,
             local_vals_bulk_handle, 0, in.vals_bulk_size);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
 
@@ -1332,7 +1332,7 @@ static void sdskv_length_multi_ult(hg_handle_t handle)
     /* deserialize input */
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
     auto r3 = at_exit([&handle,&in]() { margo_free_input(handle, &in); });
@@ -1357,7 +1357,7 @@ static void sdskv_length_multi_ult(hg_handle_t handle)
     hret = margo_bulk_create(mid, 1, keys_addr.data(), &in.keys_bulk_size,
             HG_BULK_WRITE_ONLY, &local_keys_bulk_handle);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
     auto r6 = at_exit([&local_keys_bulk_handle]() { margo_bulk_free(local_keys_bulk_handle); });
@@ -1372,7 +1372,7 @@ static void sdskv_length_multi_ult(hg_handle_t handle)
     hret = margo_bulk_create(mid, 1, vals_sizes_addr.data(), &local_vals_size_buffer_size,
             HG_BULK_READ_ONLY, &local_vals_size_bulk_handle);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
     auto r7 = at_exit([&local_vals_size_bulk_handle]() { margo_bulk_free(local_vals_size_bulk_handle); });
@@ -1381,7 +1381,7 @@ static void sdskv_length_multi_ult(hg_handle_t handle)
     hret = margo_bulk_transfer(mid, HG_BULK_PULL, info->addr, in.keys_bulk_handle, 0,
             local_keys_bulk_handle, 0, in.keys_bulk_size);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
 
@@ -1406,7 +1406,7 @@ static void sdskv_length_multi_ult(hg_handle_t handle)
     hret = margo_bulk_transfer(mid, HG_BULK_PUSH, info->addr, in.vals_size_bulk_handle, 0,
             local_vals_size_bulk_handle, 0, local_vals_size_buffer_size);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
 
@@ -1442,7 +1442,7 @@ static void sdskv_exists_multi_ult(hg_handle_t handle)
     /* deserialize input */
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
     auto r3 = at_exit([&handle,&in]() { margo_free_input(handle, &in); });
@@ -1467,7 +1467,7 @@ static void sdskv_exists_multi_ult(hg_handle_t handle)
     hret = margo_bulk_create(mid, 1, keys_addr.data(), &in.keys_bulk_size,
             HG_BULK_WRITE_ONLY, &local_keys_bulk_handle);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
     auto r6 = at_exit([&local_keys_bulk_handle]() { margo_bulk_free(local_keys_bulk_handle); });
@@ -1482,7 +1482,7 @@ static void sdskv_exists_multi_ult(hg_handle_t handle)
     hret = margo_bulk_create(mid, 1, flags_buffer_addr.data(), &local_flags_buffer_size,
             HG_BULK_READ_ONLY, &local_flags_bulk_handle);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
     auto r7 = at_exit([&local_flags_bulk_handle]() { margo_bulk_free(local_flags_bulk_handle); });
@@ -1491,7 +1491,7 @@ static void sdskv_exists_multi_ult(hg_handle_t handle)
     hret = margo_bulk_transfer(mid, HG_BULK_PULL, info->addr, in.keys_bulk_handle, 0,
             local_keys_bulk_handle, 0, in.keys_bulk_size);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
 
@@ -1518,7 +1518,7 @@ static void sdskv_exists_multi_ult(hg_handle_t handle)
     hret = margo_bulk_transfer(mid, HG_BULK_PUSH, info->addr, in.flags_bulk_handle, 0,
             local_flags_bulk_handle, 0, local_flags_buffer_size);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
 
@@ -1554,7 +1554,7 @@ static void sdskv_length_packed_ult(hg_handle_t handle)
     /* deserialize input */
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
     auto r3 = at_exit([&handle,&in]() { margo_free_input(handle, &in); });
@@ -1579,7 +1579,7 @@ static void sdskv_length_packed_ult(hg_handle_t handle)
     hret = margo_bulk_create(mid, 1, keys_addr.data(), &in.in_bulk_size,
             HG_BULK_WRITE_ONLY, &local_keys_bulk_handle);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
     auto r6 = at_exit([&local_keys_bulk_handle]() { margo_bulk_free(local_keys_bulk_handle); });
@@ -1594,7 +1594,7 @@ static void sdskv_length_packed_ult(hg_handle_t handle)
     hret = margo_bulk_create(mid, 1, vals_sizes_addr.data(), &local_vals_size_buffer_size,
             HG_BULK_READ_ONLY, &local_vals_size_bulk_handle);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
     auto r7 = at_exit([&local_vals_size_bulk_handle]() { margo_bulk_free(local_vals_size_bulk_handle); });
@@ -1603,7 +1603,7 @@ static void sdskv_length_packed_ult(hg_handle_t handle)
     hret = margo_bulk_transfer(mid, HG_BULK_PULL, info->addr, in.in_bulk_handle, 0,
             local_keys_bulk_handle, 0, in.in_bulk_size);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
 
@@ -1628,7 +1628,7 @@ static void sdskv_length_packed_ult(hg_handle_t handle)
     hret = margo_bulk_transfer(mid, HG_BULK_PUSH, info->addr, in.out_bulk_handle, 0,
             local_vals_size_bulk_handle, 0, local_vals_size_buffer_size);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
 
@@ -1659,7 +1659,7 @@ static void sdskv_bulk_put_ult(hg_handle_t handle)
 
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         margo_respond(handle, &out);
         margo_destroy(handle);
         return;
@@ -1687,7 +1687,7 @@ static void sdskv_bulk_put_ult(hg_handle_t handle)
         hret = margo_bulk_create(mid, 1, (void**)&buffer, &size,
                 HG_BULK_WRITE_ONLY, &bulk_handle);
         if(hret != HG_SUCCESS) {
-            out.ret = SDSKV_ERR_MERCURY;
+            out.ret = SDSKV_MAKE_HG_ERROR(hret);
             margo_respond(handle, &out);
             margo_free_input(handle, &in);
             margo_destroy(handle);
@@ -1697,7 +1697,7 @@ static void sdskv_bulk_put_ult(hg_handle_t handle)
         hret = margo_bulk_transfer(mid, HG_BULK_PULL, info->addr, in.handle, 0,
                 bulk_handle, 0, vdata.size());
         if(hret != HG_SUCCESS) {
-            out.ret = SDSKV_ERR_MERCURY;
+            out.ret = SDSKV_MAKE_HG_ERROR(hret);
             margo_respond(handle, &out);
             margo_free_input(handle, &in);
             margo_bulk_free(bulk_handle);
@@ -1744,7 +1744,7 @@ static void sdskv_bulk_get_ult(hg_handle_t handle)
 
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         margo_respond(handle, &out);
         margo_destroy(handle);
         return;
@@ -1793,7 +1793,7 @@ static void sdskv_bulk_get_ult(hg_handle_t handle)
                 HG_BULK_READ_ONLY, &bulk_handle);
         if(hret != HG_SUCCESS) {
             out.vsize = 0;
-            out.ret = SDSKV_ERR_MERCURY;
+            out.ret = SDSKV_MAKE_HG_ERROR(hret);
             margo_respond(handle, &out);
             margo_free_input(handle, &in);
             margo_destroy(handle);
@@ -1804,7 +1804,7 @@ static void sdskv_bulk_get_ult(hg_handle_t handle)
                 bulk_handle, 0, vdata.size());
         if(hret != HG_SUCCESS) {
             out.vsize = 0;
-            out.ret = SDSKV_ERR_MERCURY;
+            out.ret = SDSKV_MAKE_HG_ERROR(hret);
             margo_respond(handle, &out);
             margo_free_input(handle, &in);
             margo_bulk_free(bulk_handle);
@@ -1848,7 +1848,7 @@ static void sdskv_erase_ult(hg_handle_t handle)
 
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         margo_respond(handle, &out);
         margo_destroy(handle);
         return;
@@ -1909,7 +1909,7 @@ static void sdskv_erase_multi_ult(hg_handle_t handle)
     /* deserialize input */
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
     auto r3 = at_exit([&handle,&in]() { margo_free_input(handle, &in); });
@@ -1934,7 +1934,7 @@ static void sdskv_erase_multi_ult(hg_handle_t handle)
     hret = margo_bulk_create(mid, 1, keys_addr.data(), &in.keys_bulk_size,
             HG_BULK_WRITE_ONLY, &local_keys_bulk_handle);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
     auto r6 = at_exit([&local_keys_bulk_handle]() { margo_bulk_free(local_keys_bulk_handle); });
@@ -1943,7 +1943,7 @@ static void sdskv_erase_multi_ult(hg_handle_t handle)
     hret = margo_bulk_transfer(mid, HG_BULK_PULL, info->addr, in.keys_bulk_handle, 0,
             local_keys_bulk_handle, 0, in.keys_bulk_size);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
 
@@ -1985,7 +1985,7 @@ static void sdskv_exists_ult(hg_handle_t handle)
 
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         margo_respond(handle, &out);
         margo_destroy(handle);
         return;
@@ -2046,7 +2046,7 @@ static void sdskv_list_keys_ult(hg_handle_t handle)
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
         std::cerr << "Error: SDSKV list_keys could not get RPC input" << std::endl;
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         margo_respond(handle, &out);
         margo_destroy(handle);
         return;
@@ -2060,7 +2060,7 @@ static void sdskv_list_keys_ult(hg_handle_t handle)
         if(it == svr_ctx->databases.end()) {
             std::cerr << "Error: SDSKV list_keys could not get database with id " << in.db_id << std::endl;
             ABT_rwlock_unlock(svr_ctx->lock);
-            throw SDSKV_ERR_UNKNOWN_DB;
+            throw (int)SDSKV_ERR_UNKNOWN_DB;
         }
         auto db = it->second;
         ABT_rwlock_unlock(svr_ctx->lock);
@@ -2074,7 +2074,7 @@ static void sdskv_list_keys_ult(hg_handle_t handle)
                 &ksizes_bulk_size, HG_BULK_READWRITE, &ksizes_local_bulk);
         if(hret != HG_SUCCESS) {
             std::cerr << "Error: SDSKV list_keys could not create bulk handle (ksizes_local_bulk)" << std::endl;
-            throw SDSKV_ERR_MERCURY;
+            throw (int)SDSKV_MAKE_HG_ERROR(hret);
         }
 
 
@@ -2085,7 +2085,7 @@ static void sdskv_list_keys_ult(hg_handle_t handle)
         if(hret != HG_SUCCESS) {
             std::cerr << "Error: SDSKV list_keys could not issue bulk transfer " 
                 << "(pull from in.ksizes_bulk_handle to ksizes_local_bulk)" << std::endl;
-            throw SDSKV_ERR_MERCURY;
+            throw (int)SDSKV_MAKE_HG_ERROR(hret);
         }
 
         /* make a copy of the remote key sizes */
@@ -2097,7 +2097,7 @@ static void sdskv_list_keys_ult(hg_handle_t handle)
         auto keys = db->list_keys(start_kdata, in.max_keys, prefix);
         hg_size_t num_keys = std::min((size_t)keys.size(), (size_t)in.max_keys);
 
-        if(num_keys == 0) throw SDSKV_SUCCESS;
+        if(num_keys == 0) throw (int)SDSKV_SUCCESS;
 
         /* create the array of actual sizes */
         std::vector<hg_size_t> true_ksizes(num_keys);
@@ -2123,12 +2123,12 @@ static void sdskv_list_keys_ult(hg_handle_t handle)
         if(hret != HG_SUCCESS) {
             std::cerr << "Error: SDSKV list_keys could not issue bulk transfer "
                 << "(push from ksizes_local_bulk to in.ksizes_bulk_handle)" << std::endl;
-            throw SDSKV_ERR_MERCURY;
+            throw (int)SDSKV_MAKE_HG_ERROR(hret);
         }
             
         /* if user provided a size too small for some key, return error (we already set the right key sizes) */    
         if(size_error)
-            throw SDSKV_ERR_SIZE;
+            throw (int)SDSKV_ERR_SIZE;
 
         /* create an array of addresses pointing to keys */
         std::vector<void*> keys_addr(num_keys);
@@ -2141,7 +2141,7 @@ static void sdskv_list_keys_ult(hg_handle_t handle)
                 true_ksizes.data(), HG_BULK_READ_ONLY, &keys_local_bulk);
         if(hret != HG_SUCCESS) {
             std::cerr << "Error: SDSKV list_keys could not create bulk handle (keys_local_bulk)" << std::endl;
-            throw SDSKV_ERR_MERCURY;
+            throw (int)SDSKV_MAKE_HG_ERROR(hret);
         }
 
         /* transfer the keys to the client */
@@ -2154,7 +2154,7 @@ static void sdskv_list_keys_ult(hg_handle_t handle)
                         in.keys_bulk_handle, remote_offset, keys_local_bulk, local_offset, true_ksizes[i]);
                 if(hret != HG_SUCCESS) {
                     std::cerr << "Error: SDSKV list_keys could not issue bulk transfer (keys_local_bulk)" << std::endl;
-                    throw SDSKV_ERR_MERCURY;
+                    throw (int)SDSKV_MAKE_HG_ERROR(hret);
                 }
             }
 
@@ -2210,7 +2210,7 @@ static void sdskv_list_keyvals_ult(hg_handle_t handle)
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
         std::cerr << "Error: SDSKV list_keyvals could not get RPC input" << std::endl;
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         margo_respond(handle, &out);
         margo_destroy(handle);
         return;
@@ -2224,7 +2224,7 @@ static void sdskv_list_keyvals_ult(hg_handle_t handle)
         if(it == svr_ctx->databases.end()) {
             std::cerr << "Error: SDSKV list_keyvals could not get database with id " << in.db_id << std::endl;
             ABT_rwlock_unlock(svr_ctx->lock);
-            throw SDSKV_ERR_UNKNOWN_DB;
+            throw (int)SDSKV_ERR_UNKNOWN_DB;
         }
         auto db = it->second;
         ABT_rwlock_unlock(svr_ctx->lock);
@@ -2238,7 +2238,7 @@ static void sdskv_list_keyvals_ult(hg_handle_t handle)
                 &ksizes_bulk_size, HG_BULK_READWRITE, &ksizes_local_bulk);
         if(hret != HG_SUCCESS) {
             std::cerr << "Error: SDSKV list_keyvals could not create bulk handle (ksizes_local_bulk)" << std::endl;
-            throw SDSKV_ERR_MERCURY;
+            throw (int)SDSKV_MAKE_HG_ERROR(hret);
         }
 
         /* create a bulk handle to receive and send value sizes from client */
@@ -2250,7 +2250,7 @@ static void sdskv_list_keyvals_ult(hg_handle_t handle)
                 &vsizes_bulk_size, HG_BULK_READWRITE, &vsizes_local_bulk);
         if(hret != HG_SUCCESS) {
             std::cerr << "Error: SDSKV list_keyvals could not create bulk handle (vsizes_local_bulk)" << std::endl;
-            throw SDSKV_ERR_MERCURY;
+            throw (int)SDSKV_MAKE_HG_ERROR(hret);
         }
 
         /* receive the key sizes from the client */
@@ -2260,7 +2260,7 @@ static void sdskv_list_keyvals_ult(hg_handle_t handle)
         if(hret != HG_SUCCESS) {
             std::cerr << "Error: SDSKV list_keyvals could not issue bulk transfer " 
                 << "(pull from in.ksizes_bulk_handle to ksizes_local_bulk)" << std::endl;
-            throw SDSKV_ERR_MERCURY;
+            throw (int)SDSKV_MAKE_HG_ERROR(hret);
         }
 
         /* receive the values sizes from the client */
@@ -2269,7 +2269,7 @@ static void sdskv_list_keyvals_ult(hg_handle_t handle)
         if(hret != HG_SUCCESS) {
             std::cerr << "Error: SDSKV list_keyvals could not issue bulk transfer " 
                 << "(pull from in.vsizes_bulk_handle to vsizes_local_bulk)" << std::endl;
-            throw SDSKV_ERR_MERCURY;
+            throw (int)SDSKV_MAKE_HG_ERROR(hret);
         }
 
         /* make a copy of the remote key sizes and value sizes */
@@ -2284,7 +2284,7 @@ static void sdskv_list_keyvals_ult(hg_handle_t handle)
 
         out.nkeys = num_keys;
 
-        if(num_keys == 0) throw SDSKV_SUCCESS;
+        if(num_keys == 0) throw (int)SDSKV_SUCCESS;
 
         bool size_error = false;
 
@@ -2323,7 +2323,7 @@ static void sdskv_list_keyvals_ult(hg_handle_t handle)
             if(hret != HG_SUCCESS) {
                 std::cerr << "Error: SDSKV list_keyvals could not issue bulk transfer "
                     << "(push from ksizes_local_bulk to in.ksizes_bulk_handle)" << std::endl;
-                throw SDSKV_ERR_MERCURY;
+                throw (int)SDSKV_MAKE_HG_ERROR(hret);
             }
         }
 
@@ -2334,12 +2334,12 @@ static void sdskv_list_keyvals_ult(hg_handle_t handle)
             if(hret != HG_SUCCESS) {
                 std::cerr << "Error: SDSKV list_keyvals could not issue bulk transfer "
                     << "(push from vsizes_local_bulk to in.vsizes_bulk_handle)" << std::endl;
-                throw SDSKV_ERR_MERCURY;
+                throw (int)SDSKV_MAKE_HG_ERROR(hret);
             }
         }
 
         if(size_error)
-            throw SDSKV_ERR_SIZE;
+            throw (int)SDSKV_ERR_SIZE;
 
         /* create an array of addresses pointing to keys */
         std::vector<void*> keys_addr(num_keys);
@@ -2358,7 +2358,7 @@ static void sdskv_list_keyvals_ult(hg_handle_t handle)
                 true_ksizes.data(), HG_BULK_READ_ONLY, &keys_local_bulk);
         if(hret != HG_SUCCESS) {
             std::cerr << "Error: SDSKV list_keyvals could not create bulk handle (keys_local_bulk)" << std::endl;
-            throw SDSKV_ERR_MERCURY;
+            throw (int)SDSKV_MAKE_HG_ERROR(hret);
         }
 
         /* expose the values for bulk transfer */
@@ -2366,7 +2366,7 @@ static void sdskv_list_keyvals_ult(hg_handle_t handle)
                 true_vsizes.data(), HG_BULK_READ_ONLY, &vals_local_bulk);
         if(hret != HG_SUCCESS) {
             std::cerr << "Error: SDSKV list_keyvals could not create bulk handle (vals_local_bulk)" << std::endl;
-            throw SDSKV_ERR_MERCURY;
+            throw (int)SDSKV_MAKE_HG_ERROR(hret);
         }
 
 
@@ -2380,7 +2380,7 @@ static void sdskv_list_keyvals_ult(hg_handle_t handle)
                         in.keys_bulk_handle, remote_offset, keys_local_bulk, local_offset, true_ksizes[i]);
                 if(hret != HG_SUCCESS) {
                     std::cerr << "Error: SDSKV list_keyvals could not issue bulk transfer (keys_local_bulk)" << std::endl;
-                    throw SDSKV_ERR_MERCURY;
+                    throw (int)SDSKV_MAKE_HG_ERROR(hret);
                 }
             }
             remote_offset += remote_ksizes[i];
@@ -2397,7 +2397,7 @@ static void sdskv_list_keyvals_ult(hg_handle_t handle)
                         in.vals_bulk_handle, remote_offset, vals_local_bulk, local_offset, true_vsizes[i]);
                 if(hret != HG_SUCCESS) {
                     std::cerr << "Error: SDSKV list_keyvals could not issue bulk transfer (vals_local_bulk)" << std::endl;
-                    throw SDSKV_ERR_MERCURY;
+                    throw (int)SDSKV_MAKE_HG_ERROR(hret);
                 }
             }
             remote_offset += remote_vsizes[i];
@@ -2445,7 +2445,7 @@ static void sdskv_migrate_keys_ult(hg_handle_t handle)
     /* get the input */
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
     auto r2 = at_exit([&handle,&in]() { margo_free_input(handle, &in); });
@@ -2463,7 +2463,7 @@ static void sdskv_migrate_keys_ult(hg_handle_t handle)
     hg_addr_t target_addr = HG_ADDR_NULL;
     hret = margo_addr_lookup(mid, in.target_addr, &target_addr);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
 
@@ -2475,7 +2475,7 @@ static void sdskv_migrate_keys_ult(hg_handle_t handle)
     hret = margo_bulk_create(mid, 1, (void**)&buffer, &bulk_size,
             HG_BULK_WRITE_ONLY, &bulk_handle);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
     auto r5 = at_exit([&bulk_handle]() { margo_bulk_free(bulk_handle); });
@@ -2484,7 +2484,7 @@ static void sdskv_migrate_keys_ult(hg_handle_t handle)
     hret = margo_bulk_transfer(mid, HG_BULK_PULL, info->addr, in.keys_bulk, 0,
             bulk_handle, 0, in.bulk_size);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
 
@@ -2496,7 +2496,7 @@ static void sdskv_migrate_keys_ult(hg_handle_t handle)
     hg_handle_t put_handle;
     hret = margo_create(mid, target_addr, provider->sdskv_put_id, &put_handle);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
     auto r6 = at_exit([&put_handle]() { margo_destroy(put_handle); });
@@ -2566,7 +2566,7 @@ static void sdskv_migrate_key_range_ult(hg_handle_t handle)
     /* get the input */
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         margo_respond(handle, &out);
         margo_destroy(handle);
         return;
@@ -2609,7 +2609,7 @@ static void sdskv_migrate_keys_prefixed_ult(hg_handle_t handle)
     /* get the input */
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
     /* need to destroy the input at exit */
@@ -2628,7 +2628,7 @@ static void sdskv_migrate_keys_prefixed_ult(hg_handle_t handle)
     hg_addr_t target_addr = HG_ADDR_NULL;
     hret = margo_addr_lookup(mid, in.target_addr, &target_addr);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
     /* need to destroy the address at exit */
@@ -2637,7 +2637,7 @@ static void sdskv_migrate_keys_prefixed_ult(hg_handle_t handle)
     hg_handle_t put_handle;
     hret = margo_create(mid, target_addr, provider->sdskv_put_id, &put_handle);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
     /* need to destroy the handle at exist */
@@ -2718,7 +2718,7 @@ static void sdskv_migrate_all_keys_ult(hg_handle_t handle)
     /* get the input */
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
     /* need to destroy the input at exit */
@@ -2737,7 +2737,7 @@ static void sdskv_migrate_all_keys_ult(hg_handle_t handle)
     hg_addr_t target_addr = HG_ADDR_NULL;
     hret = margo_addr_lookup(mid, in.target_addr, &target_addr);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
     /* need to destroy the address at exit */
@@ -2746,7 +2746,7 @@ static void sdskv_migrate_all_keys_ult(hg_handle_t handle)
     hg_handle_t put_handle;
     hret = margo_create(mid, target_addr, provider->sdskv_put_id, &put_handle);
     if(hret != HG_SUCCESS) {
-        out.ret = SDSKV_ERR_MERCURY;
+        out.ret = SDSKV_MAKE_HG_ERROR(hret);
         return;
     }
     /* need to destroy the handle at exist */
@@ -2833,7 +2833,7 @@ static void sdskv_migrate_database_ult(hg_handle_t handle)
         hret = margo_get_input(handle, &in);
         if(hret != HG_SUCCESS)
         {
-            out.ret = SDSKV_ERR_MERCURY;
+            out.ret = SDSKV_MAKE_HG_ERROR(hret);
             break;
         }
 
@@ -2855,7 +2855,7 @@ static void sdskv_migrate_database_ult(hg_handle_t handle)
         /* lookup the address of the destination REMI provider */
         hret = margo_addr_lookup(mid, in.dest_remi_addr, &dest_addr);
         if(hret != HG_SUCCESS) {
-            out.ret = SDSKV_ERR_MERCURY;
+            out.ret = SDSKV_MAKE_HG_ERROR(hret);
             break;
         }
 

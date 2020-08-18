@@ -17,8 +17,12 @@ class exception : public std::exception {
 
     exception(int error)
     : m_error(error) {
-        if(error < 0 && error > SDSKV_ERR_END) {
-            m_msg = std::string("[SDSKV] ") + sdskv_error_messages[-error];
+        if(error > 0 && error < SDSKV_ERR_MAX) {
+            m_msg = std::string("[SDSKV] ") + sdskv_error_messages[error];
+        } else if(SDSKV_ERROR_IS_HG(error)) {
+            m_msg = std::string("[SDSKV] Mercury error ") + std::to_string(SDSKV_GET_HG_ERROR(error));
+        } else if(SDSKV_ERROR_IS_ABT(error)) {
+            m_msg = std::string("[SDSKV] Argobots error ") + std::to_string(SDSKV_GET_ABT_ERROR(error));
         } else {
             m_msg = std::string("[SDSKV] Unknown error code ") + std::to_string(error);
         }
