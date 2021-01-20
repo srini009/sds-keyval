@@ -24,7 +24,10 @@ struct sdskv_server_context_t
     std::map<std::string, sdskv_database_id_t> name2id;
     std::map<sdskv_database_id_t, std::string> id2name;
     std::map<std::string, sdskv_compare_fn> compfunctions;
+
+#ifdef USE_SYMBIOMON
     symbiomon_provider_t metric_provider;
+#endif
 
 #ifdef USE_REMI
     int owns_remi_provider;
@@ -359,11 +362,13 @@ extern "C" int sdskv_provider_register(
     return SDSKV_SUCCESS;
 }
 
+#ifdef USE_SYMBIOMON
 extern "C" int sdskv_provider_set_symbiomon(sdskv_provider_t provider, symbiomon_provider_t metric_provider)
 {
     provider->metric_provider = metric_provider;
     return SDSKV_SUCCESS;
 }
+#endif
 
 extern "C" int sdskv_provider_destroy(sdskv_provider_t provider)
 {
