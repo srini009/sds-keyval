@@ -687,7 +687,6 @@ static void sdskv_put_ult(hg_handle_t handle)
     put_out_t out;
 
     double start = ABT_get_wtime();
-    double end;
 
     margo_instance_id mid = margo_hg_handle_get_instance(handle);
     assert(mid);
