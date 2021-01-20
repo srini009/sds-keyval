@@ -186,6 +186,29 @@ else
 fi
 AC_SUBST(USE_REMI)
 
+AC_ARG_ENABLE(symbiomon,
+              [AS_HELP_STRING([--enable-symbiomon],[Enable SYMBIOMON monitoring support @<:@default=no@:>@])],
+              [case "${enableval}" in
+                yes) enable_symbiomon="yes" ;;
+                no) enable_symbiomon="no" ;;
+                *) AC_MSG_ERROR(bad value ${enableval} for --enable-symbiomon) ;;
+               esac],
+              [enable_symbiomon="no"]
+)
+AM_CONDITIONAL(ENABLE_SYMBIOMON, test x$enable_symbiomon = xyes)
+if test "$enable_symbiomon" = "yes"; then
+        PKG_CHECK_MODULES(SYMBIOMON, symbiomon)
+        AC_DEFINE(USE_SYMBIOMON, 1, [SYMBIOMON support enabled.])
+        SERVER_DEPS_PKG="${SERVER_DEPS_PKG} symbiomon"
+        USE_SYMBIOMON=1
+        LIBS="$SYMBIOMON_LIBS $LIBS"
+        CPPFLAGS="$SYMBIOMON_CFLAGS $CPPFLAGS"
+        CFLAGS="$SYMBIOMON_CFLAGS $CFLAGS"
+else
+        USE_SYMBIOMON=0
+fi
+AC_SUBST(USE_SYMBIOMON)
+
 AC_ARG_ENABLE(benchmark,
               [AS_HELP_STRING([--enable-benchmark],[Build SDSKV benchmark @<:@default=no@:>@])],
               [case "${enableval}" in
