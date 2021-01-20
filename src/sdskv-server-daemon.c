@@ -188,11 +188,11 @@ int main(int argc, char **argv)
             symbiomon_provider_t metric_provider;
             ret = symbiomon_provider_register(mid, 42, &args, &metric_provider);
             if(ret != 0)
-                fprintf(stderr, "Error: symbiomon_provider_register() failed. Continuing on.\n");*/
+                fprintf(stderr, "Error: symbiomon_provider_register() failed. Continuing on.\n");
            
             ret = sdskv_provider_set_symbiomon(provider, metric_provider);
             if(ret != 0)
-                fprintf(stderr, "Error: sdskv_provider_set_symbiomon() failed. Contuinuing on.\n");
+                fprintf(stderr, "Error: sdskv_provider_set_symbiomon() failed. Contuinuing on.\n");*/
             
             char* path = opts.db_names[i];
             char* x = strrchr(path, '/');
@@ -242,11 +242,11 @@ int main(int argc, char **argv)
         symbiomon_provider_t metric_provider;
         ret = symbiomon_provider_register(mid, 42, &args, &metric_provider);
         if(ret != 0)
-            fprintf(stderr, "Error: symbiomon_provider_register() failed. Continuing on.\n");*/
+            fprintf(stderr, "Error: symbiomon_provider_register() failed. Continuing on.\n");
            
          ret = sdskv_provider_set_symbiomon(provider, metric_provider);
          if(ret != 0)
-             fprintf(stderr, "Error: sdskv_provider_set_symbiomon() failed. Contuinuing on.\n");
+             fprintf(stderr, "Error: sdskv_provider_set_symbiomon() failed. Contuinuing on.\n");*/
 
         for(i=0; i < opts.num_db; i++) {
             sdskv_database_id_t db_id;
