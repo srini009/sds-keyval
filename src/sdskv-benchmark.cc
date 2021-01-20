@@ -12,6 +12,10 @@
 #include <sdskv-client.hpp>
 #include <sdskv-server.hpp>
 
+#ifdef USE_SYMBIOMON
+#include <symbiomon/symbiomon-server.h>
+#endif
+
 using RemoteDatabase = sdskv::database;
 
 /**
@@ -920,6 +924,20 @@ static void run_single_node(Json::Value& config) {
     margo_addr_self(mid, &server_addr);
     // initialize sdskv provider
     auto provider = sdskv::provider::create(mid);
+    
+#ifdef USE_SYMBIOMON
+    /* initialize SYMBIOMON */
+    struct symbiomon_provider_args args = SYMBIOMON_PROVIDER_ARGS_INIT;
+
+    symbiomon_provider_t metric_provider;
+    ret = symbiomon_provider_register(mid, 42, &args, &metric_provider);
+    if(ret != 0)
+        fprintf(stderr, "Error: symbiomon_provider_register() failed. Continuing on.\n");
+           
+     ret = sdskv_provider_set_symbiomon(provider, metric_provider);
+     if(ret != 0)
+        fprintf(stderr, "Error: sdskv_provider_set_symbiomon() failed. Contuinuing on.\n");
+#endif
     // initialize database
     auto& database_config = server_config["database"];
     std::string db_name = database_config["name"].asString();
