@@ -348,7 +348,7 @@ extern "C" int sdskv_provider_register(
 #endif
 
     /* Set the SYMBIOMON metric provider to NULL */
-    tmp_svr_ctx->metric_provider = NULL:
+    tmp_svr_ctx->metric_provider = NULL;
 
     /* install the bake server finalize callback */
     margo_provider_push_finalize_callback(mid, tmp_svr_ctx, &sdskv_server_finalize_cb, tmp_svr_ctx);
