@@ -76,6 +76,7 @@ CPPFLAGS="$ABTIO_CFLAGS $CPPFLAGS"
 CFLAGS="$ABTIO_CFLAGS $CFLAGS"
 
 SERVER_DEPS_PKG=""
+CLIENT_DEPS_PKG=""
 
 #PKG_CHECK_MODULES([SSG], [ssg], [],
 #		  AC_MSG_ERROR([Could not find ssg]) )
@@ -199,7 +200,8 @@ AM_CONDITIONAL(ENABLE_SYMBIOMON, test x$enable_symbiomon = xyes)
 if test "$enable_symbiomon" = "yes"; then
         PKG_CHECK_MODULES(SYMBIOMON, symbiomon)
         AC_DEFINE(USE_SYMBIOMON, 1, [SYMBIOMON support enabled.])
-        SERVER_DEPS_PKG="${SERVER_DEPS_PKG} symbiomon"
+        SERVER_DEPS_PKG="${SERVER_DEPS_PKG} symbiomon-server"
+        CLIENT_DEPS_PKG="${SERVER_DEPS_PKG} symbiomon-client"
         USE_SYMBIOMON=1
         LIBS="$SYMBIOMON_LIBS $LIBS"
         CPPFLAGS="$SYMBIOMON_CFLAGS $CPPFLAGS"
@@ -232,6 +234,7 @@ AC_SUBST(SERVER_LIBS)
 AC_SUBST(SERVER_LIBS_PKG)
 AC_SUBST(SERVER_LIBS_EXT)
 AC_SUBST(SERVER_DEPS_PKG)
+AC_SUBST(CLIENT_DEPS_PKG)
 AC_SUBST(GROUP_LIBS)
 AC_CONFIG_FILES([Makefile maint/sdskv-client.pc maint/sdskv-server.pc])
 AC_OUTPUT
