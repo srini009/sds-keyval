@@ -375,6 +375,9 @@ extern "C" int sdskv_provider_register(
 extern "C" int sdskv_provider_set_symbiomon(sdskv_provider_t provider, symbiomon_provider_t metric_provider)
 {
     provider->metric_provider = metric_provider;
+
+    fprintf(stderr, "Successfully set the SYMBIOMON provider\n");
+
     return SDSKV_SUCCESS;
 }
 #endif
