@@ -937,6 +937,9 @@ static void run_single_node(Json::Value& config) {
      ret = sdskv_provider_set_symbiomon(provider, metric_provider);
      if(ret != 0)
         fprintf(stderr, "Error: sdskv_provider_set_symbiomon() failed. Contuinuing on.\n");
+
+     fprintf(stderr, "Successfully set the SYMBIOMON provider\n");
+
 #endif
     // initialize database
     auto& database_config = server_config["database"];
