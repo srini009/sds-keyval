@@ -686,6 +686,9 @@ static void sdskv_put_ult(hg_handle_t handle)
     put_in_t in;
     put_out_t out;
 
+    double start = ABT_get_wtime();
+    double end;
+
     margo_instance_id mid = margo_hg_handle_get_instance(handle);
     assert(mid);
     const struct hg_info* info = margo_get_info(handle);
@@ -727,6 +730,17 @@ static void sdskv_put_ult(hg_handle_t handle)
 
     out.ret = db->put(kdata, vdata);
 
+    double end = ABT_get_wtime();
+
+#ifdef USE_SYMBIOMON
+    symbiomon_metric_t m;
+    symbiomon_taglist_t taglist;
+
+    symbiomon_taglist_create(&taglist, 1, "tag1", "dummytag");
+    symbiomon_metric_create("sdskv", "put_latency", SYMBIOMON_TYPE_TIMER, "sdskv:put latency in seconds", taglist, &m, svr_ctx->metric_provider);
+    symbiomon_metric_update(m, (end-start));
+    fprintf(stderr, "Put value: %lf\n", end-start);
+#endif 
     margo_respond(handle, &out);
     margo_free_input(handle, &in);
     margo_destroy(handle);
