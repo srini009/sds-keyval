@@ -740,9 +740,9 @@ static void sdskv_put_ult(hg_handle_t handle)
 
 #ifdef USE_SYMBIOMON
     symbiomon_metric_t m;
-    symbiomon_taglist_t taglist;
+    symbiomon_taglist_t taglist = NULL;
 
-    symbiomon_taglist_create(&taglist, 1, "tag1", "dummytag");
+    symbiomon_taglist_create(&taglist, 1, "dummytag");
     symbiomon_metric_create("sdskv", "put_latency", SYMBIOMON_TYPE_TIMER, "sdskv:put latency in seconds", taglist, &m, svr_ctx->metric_provider);
     symbiomon_metric_update(m, (end-start));
     fprintf(stderr, "Put value: %lf\n", end-start);
