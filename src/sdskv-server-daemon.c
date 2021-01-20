@@ -9,9 +9,9 @@
 #include <unistd.h>
 #include <margo.h>
 #include <sdskv-server.h>
-#ifdef USE_SYMBIOMON
+//#ifdef USE_SYMBIOMON
 #include <symbiomon/symbiomon-server.h>
-#endif
+//#endif
 
 typedef enum {
     MODE_DATABASES = 0,
@@ -184,7 +184,7 @@ int main(int argc, char **argv)
                 return(-1);
             }
 
-#ifdef USE_SYMBIOMON
+//#ifdef USE_SYMBIOMON
             /* initialize SYMBIOMON */
             struct symbiomon_provider_args args = SYMBIOMON_PROVIDER_ARGS_INIT;
 
@@ -196,7 +196,7 @@ int main(int argc, char **argv)
             ret = sdskv_provider_set_symbiomon(provider, metric_provider);
             if(ret != 0)
                 fprintf(stderr, "Error: sdskv_provider_set_symbiomon() failed. Contuinuing on.\n");
-#endif
+//#endif
             
             char* path = opts.db_names[i];
             char* x = strrchr(path, '/');
