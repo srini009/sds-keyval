@@ -198,7 +198,8 @@ AC_ARG_ENABLE(symbiomon,
 )
 AM_CONDITIONAL(ENABLE_SYMBIOMON, test x$enable_symbiomon = xyes)
 if test "$enable_symbiomon" = "yes"; then
-        PKG_CHECK_MODULES(SYMBIOMON, symbiomon)
+        PKG_CHECK_MODULES(SYMBIOMON, symbiomon-server)
+        PKG_CHECK_MODULES(SYMBIOMON, symbiomon-client)
         AC_DEFINE(USE_SYMBIOMON, 1, [SYMBIOMON support enabled.])
         SERVER_DEPS_PKG="${SERVER_DEPS_PKG} symbiomon-server"
         CLIENT_DEPS_PKG="${SERVER_DEPS_PKG} symbiomon-client"
