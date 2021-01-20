@@ -11,6 +11,13 @@
 #include <remi/remi-client.h>
 #include <remi/remi-server.h>
 #endif
+
+#ifdef USE_SYMBIOMON
+#include <symbiomon/symbiomon-metric.h>
+#include <symbiomon/symbiomon-common.h>
+#include <symbiomon/symbiomon-server.h>
+#endif
+
 #define SDSKV
 #include "datastore/datastore_factory.h"
 #include "sdskv-rpc-types.h"
