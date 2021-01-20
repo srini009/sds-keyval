@@ -10,6 +10,9 @@
 #include <margo.h>
 #include <abt-io.h>
 #include <sdskv-common.h>
+#include <symbiomon/symbiomon-server.h>
+#include <symbiomon/symbiomon-metric.h>
+#include <symbiomon/symbiomon-common.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -60,6 +63,10 @@ int sdskv_provider_register(
  * @return SDSKV_SUCCESS  or error code defined in sdskv-common.h
  */
 int sdskv_provider_destroy(sdskv_provider_t provider);
+
+
+/* Set symbiomon_provider_t instance for metrics reporting*/
+int sdskv_provider_set_symbiomon(sdskv_provider_t provider, symbiomon_provider_t metric_provider);
 
 /**
  * @brief Registers a comparison function for databases to use.

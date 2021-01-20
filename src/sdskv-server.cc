@@ -24,6 +24,7 @@ struct sdskv_server_context_t
     std::map<std::string, sdskv_database_id_t> name2id;
     std::map<sdskv_database_id_t, std::string> id2name;
     std::map<std::string, sdskv_compare_fn> compfunctions;
+    symbiomon_provider_t metric_provider;
 
 #ifdef USE_REMI
     int owns_remi_provider;
@@ -346,12 +347,21 @@ extern "C" int sdskv_provider_register(
     }
 #endif
 
+    /* Set the SYMBIOMON metric provider to NULL */
+    tmp_svr_ctx->metric_provider = NULL:
+
     /* install the bake server finalize callback */
     margo_provider_push_finalize_callback(mid, tmp_svr_ctx, &sdskv_server_finalize_cb, tmp_svr_ctx);
 
     if(provider != SDSKV_PROVIDER_IGNORE)
         *provider = tmp_svr_ctx;
 
+    return SDSKV_SUCCESS;
+}
+
+extern "C" int sdskv_provider_set_symbiomon(sdskv_provider_t provider, symbiomon_provider_t metric_provider)
+{
+    provider->metric_provider = metric_provider;
     return SDSKV_SUCCESS;
 }
 
