@@ -371,7 +371,7 @@ extern "C" int sdskv_provider_register(
     return SDSKV_SUCCESS;
 }
 
-//#ifdef USE_SYMBIOMON
+#ifdef USE_SYMBIOMON
 extern "C" int sdskv_provider_set_symbiomon(sdskv_provider_t provider, symbiomon_provider_t metric_provider)
 {
     provider->metric_provider = metric_provider;
@@ -380,7 +380,7 @@ extern "C" int sdskv_provider_set_symbiomon(sdskv_provider_t provider, symbiomon
 
     return SDSKV_SUCCESS;
 }
-//#endif
+#endif
 
 extern "C" int sdskv_provider_destroy(sdskv_provider_t provider)
 {
