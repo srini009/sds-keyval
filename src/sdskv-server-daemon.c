@@ -9,6 +9,9 @@
 #include <unistd.h>
 #include <margo.h>
 #include <sdskv-server.h>
+#include <symbiomon/symbiomon-server.h>
+#include <symbiomon/symbiomon-metric.h>
+#include <symbiomon/symbiomon-common.h>
 
 typedef enum {
     MODE_DATABASES = 0,
