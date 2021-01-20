@@ -186,7 +186,7 @@ int main(int argc, char **argv)
 
 #ifdef USE_SYMBIOMON
             /* initialize SYMBIOMON */
-            /*struct symbiomon_provider_args args = SYMBIOMON_PROVIDER_ARGS_INIT;
+            struct symbiomon_provider_args args = SYMBIOMON_PROVIDER_ARGS_INIT;
 
             symbiomon_provider_t metric_provider;
             ret = symbiomon_provider_register(mid, 42, &args, &metric_provider);
@@ -195,7 +195,7 @@ int main(int argc, char **argv)
            
             ret = sdskv_provider_set_symbiomon(provider, metric_provider);
             if(ret != 0)
-                fprintf(stderr, "Error: sdskv_provider_set_symbiomon() failed. Contuinuing on.\n");*/
+                fprintf(stderr, "Error: sdskv_provider_set_symbiomon() failed. Contuinuing on.\n");
 #endif
             
             char* path = opts.db_names[i];
@@ -242,7 +242,7 @@ int main(int argc, char **argv)
         }
 #ifdef USE_SYMBIOMON
         /* initialize SYMBIOMON */
-        /*struct symbiomon_provider_args args = SYMBIOMON_PROVIDER_ARGS_INIT;
+        struct symbiomon_provider_args args = SYMBIOMON_PROVIDER_ARGS_INIT;
 
         symbiomon_provider_t metric_provider;
         ret = symbiomon_provider_register(mid, 42, &args, &metric_provider);
@@ -251,7 +251,7 @@ int main(int argc, char **argv)
            
          ret = sdskv_provider_set_symbiomon(provider, metric_provider);
          if(ret != 0)
-             fprintf(stderr, "Error: sdskv_provider_set_symbiomon() failed. Contuinuing on.\n");*/
+             fprintf(stderr, "Error: sdskv_provider_set_symbiomon() failed. Contuinuing on.\n");
 #endif
 
         for(i=0; i < opts.num_db; i++) {
