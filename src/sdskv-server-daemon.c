@@ -244,9 +244,9 @@ int main(int argc, char **argv)
         if(ret != 0)
             fprintf(stderr, "Error: symbiomon_provider_register() failed. Continuing on.\n");
            
-         ret = sdskv_provider_set_symbiomon(provider, metric_provider);
-         if(ret != 0)
-             fprintf(stderr, "Error: sdskv_provider_set_symbiomon() failed. Contuinuing on.\n");
+        ret = sdskv_provider_set_symbiomon(provider, metric_provider);
+        if(ret != 0)
+            fprintf(stderr, "Error: sdskv_provider_set_symbiomon() failed. Contuinuing on.\n");
 
         for(i=0; i < opts.num_db; i++) {
             sdskv_database_id_t db_id;

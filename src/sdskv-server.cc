@@ -34,6 +34,7 @@ struct sdskv_server_context_t
 
 #ifdef USE_SYMBIOMON
     symbiomon_provider_t metric_provider;
+    symbiomon_metric_t put_latency;
 #endif
 
 #ifdef USE_REMI
@@ -377,6 +378,10 @@ extern "C" int sdskv_provider_set_symbiomon(sdskv_provider_t provider, symbiomon
     provider->metric_provider = metric_provider;
 
     fprintf(stderr, "Successfully set the SYMBIOMON provider\n");
+    symbiomon_taglist_t taglist = NULL;
+
+    symbiomon_taglist_create(&taglist, 1, "dummytag");
+    symbiomon_metric_create("sdskv", "put_latency", SYMBIOMON_TYPE_TIMER, "sdskv:put latency in seconds", taglist, &provider->put_latency, provider->metric_provider);
 
     return SDSKV_SUCCESS;
 }
@@ -742,12 +747,7 @@ static void sdskv_put_ult(hg_handle_t handle)
     double end = ABT_get_wtime();
 
 #ifdef USE_SYMBIOMON
-    symbiomon_metric_t m;
-    symbiomon_taglist_t taglist = NULL;
-
-    symbiomon_taglist_create(&taglist, 1, "dummytag");
-    symbiomon_metric_create("sdskv", "put_latency", SYMBIOMON_TYPE_TIMER, "sdskv:put latency in seconds", taglist, &m, svr_ctx->metric_provider);
-    symbiomon_metric_update(m, (end-start));
+    symbiomon_metric_update(svr_ctx->put_latency, (end-start));
     fprintf(stderr, "Put value: %lf\n", end-start);
 #endif 
     margo_respond(handle, &out);

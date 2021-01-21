@@ -925,7 +925,7 @@ static void run_single_node(Json::Value& config) {
     // initialize sdskv provider
     auto provider = sdskv::provider::create(mid);
     
-#ifdef USE_SYMBIOMON
+//#ifdef USE_SYMBIOMON
     /* initialize SYMBIOMON */
     struct symbiomon_provider_args args = SYMBIOMON_PROVIDER_ARGS_INIT;
 
@@ -940,7 +940,7 @@ static void run_single_node(Json::Value& config) {
 
      fprintf(stderr, "Successfully set the SYMBIOMON provider\n");
 
-#endif
+//#endif
     // initialize database
     auto& database_config = server_config["database"];
     std::string db_name = database_config["name"].asString();
