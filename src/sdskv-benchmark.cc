@@ -935,7 +935,7 @@ static void run_single_node(Json::Value& config) {
     if(ret != 0)
         fprintf(stderr, "Error: symbiomon_provider_register() failed. Continuing on.\n");
            
-     ret = sdskv_provider_set_symbiomon(provider, metric_provider);
+     ret = provider.set_symbiomon_provider(metric_provider);
      if(ret != 0)
         fprintf(stderr, "Error: sdskv_provider_set_symbiomon() failed. Contuinuing on.\n");
 
