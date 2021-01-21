@@ -114,7 +114,7 @@ class provider {
     }
 
     int set_symbiomon_provider(symbiomon_provider_t metric_provider) {
-        return sdskv_set_symbiomon_provider(m_provider, metric_provider);
+        return sdskv_provider_set_symbiomon(m_provider, metric_provider);
     }
 
     /**
