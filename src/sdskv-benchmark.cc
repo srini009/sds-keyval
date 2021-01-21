@@ -12,9 +12,9 @@
 #include <sdskv-client.hpp>
 #include <sdskv-server.hpp>
 
-#ifdef USE_SYMBIOMON
+//#ifdef USE_SYMBIOMON
 #include <symbiomon/symbiomon-server.h>
-#endif
+//#endif
 
 using RemoteDatabase = sdskv::database;
 
