@@ -11,6 +11,7 @@
 #include <json/json.h>
 #include <sdskv-client.hpp>
 #include <sdskv-server.hpp>
+#include <sdskv-server.h>
 
 //#ifdef USE_SYMBIOMON
 #include <symbiomon/symbiomon-server.h>
@@ -930,7 +931,7 @@ static void run_single_node(Json::Value& config) {
     struct symbiomon_provider_args args = SYMBIOMON_PROVIDER_ARGS_INIT;
 
     symbiomon_provider_t metric_provider;
-    ret = symbiomon_provider_register(mid, 42, &args, &metric_provider);
+    int ret = symbiomon_provider_register(mid, 42, &args, &metric_provider);
     if(ret != 0)
         fprintf(stderr, "Error: symbiomon_provider_register() failed. Continuing on.\n");
            
