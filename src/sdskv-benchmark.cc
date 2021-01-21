@@ -767,6 +767,21 @@ static void run_server(MPI_Comm comm, Json::Value& config) {
     MPI_Bcast(server_addr_str.data(), buf_size, MPI_BYTE, 0, MPI_COMM_WORLD);
     // initialize sdskv provider
     auto provider = sdskv::provider::create(mid);
+
+    /* initialize SYMBIOMON */
+    struct symbiomon_provider_args args = SYMBIOMON_PROVIDER_ARGS_INIT;
+
+    symbiomon_provider_t metric_provider;
+    int ret = symbiomon_provider_register(mid, 42, &args, &metric_provider);
+    if(ret != 0)
+        fprintf(stderr, "Error: symbiomon_provider_register() failed. Continuing on.\n");
+           
+     ret = provider->set_symbiomon_provider(metric_provider);
+     if(ret != 0)
+        fprintf(stderr, "Error: sdskv_provider_set_symbiomon() failed. Contuinuing on.\n");
+
+     fprintf(stderr, "Successfully set the SYMBIOMON provider\n");
+
     // initialize database
     auto& database_config = server_config["database"];
     std::string db_name = database_config["name"].asString();

@@ -378,7 +378,7 @@ extern "C" int sdskv_provider_set_symbiomon(sdskv_provider_t provider, symbiomon
     provider->metric_provider = metric_provider;
 
     fprintf(stderr, "Successfully set the SYMBIOMON provider\n");
-    symbiomon_taglist_t taglist = NULL;
+    symbiomon_taglist_t taglist;
 
     symbiomon_taglist_create(&taglist, 1, "dummytag");
     symbiomon_metric_create("sdskv", "put_latency", SYMBIOMON_TYPE_TIMER, "sdskv:put latency in seconds", taglist, &provider->put_latency, provider->metric_provider);
