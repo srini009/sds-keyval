@@ -35,6 +35,8 @@ struct sdskv_server_context_t
 #ifdef USE_SYMBIOMON
     symbiomon_provider_t metric_provider;
     symbiomon_metric_t put_latency;
+    symbiomon_metric_t put_packed_latency;
+    symbiomon_metric_t put_packed_batch_size;
 #endif
 
 #ifdef USE_REMI
@@ -382,6 +384,10 @@ extern "C" int sdskv_provider_set_symbiomon(sdskv_provider_t provider, symbiomon
 
     symbiomon_taglist_create(&taglist, 1, "dummytag");
     symbiomon_metric_create("sdskv", "put_latency", SYMBIOMON_TYPE_TIMER, "sdskv:put latency in seconds", taglist, &provider->put_latency, provider->metric_provider);
+    symbiomon_metric_create("sdskv", "put_packed_latency", SYMBIOMON_TYPE_TIMER, "sdskv:put_packed latency in seconds", taglist, &provider->put_packed_latency, provider->metric_provider);
+    symbiomon_metric_create("sdskv", "put_packed_batch_size", SYMBIOMON_TYPE_GAUGE, "sdskv:put_packed_batch_size", taglist, &provider->put_packed_batch_size, provider->metric_provider);
+
+    
 
     return SDSKV_SUCCESS;
 }
@@ -868,6 +874,8 @@ static void sdskv_put_packed_ult(hg_handle_t handle)
     std::vector<char> local_buffer;
     hg_bulk_t local_bulk_handle;
     hg_addr_t origin_addr = HG_ADDR_NULL;
+    double start, end;
+    start = ABT_get_wtime();
 
     auto r1 = at_exit([&handle]() { margo_destroy(handle); });
     auto r2 = at_exit([&handle,&out]() { margo_respond(handle, &out); });
@@ -946,6 +954,13 @@ static void sdskv_put_packed_ult(hg_handle_t handle)
 
     /* insert key/vals into the DB */
     out.ret = db->put_packed(in.num_keys, packed_keys, key_sizes, packed_vals, val_sizes);
+    end = ABT_get_wtime();
+#ifdef USE_SYMBIOMON
+    symbiomon_metric_update(svr_ctx->put_packed_latency, (end-start));
+    symbiomon_metric_update(svr_ctx->put_packed_batch_size, (double)in.num_keys);
+    fprintf(stderr, "Put packed latency: %lf\n", end-start);
+    fprintf(stderr, "Put packed batch size: %u\n", in.num_keys);
+#endif 
 
     return;
 }
