@@ -397,6 +397,7 @@ extern "C" int sdskv_provider_destroy(sdskv_provider_t provider)
 {
 
 #ifdef USE_SYMBIOMON
+    fprintf(stderr, "SDSKV provider destroy invoked\n");
     int pid = getpid();
     char * pid_s = (char*)malloc(20);
     sprintf(pid_s, "batch_size_%d", pid);
