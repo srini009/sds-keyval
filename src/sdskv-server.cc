@@ -380,14 +380,14 @@ extern "C" int sdskv_provider_set_symbiomon(sdskv_provider_t provider, symbiomon
     provider->metric_provider = metric_provider;
 
     fprintf(stderr, "Successfully set the SYMBIOMON provider\n");
-    symbiomon_taglist_t taglist;
+    symbiomon_taglist_t taglist, taglist2, taglist3;
 
     symbiomon_taglist_create(&taglist, 1, "dummytag");
+    symbiomon_taglist_create(&taglist2, 1, "dummytag1");
+    symbiomon_taglist_create(&taglist3, 1, "dummytag2");
     symbiomon_metric_create("sdskv", "put_latency", SYMBIOMON_TYPE_TIMER, "sdskv:put latency in seconds", taglist, &provider->put_latency, provider->metric_provider);
-    symbiomon_metric_create("sdskv", "put_packed_latency", SYMBIOMON_TYPE_TIMER, "sdskv:put_packed latency in seconds", taglist, &provider->put_packed_latency, provider->metric_provider);
-    symbiomon_metric_create("sdskv", "put_packed_batch_size", SYMBIOMON_TYPE_GAUGE, "sdskv:put_packed_batch_size", taglist, &provider->put_packed_batch_size, provider->metric_provider);
-
-    
+    symbiomon_metric_create("sdskv", "put_packed_latency", SYMBIOMON_TYPE_TIMER, "sdskv:put_packed latency in seconds", taglist2, &provider->put_packed_latency, provider->metric_provider);
+    symbiomon_metric_create("sdskv", "put_packed_batch_size", SYMBIOMON_TYPE_GAUGE, "sdskv:put_packed_batch_size", taglist3, &provider->put_packed_batch_size, provider->metric_provider);
 
     return SDSKV_SUCCESS;
 }
