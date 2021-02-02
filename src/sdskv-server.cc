@@ -395,6 +395,13 @@ extern "C" int sdskv_provider_set_symbiomon(sdskv_provider_t provider, symbiomon
 
 extern "C" int sdskv_provider_destroy(sdskv_provider_t provider)
 {
+
+#ifdef USE_SYMBIOMON
+    int pid = getpid();
+    char * pid_s = malloc(20);
+    sprintf(pid_s, "batch_size_%d", pid);
+    symbiomon_metric_dump_histogram(provider->put_packed_batch_size, pid_s, 20);
+#endif
     margo_provider_pop_finalize_callback(provider->mid, provider);
     sdskv_server_finalize_cb(provider);
     return SDSKV_SUCCESS;
