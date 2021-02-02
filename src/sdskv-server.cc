@@ -34,6 +34,7 @@ struct sdskv_server_context_t
 
 #ifdef USE_SYMBIOMON
     symbiomon_provider_t metric_provider;
+    uint8_t provider_id;
     symbiomon_metric_t put_latency;
     symbiomon_metric_t put_packed_latency;
     symbiomon_metric_t put_packed_batch_size;
@@ -363,6 +364,7 @@ extern "C" int sdskv_provider_register(
 #ifdef USE_SYMBIOMON
     /* Set the SYMBIOMON metric provider to NULL */
     tmp_svr_ctx->metric_provider = NULL;
+    tmp_svr_ctx->provider_id = provider_id;
 #endif
 
     /* install the bake server finalize callback */
@@ -400,7 +402,7 @@ extern "C" int sdskv_provider_destroy(sdskv_provider_t provider)
     fprintf(stderr, "SDSKV provider destroy invoked\n");
     int pid = getpid();
     char * pid_s = (char*)malloc(20);
-    sprintf(pid_s, "batch_size_%d", pid);
+    sprintf(pid_s, "batch_size_%d_%d", pid, provider->provider_id);
     symbiomon_metric_dump_histogram(provider->put_packed_batch_size, pid_s, 20);
 #endif
     margo_provider_pop_finalize_callback(provider->mid, provider);
