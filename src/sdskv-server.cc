@@ -409,9 +409,9 @@ extern "C" int sdskv_provider_destroy(sdskv_provider_t provider)
     sprintf(pid_s, "putpacked_latency_%d_%d", pid, provider->provider_id);
     sprintf(pid_bs, "batch_size_%d_%d", pid, provider->provider_id);
     sprintf(pid_ds, "data_size_%d_%d", pid, provider->provider_id);
-    symbiomon_metric_dump_histogram(provider->put_packed_latency, pid_s, 20);
-    symbiomon_metric_dump_histogram(provider->put_packed_batch_size, pid_bs, 20);
-    symbiomon_metric_dump_histogram(provider->put_packed_data_size, pid_ds, 20);
+    symbiomon_metric_dump_histogram(provider->put_packed_latency, pid_s, 100);
+    symbiomon_metric_dump_histogram(provider->put_packed_batch_size, pid_bs, 100);
+    symbiomon_metric_dump_histogram(provider->put_packed_data_size, pid_ds, 100);
 #endif
     margo_provider_pop_finalize_callback(provider->mid, provider);
     sdskv_server_finalize_cb(provider);
