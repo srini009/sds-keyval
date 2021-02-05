@@ -1183,6 +1183,7 @@ static void sdskv_get_packed_ult(hg_handle_t handle)
     get_packed_in_t in;
     get_packed_out_t out;
     out.ret = SDSKV_SUCCESS;
+    out.num_keys = 0;
     std::vector<char> local_keys_buffer;
     std::vector<char> local_vals_buffer;
     hg_bulk_t local_keys_bulk_handle;
@@ -1282,14 +1283,15 @@ static void sdskv_get_packed_ult(hg_handle_t handle)
                 out.ret = SDSKV_ERR_SIZE;
                 val_sizes[i] = 0;
             } else {
+                out.num_keys += 1;
                 val_sizes[i] = vdata.size();
                 memcpy(packed_values, vdata.data(), val_sizes[i]);
+                packed_values += val_sizes[i];
             }
         } else {
-            val_sizes[i] = 0;
+            val_sizes[i] = (hg_size_t)(-1);
         }
         packed_keys += key_sizes[i];
-        packed_values += val_sizes[i];
     }
 
     /* do a PUSH operation to push back the values to the client */
