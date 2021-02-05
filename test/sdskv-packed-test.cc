@@ -173,6 +173,15 @@ int main(int argc, char *argv[])
     ret = sdskv_get_packed(kvph, db_id, &num_keys_read, 
             packed_keys.data(), packed_key_sizes.data(),
             total_read_size, read_values.data(), read_value_sizes.data());
+    if(num_keys_read != num_keys) {
+        fprintf(stderr, "Error: sdskv_get_packed didn't read all the requested keys\n");
+        sdskv_shutdown_service(kvcl, svr_addr);
+        sdskv_provider_handle_release(kvph);
+        margo_addr_free(mid, svr_addr);
+        sdskv_client_finalize(kvcl);
+        margo_finalize(mid);
+        return -1;
+    }
     if(ret != 0) {
         fprintf(stderr, "Error: sdskv_get_packed() failed\n");
         sdskv_shutdown_service(kvcl, svr_addr);
