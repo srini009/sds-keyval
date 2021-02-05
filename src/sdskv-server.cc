@@ -34,7 +34,11 @@ struct sdskv_server_context_t
 
 #ifdef USE_SYMBIOMON
     symbiomon_provider_t metric_provider;
+    uint8_t provider_id;
     symbiomon_metric_t put_latency;
+    symbiomon_metric_t put_packed_latency;
+    symbiomon_metric_t put_packed_batch_size;
+    symbiomon_metric_t put_packed_data_size;
 #endif
 
 #ifdef USE_REMI
@@ -361,6 +365,7 @@ extern "C" int sdskv_provider_register(
 #ifdef USE_SYMBIOMON
     /* Set the SYMBIOMON metric provider to NULL */
     tmp_svr_ctx->metric_provider = NULL;
+    tmp_svr_ctx->provider_id = provider_id;
 #endif
 
     /* install the bake server finalize callback */
@@ -378,10 +383,15 @@ extern "C" int sdskv_provider_set_symbiomon(sdskv_provider_t provider, symbiomon
     provider->metric_provider = metric_provider;
 
     fprintf(stderr, "Successfully set the SYMBIOMON provider\n");
-    symbiomon_taglist_t taglist;
-
+    symbiomon_taglist_t taglist, taglist2, taglist3, taglist4;
     symbiomon_taglist_create(&taglist, 1, "dummytag");
+    symbiomon_taglist_create(&taglist2, 1, "dummytag1");
+    symbiomon_taglist_create(&taglist3, 1, "dummytag2");
+    symbiomon_taglist_create(&taglist4, 1, "dummytag3");
     symbiomon_metric_create("sdskv", "put_latency", SYMBIOMON_TYPE_TIMER, "sdskv:put latency in seconds", taglist, &provider->put_latency, provider->metric_provider);
+    symbiomon_metric_create("sdskv", "put_packed_latency", SYMBIOMON_TYPE_TIMER, "sdskv:put_packed latency in seconds", taglist2, &provider->put_packed_latency, provider->metric_provider);
+    symbiomon_metric_create("sdskv", "put_packed_batch_size", SYMBIOMON_TYPE_GAUGE, "sdskv:put_packed_batch_size", taglist3, &provider->put_packed_batch_size, provider->metric_provider);
+    symbiomon_metric_create("sdskv", "put_packed_data_size", SYMBIOMON_TYPE_GAUGE, "sdskv:put_packed_data_size", taglist3, &provider->put_packed_data_size, provider->metric_provider);
 
     return SDSKV_SUCCESS;
 }
@@ -389,6 +399,20 @@ extern "C" int sdskv_provider_set_symbiomon(sdskv_provider_t provider, symbiomon
 
 extern "C" int sdskv_provider_destroy(sdskv_provider_t provider)
 {
+
+#ifdef USE_SYMBIOMON
+    fprintf(stderr, "SDSKV provider destroy invoked\n");
+    int pid = getpid();
+    char * pid_s = (char*)malloc(20);
+    char * pid_bs = (char*)malloc(20);
+    char * pid_ds = (char*)malloc(20);
+    sprintf(pid_s, "putpacked_latency_%d_%d", pid, provider->provider_id);
+    sprintf(pid_bs, "batch_size_%d_%d", pid, provider->provider_id);
+    sprintf(pid_ds, "data_size_%d_%d", pid, provider->provider_id);
+    symbiomon_metric_dump_raw_data(provider->put_packed_latency, pid_s);
+    symbiomon_metric_dump_raw_data(provider->put_packed_batch_size, pid_bs);
+    symbiomon_metric_dump_raw_data(provider->put_packed_data_size, pid_ds);
+#endif
     margo_provider_pop_finalize_callback(provider->mid, provider);
     sdskv_server_finalize_cb(provider);
     return SDSKV_SUCCESS;
@@ -868,6 +892,8 @@ static void sdskv_put_packed_ult(hg_handle_t handle)
     std::vector<char> local_buffer;
     hg_bulk_t local_bulk_handle;
     hg_addr_t origin_addr = HG_ADDR_NULL;
+    double start, end;
+    start = ABT_get_wtime();
 
     auto r1 = at_exit([&handle]() { margo_destroy(handle); });
     auto r2 = at_exit([&handle,&out]() { margo_respond(handle, &out); });
@@ -939,13 +965,24 @@ static void sdskv_put_packed_ult(hg_handle_t handle)
     /* interpret buffer as list of keys */
     char* packed_keys = (char*)(val_sizes + in.num_keys);
     /* compute the size of part of the buffer that contain keys */
-    size_t k=0;
+    size_t k=0, v = 0;
     for(unsigned i=0; i < in.num_keys; i++) k += key_sizes[i];
     /* interpret the rest of the buffer as list of values */
     char* packed_vals = packed_keys + k;
+    for(unsigned i=0; i < in.num_keys; i++) v += val_sizes[i];
 
+    double data_size = (double)v+k;
     /* insert key/vals into the DB */
     out.ret = db->put_packed(in.num_keys, packed_keys, key_sizes, packed_vals, val_sizes);
+    end = ABT_get_wtime();
+#ifdef USE_SYMBIOMON
+    symbiomon_metric_update(svr_ctx->put_packed_latency, (end-start));
+    symbiomon_metric_update(svr_ctx->put_packed_batch_size, (double)in.num_keys);
+    symbiomon_metric_update(svr_ctx->put_packed_data_size, (double)data_size);
+    fprintf(stderr, "Put packed latency: %lf\n", end-start);
+    fprintf(stderr, "Put packed batch size: %u\n", in.num_keys);
+    fprintf(stderr, "Put packed data size: %lf\n", data_size);
+#endif 
 
     return;
 }
