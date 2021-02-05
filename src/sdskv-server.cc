@@ -2284,6 +2284,7 @@ static void sdskv_list_keyvals_ult(hg_handle_t handle)
     hg_bulk_t vals_local_bulk   = HG_BULK_NULL;
     double start, end;
     size_t true_data_size;
+    size_t true_num_keys;
 
     out.ret     = SDSKV_SUCCESS;
     out.nkeys   = 0;
@@ -2502,6 +2503,8 @@ static void sdskv_list_keyvals_ult(hg_handle_t handle)
         }
 
         out.ret = SDSKV_SUCCESS;
+        true_data_size = keys_bulk_size + vals_bulk_size;
+        true_num_keys = num_keys;
 
     } catch(int exc_no) {
         out.ret = exc_no;
@@ -2516,14 +2519,13 @@ static void sdskv_list_keyvals_ult(hg_handle_t handle)
     margo_destroy(handle); 
 
     end = ABT_get_wtime();
-    true_data_size = keys_bulk_size + vals_bulk_size;
 #ifdef USE_SYMBIOMON
     symbiomon_metric_update(svr_ctx->listkeyvals_latency, (end-start));
     symbiomon_metric_update(svr_ctx->listkeyvals_data_size, (double)true_data_size);
-    symbiomon_metric_update(svr_ctx->listkeyvals_batch_size, (double)num_keys);
+    symbiomon_metric_update(svr_ctx->listkeyvals_batch_size, (double)true_num_keys);
     fprintf(stderr, "List keyvals latency: %lf\n", end-start);
     fprintf(stderr, "List keyvals data size: %lu\n", true_data_size);
-    fprintf(stderr, "List keyvals num keys: %lu\n", num_keys);
+    fprintf(stderr, "List keyvals num keys: %lu\n", true_num_keys);
 #endif 
 
     return;
