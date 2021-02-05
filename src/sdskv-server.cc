@@ -39,6 +39,9 @@ struct sdskv_server_context_t
     symbiomon_metric_t put_packed_latency;
     symbiomon_metric_t put_packed_batch_size;
     symbiomon_metric_t put_packed_data_size;
+    symbiomon_metric_t listkeyvals_latency;
+    symbiomon_metric_t listkeyvals_batch_size;
+    symbiomon_metric_t listkeyvals_data_size;
 #endif
 
 #ifdef USE_REMI
@@ -390,8 +393,11 @@ extern "C" int sdskv_provider_set_symbiomon(sdskv_provider_t provider, symbiomon
     symbiomon_taglist_create(&taglist4, 1, "dummytag3");
     symbiomon_metric_create("sdskv", "put_latency", SYMBIOMON_TYPE_TIMER, "sdskv:put latency in seconds", taglist, &provider->put_latency, provider->metric_provider);
     symbiomon_metric_create("sdskv", "put_packed_latency", SYMBIOMON_TYPE_TIMER, "sdskv:put_packed latency in seconds", taglist2, &provider->put_packed_latency, provider->metric_provider);
+    symbiomon_metric_create("sdskv", "listkeyvals_latency", SYMBIOMON_TYPE_TIMER, "sdskv:listkeyvals latency in seconds", taglist2, &provider->listkeyvals_latency, provider->metric_provider);
     symbiomon_metric_create("sdskv", "put_packed_batch_size", SYMBIOMON_TYPE_GAUGE, "sdskv:put_packed_batch_size", taglist3, &provider->put_packed_batch_size, provider->metric_provider);
     symbiomon_metric_create("sdskv", "put_packed_data_size", SYMBIOMON_TYPE_GAUGE, "sdskv:put_packed_data_size", taglist3, &provider->put_packed_data_size, provider->metric_provider);
+    symbiomon_metric_create("sdskv", "listkeyvals_batch_size", SYMBIOMON_TYPE_GAUGE, "sdskv:listkeyvals_batch_size", taglist3, &provider->listkeyvals_batch_size, provider->metric_provider);
+    symbiomon_metric_create("sdskv", "listkeyvals_data_size", SYMBIOMON_TYPE_GAUGE, "sdskv:listkeyvals_data_size", taglist3, &provider->listkeyvals_data_size, provider->metric_provider);
 
     return SDSKV_SUCCESS;
 }
@@ -406,12 +412,21 @@ extern "C" int sdskv_provider_destroy(sdskv_provider_t provider)
     char * pid_s = (char*)malloc(20);
     char * pid_bs = (char*)malloc(20);
     char * pid_ds = (char*)malloc(20);
-    sprintf(pid_s, "putpacked_latency_%d_%d", pid, provider->provider_id);
-    sprintf(pid_bs, "batch_size_%d_%d", pid, provider->provider_id);
-    sprintf(pid_ds, "data_size_%d_%d", pid, provider->provider_id);
+    char * pid_lkvl = (char*)malloc(20);
+    char * pid_lkvds = (char*)malloc(20);
+    char * pid_lkvbs = (char*)malloc(20);
+    sprintf(pid_s, "sdskv_putpacked_latency_%d_%d", pid, provider->provider_id);
+    sprintf(pid_bs, "sdskv_putpacked_batch_size_%d_%d", pid, provider->provider_id);
+    sprintf(pid_ds, "sdskv_putpacked_data_size_%d_%d", pid, provider->provider_id);
+    sprintf(pid_lkvl, "sdskv_listkeyvals_latency_%d_%d", pid, provider->provider_id);
+    sprintf(pid_lkvbs, "sdskv_listkeyvals_batch_size_%d_%d", pid, provider->provider_id);
+    sprintf(pid_lkvds, "sdskv_listkeyvals_data_size_%d_%d", pid, provider->provider_id);
     symbiomon_metric_dump_raw_data(provider->put_packed_latency, pid_s);
     symbiomon_metric_dump_raw_data(provider->put_packed_batch_size, pid_bs);
     symbiomon_metric_dump_raw_data(provider->put_packed_data_size, pid_ds);
+    symbiomon_metric_dump_raw_data(provider->listkeyvals_latency, pid_lkvl);
+    symbiomon_metric_dump_raw_data(provider->listkeyvals_batch_size, pid_lkvbs);
+    symbiomon_metric_dump_raw_data(provider->listkeyvals_data_size, pid_lkvds);
 #endif
     margo_provider_pop_finalize_callback(provider->mid, provider);
     sdskv_server_finalize_cb(provider);
@@ -2267,10 +2282,13 @@ static void sdskv_list_keyvals_ult(hg_handle_t handle)
     hg_bulk_t keys_local_bulk   = HG_BULK_NULL;
     hg_bulk_t vsizes_local_bulk = HG_BULK_NULL;
     hg_bulk_t vals_local_bulk   = HG_BULK_NULL;
+    double start, end;
+    size_t true_data_size;
 
     out.ret     = SDSKV_SUCCESS;
     out.nkeys   = 0;
 
+    start = ABT_get_wtime();
     /* get the provider handling this request */
     margo_instance_id mid = margo_hg_handle_get_instance(handle);
     assert(mid);
@@ -2496,6 +2514,17 @@ static void sdskv_list_keyvals_ult(hg_handle_t handle)
     margo_respond(handle, &out);
     margo_free_input(handle, &in);
     margo_destroy(handle); 
+
+    end = ABT_get_wtime();
+    true_data_size = keys_bulk_size + vals_bulk_size;
+#ifdef USE_SYMBIOMON
+    symbiomon_metric_update(svr_ctx->listkeyvals_latency, (end-start));
+    symbiomon_metric_update(svr_ctx->listkeyvals_data_size, (double)true_data_size);
+    symbiomon_metric_update(svr_ctx->listkeyvals_batch_size, (double)num_keys);
+    fprintf(stderr, "List keyvals latency: %lf\n", end-start);
+    fprintf(stderr, "List keyvals data size: %lu\n", true_data_size);
+    fprintf(stderr, "List keyvals num keys: %lu\n", num_keys);
+#endif 
 
     return;
 }
