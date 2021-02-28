@@ -36,6 +36,7 @@ struct sdskv_server_context_t
     symbiomon_provider_t metric_provider;
     uint8_t provider_id;
     symbiomon_metric_t put_latency;
+    symbiomon_metric_t put_num_entrants;
     symbiomon_metric_t put_packed_latency;
     symbiomon_metric_t put_packed_batch_size;
     symbiomon_metric_t put_packed_data_size;
@@ -399,6 +400,7 @@ extern "C" int sdskv_provider_set_symbiomon(sdskv_provider_t provider, symbiomon
     symbiomon_metric_create("sdskv", "put_packed_data_size", SYMBIOMON_TYPE_GAUGE, "sdskv:put_packed_data_size", taglist3, &provider->put_packed_data_size, provider->metric_provider);
     symbiomon_metric_create("sdskv", "listkeyvals_batch_size", SYMBIOMON_TYPE_GAUGE, "sdskv:listkeyvals_batch_size", taglist3, &provider->listkeyvals_batch_size, provider->metric_provider);
     symbiomon_metric_create("sdskv", "listkeyvals_data_size", SYMBIOMON_TYPE_GAUGE, "sdskv:listkeyvals_data_size", taglist3, &provider->listkeyvals_data_size, provider->metric_provider);
+    symbiomon_metric_create("sdskv", "put_num_entrants", SYMBIOMON_TYPE_GAUGE, "sdskv:put_num_entrants", taglist3, &provider->put_num_entrants, provider->metric_provider);
     symbiomon_metric_create("sdskv", "putpacked_num_entrants", SYMBIOMON_TYPE_GAUGE, "sdskv:putpacked_num_entrants", taglist3, &provider->putpacked_num_entrants, provider->metric_provider);
 
     return SDSKV_SUCCESS;
@@ -418,20 +420,23 @@ extern "C" int sdskv_provider_destroy(sdskv_provider_t provider)
     char * pid_lkvds = (char*)malloc(40);
     char * pid_lkvbs = (char*)malloc(40);
     char * pid_ne = (char*)malloc(40);
+    char * pid_pne = (char*)malloc(40);
     sprintf(pid_s, "sdskv_putpacked_latency_%d_%d", pid, provider->provider_id);
     sprintf(pid_bs, "sdskv_putpacked_batch_size_%d_%d", pid, provider->provider_id);
     sprintf(pid_ds, "sdskv_putpacked_data_size_%d_%d", pid, provider->provider_id);
     sprintf(pid_lkvl, "sdskv_listkeyvals_latency_%d_%d", pid, provider->provider_id);
     sprintf(pid_lkvbs, "sdskv_listkeyvals_batch_size_%d_%d", pid, provider->provider_id);
     sprintf(pid_lkvds, "sdskv_listkeyvals_data_size_%d_%d", pid, provider->provider_id);
-    sprintf(pid_lkvds, "sdskv_putpacked_num_entrants_%d_%d", pid, provider->provider_id);
+    sprintf(pid_pne, "sdskv_putpacked_num_entrants_%d_%d", pid, provider->provider_id);
+    sprintf(pid_ne, "sdskv_put_num_entrants_%d_%d", pid, provider->provider_id);
     symbiomon_metric_dump_raw_data(provider->put_packed_latency, pid_s);
     symbiomon_metric_dump_raw_data(provider->put_packed_batch_size, pid_bs);
     symbiomon_metric_dump_raw_data(provider->put_packed_data_size, pid_ds);
     symbiomon_metric_dump_raw_data(provider->listkeyvals_latency, pid_lkvl);
     symbiomon_metric_dump_raw_data(provider->listkeyvals_batch_size, pid_lkvbs);
     symbiomon_metric_dump_raw_data(provider->listkeyvals_data_size, pid_lkvds);
-    symbiomon_metric_dump_raw_data(provider->putpacked_num_entrants, pid_ne);
+    symbiomon_metric_dump_raw_data(provider->put_num_entrants, pid_ne);
+    symbiomon_metric_dump_raw_data(provider->putpacked_num_entrants, pid_pne);
 #endif
     margo_provider_pop_finalize_callback(provider->mid, provider);
     sdskv_server_finalize_cb(provider);
@@ -786,11 +791,16 @@ static void sdskv_put_ult(hg_handle_t handle)
     ds_bulk_t kdata(in.key.data, in.key.data+in.key.size);
     ds_bulk_t vdata(in.value.data, in.value.data+in.value.size);
 
+#ifdef USE_SYMBIOMON
+    symbiomon_metric_update_gauge_by_fixed_amount(svr_ctx->put_num_entrants, 1);
+#endif
+
     out.ret = db->put(kdata, vdata);
 
     double end = ABT_get_wtime();
 
 #ifdef USE_SYMBIOMON
+    symbiomon_metric_update_gauge_by_fixed_amount(svr_ctx->put_num_entrants, -1);
     symbiomon_metric_update(svr_ctx->put_latency, (end-start));
     fprintf(stderr, "Put value: %lf\n", end-start);
 #endif 
