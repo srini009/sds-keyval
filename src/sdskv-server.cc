@@ -434,7 +434,7 @@ extern "C" int sdskv_provider_destroy(sdskv_provider_t provider)
     sprintf(pid_pne, "sdskv_putpacked_num_entrants_%d_%d", pid, provider->provider_id);
     sprintf(pid_ne, "sdskv_put_num_entrants_%d_%d", pid, provider->provider_id);
     sprintf(pid_pds, "sdskv_put_data_size_%d_%d", pid, provider->provider_id);
-    sprintf(pid_pds, "sdskv_put_latency_%d_%d", pid, provider->provider_id);
+    sprintf(pid_pl, "sdskv_put_latency_%d_%d", pid, provider->provider_id);
     symbiomon_metric_dump_raw_data(provider->put_packed_latency, pid_s);
     symbiomon_metric_dump_raw_data(provider->put_packed_batch_size, pid_bs);
     symbiomon_metric_dump_raw_data(provider->put_packed_data_size, pid_ds);
