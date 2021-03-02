@@ -167,6 +167,7 @@ class PutBenchmark : public AbstractAccessBenchmark {
         // generate key/value pairs and store them in the local
         m_keys.reserve(m_num_entries);
         m_vals.reserve(m_num_entries);
+        fprintf(stderr, "Num entries is: %d\n", m_num_entries);
         for(unsigned i=0; i < m_num_entries; i++) {
             size_t ksize = m_key_size_range.first + (rand() % (m_key_size_range.second - m_key_size_range.first));
             m_keys.push_back(gen_random_string(ksize));
