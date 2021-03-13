@@ -375,7 +375,8 @@ extern "C" int sdskv_provider_register(
 #endif
 
     /* install the bake server finalize callback */
-    margo_provider_push_finalize_callback(mid, tmp_svr_ctx, &sdskv_server_finalize_cb, tmp_svr_ctx);
+    //margo_provider_push_finalize_callback(mid, tmp_svr_ctx, &sdskv_server_finalize_cb, tmp_svr_ctx);
+    margo_provider_push_finalize_callback(mid, tmp_svr_ctx, &sdskv_provider_destroy, tmp_svr_ctx);
 
     if(provider != SDSKV_PROVIDER_IGNORE)
         *provider = tmp_svr_ctx;
