@@ -5,6 +5,7 @@
 
 #include <map>
 #include <cstring>
+#include <iostream>
 #include "kv-config.h"
 #include "bulk.h"
 #include "datastore/datastore.h"
@@ -56,6 +57,7 @@ class MapDataStore : public AbstractDataStore {
         virtual int put(const ds_bulk_t &key, const ds_bulk_t &data) override {
             ABT_rwlock_wrlock(_map_lock);
             auto x = _map.count(key);
+            std::cout << "Map contains: " << x << " elements " << std::endl;
             if(_no_overwrite && (x != 0)) {
                 ABT_rwlock_unlock(_map_lock);
                 return SDSKV_ERR_KEYEXISTS;
