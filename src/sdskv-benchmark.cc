@@ -174,7 +174,6 @@ class PutBenchmark : public AbstractAccessBenchmark {
             size_t vsize = m_val_size_range.first + (rand() % (m_val_size_range.second - m_val_size_range.first));
             m_vals.push_back(gen_random_string(vsize));
         }
-	fprintf(stderr, "Setup complete.\n");
     }
 
     virtual void execute() override {
