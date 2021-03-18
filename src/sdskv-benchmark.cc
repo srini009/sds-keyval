@@ -165,16 +165,16 @@ class PutBenchmark : public AbstractAccessBenchmark {
 
     virtual void setup() override {
         // generate key/value pairs and store them in the local
-        m_keys.reserve(m_num_entries*100000);
-        m_vals.reserve(m_num_entries*100000);
-        fprintf(stderr, "Num entries is: %d\n", m_num_entries);
+        //m_keys.reserve(m_num_entries*100000);
+        //m_vals.reserve(m_num_entries*100000);
+        //fprintf(stderr, "Num entries is: %d\n", m_num_entries);
         for(unsigned i=0; i < m_num_entries; i++) {
-            fprintf(stderr, "At entry: %d\n", i);
             size_t ksize = m_key_size_range.first + (rand() % (m_key_size_range.second - m_key_size_range.first));
             m_keys.push_back(gen_random_string(ksize));
             size_t vsize = m_val_size_range.first + (rand() % (m_val_size_range.second - m_val_size_range.first));
             m_vals.push_back(gen_random_string(vsize));
         }
+	fprintf(stderr, "Setup complete.\n");
     }
 
     virtual void execute() override {
