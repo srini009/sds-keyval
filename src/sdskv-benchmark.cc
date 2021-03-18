@@ -860,7 +860,6 @@ static void run_client(MPI_Comm comm, Json::Value& config) {
         for(unsigned i = 0; i < benchmarks.size(); i++) {
             auto& bench  = benchmarks[i];
             unsigned rep = repetitions[i];
-            fprintf(stderr, "Rep here is: %d\n", rep);
             // reset the RNG
             srand(seed + rank*1789);
             std::vector<double> local_timings(rep);
