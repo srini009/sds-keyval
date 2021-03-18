@@ -726,8 +726,6 @@ static void sdskv_put_ult(hg_handle_t handle)
     put_in_t in;
     put_out_t out;
 
-    double start = ABT_get_wtime();
-
     margo_instance_id mid = margo_hg_handle_get_instance(handle);
     assert(mid);
     const struct hg_info* info = margo_get_info(handle);
@@ -766,6 +764,8 @@ static void sdskv_put_ult(hg_handle_t handle)
 
     ds_bulk_t kdata(in.key.data, in.key.data+in.key.size);
     ds_bulk_t vdata(in.value.data, in.value.data+in.value.size);
+
+    double start = ABT_get_wtime();
 
 #ifdef USE_SYMBIOMON
     symbiomon_metric_update_gauge_by_fixed_amount(svr_ctx->put_num_entrants, 1);
