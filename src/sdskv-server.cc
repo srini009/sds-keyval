@@ -766,6 +766,7 @@ static void sdskv_put_ult(hg_handle_t handle)
     ds_bulk_t vdata(in.value.data, in.value.data+in.value.size);
 
     double start = ABT_get_wtime();
+    fprintf(stderr, "Do I get here bro??\n");
 
 #ifdef USE_SYMBIOMON
     symbiomon_metric_update_gauge_by_fixed_amount(svr_ctx->put_num_entrants, 1);
