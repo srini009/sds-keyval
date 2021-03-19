@@ -1802,6 +1802,7 @@ static void sdskv_bulk_put_ult(hg_handle_t handle)
 
     ds_bulk_t kdata(in.key.data, in.key.data+in.key.size);
 
+fprintf(stderr, "No ways brother...\n");
     out.ret = db->put(kdata, vdata);
 
     margo_respond(handle, &out);
