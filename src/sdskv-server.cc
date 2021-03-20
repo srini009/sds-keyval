@@ -1814,7 +1814,7 @@ static void sdskv_bulk_put_ult(hg_handle_t handle)
 #ifdef USE_SYMBIOMON
     symbiomon_metric_update_gauge_by_fixed_amount(svr_ctx->put_num_entrants, -1);
     symbiomon_metric_update(svr_ctx->put_latency, (end-start));
-    symbiomon_metric_update(svr_ctx->put_data_size, (double)(in.key.size+in.value.size));
+    symbiomon_metric_update(svr_ctx->put_data_size, (double)(in.key.size+in.vsize));
     fprintf(stderr, "Put value: %lf, and data size: %lu\n", end-start, in.key.size+in.vsize);
 #endif 
 
