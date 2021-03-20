@@ -873,6 +873,7 @@ static void sdskv_put_multi_ult(hg_handle_t handle)
     /* interpret beginning of the value buffer as a list of value sizes */
     hg_size_t* val_sizes = (hg_size_t*)local_vals_buffer.data();
 
+    size_t tot_key_size, tot_val_size = 0;
     /* go through the key/value pairs and insert them */
     uint64_t keys_offset = sizeof(hg_size_t)*in.num_keys;
     uint64_t vals_offset = sizeof(hg_size_t)*in.num_keys;
@@ -883,8 +884,24 @@ static void sdskv_put_multi_ult(hg_handle_t handle)
         vptrs[i] = val_sizes[i] == 0 ? nullptr : local_vals_buffer.data()+vals_offset;
         keys_offset += key_sizes[i];
         vals_offset += val_sizes[i];
+	tot_key_size += key_sizes[i];
+	tot_val_size += val_sizes[i];
     }
+
+    double start = ABT_get_wtime();
+    double end;
+
+#ifdef USE_SYMBIOMON
+    symbiomon_metric_update_gauge_by_fixed_amount(svr_ctx->putpacked_num_entrants, 1);
+#endif
     out.ret = db->put_multi(in.num_keys, kptrs.data(), key_sizes, vptrs.data(), val_sizes);
+    end = ABT_get_wtime();
+#ifdef USE_SYMBIOMON
+    symbiomon_metric_update_gauge_by_fixed_amount(svr_ctx->putpacked_num_entrants, -1);
+    symbiomon_metric_update(svr_ctx->put_packed_latency, (end-start));
+    symbiomon_metric_update(svr_ctx->put_packed_batch_size, (double)in.num_keys);
+    symbiomon_metric_update(svr_ctx->put_packed_data_size, (double)tot_key_size+tot_val_size);
+#endif 
 
     return;
 }
@@ -900,7 +917,6 @@ static void sdskv_put_packed_ult(hg_handle_t handle)
     hg_bulk_t local_bulk_handle;
     hg_addr_t origin_addr = HG_ADDR_NULL;
     double start, end;
-    start = ABT_get_wtime();
 
     auto r1 = at_exit([&handle]() { margo_destroy(handle); });
     auto r2 = at_exit([&handle,&out]() { margo_respond(handle, &out); });
@@ -980,6 +996,7 @@ static void sdskv_put_packed_ult(hg_handle_t handle)
 
     double data_size = (double)v+k;
     /* insert key/vals into the DB */
+    start = ABT_get_wtime();
 #ifdef USE_SYMBIOMON
     symbiomon_metric_update_gauge_by_fixed_amount(svr_ctx->putpacked_num_entrants, 1);
 #endif
