@@ -263,6 +263,76 @@ class PutMultiBenchmark : public PutBenchmark {
 REGISTER_BENCHMARK("put-multi", PutMultiBenchmark);
 
 /**
+ * PutPacked inherites from PutBenchmark and does the same but
+ * executes a PUT-MULTI (in place of a PUT-PACKED) instead of a PUT.
+ */
+class PutPackedBenchmark : public PutBenchmark {
+    
+    protected:
+
+    size_t m_batch_size;
+    std::vector<hg_size_t>   m_ksizes;
+    std::vector<const void*> m_kptrs;
+    std::vector<hg_size_t>   m_vsizes;
+    std::vector<const void*> m_vptrs;
+
+    public:
+
+    template<typename ... T>
+    PutPackedBenchmark(Json::Value& config, T&& ... args)
+    : PutBenchmark(config, std::forward<T>(args)...) {
+        m_batch_size = config.get("max-batch-size", m_num_entries).asUInt();
+    }
+
+    virtual void setup() override {
+	    //Nothing to do
+    }
+
+    virtual void execute() override {
+        auto& db = remoteDatabase();
+        size_t remaining = m_num_entries;
+	for(unsigned i = 10; i < m_batch_size, i+=10) {
+		m_ksizes.resize(i);
+		m_kptrs.resize(i);
+		m_vsizes.resize(i);
+		m_vptrs.resize(i);
+		for(unsigned j = m_key_size_range.first; j < m_key_size_range.second, j+=50) {
+			m_keys.reserve(2*j*i);
+			m_vals.reserve(2*j*i);
+			for(unsigned k = 0; k < i; k++) {
+				m_keys.push_back(gen_random_string(j));
+				m_vals.push_back(gen_random_string(j));
+			}
+			for(unsigned k = 0; k < i; k++) {
+				 m_ksizes[k] = m_keys[k].size();
+				 m_kptrs[k] = m_keys[k].data();
+				 m_vsizes[k] = m_vals[k].size();
+				 m_vptrs[k]  = m_vals[k].data();
+			}
+			db.put_multi(m_kptrs, m_ksizes, m_vptrs, m_vsizes);
+			fprintf(stderr, "Batch size: %d and per-kv-size: %d\n", i, j*2);
+			m_keys.resize(0);
+			m_vals.resize(0);
+		}
+		m_ksizes.resize(0); m_ksizes.shrink_to_fit();
+		m_kptrs.resize(0);  m_kptrs.shrink_to_fit();
+		m_vsizes.resize(0); m_vsizes.shrink_to_fit();
+		m_vptrs.resize(0);  m_vptrs.shrink_to_fit();
+
+        }
+    }
+
+    virtual void teardown() override {
+        PutBenchmark::teardown();
+        m_ksizes.resize(0); m_ksizes.shrink_to_fit();
+        m_kptrs.resize(0);  m_kptrs.shrink_to_fit();
+        m_vsizes.resize(0); m_vsizes.shrink_to_fit();
+        m_vptrs.resize(0);  m_vptrs.shrink_to_fit();
+    }
+};
+REGISTER_BENCHMARK("put-packed", PutPackedBenchmark);
+
+/**
  * GetBenchmark executes a series of GET operations and measures their duration.
  */
 class GetBenchmark : public AbstractAccessBenchmark {
