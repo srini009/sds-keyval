@@ -296,7 +296,7 @@ class PutPackedBenchmark : public PutBenchmark {
 		m_kptrs.resize(i);
 		m_vsizes.resize(i);
 		m_vptrs.resize(i);
-		for(unsigned j = m_key_size_range.first; j < m_key_size_range.second; j+=50) {
+		for(unsigned j = m_key_size_range.first; j < m_key_size_range.second; j+=20) {
 			m_keys.reserve(2*j*i);
 			m_vals.reserve(2*j*i);
 			for(unsigned k = 0; k < i; k++) {
