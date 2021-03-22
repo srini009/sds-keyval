@@ -291,7 +291,7 @@ class PutPackedBenchmark : public PutBenchmark {
     virtual void execute() override {
         auto& db = remoteDatabase();
         size_t remaining = m_num_entries;
-	for(unsigned i = 10; i < m_batch_size; i+=15) {
+	for(unsigned i = 10; i < m_batch_size; i+=5) {
 		m_ksizes.resize(i);
 		m_kptrs.resize(i);
 		m_vsizes.resize(i);
