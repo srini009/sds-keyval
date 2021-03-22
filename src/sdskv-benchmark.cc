@@ -291,12 +291,12 @@ class PutPackedBenchmark : public PutBenchmark {
     virtual void execute() override {
         auto& db = remoteDatabase();
         size_t remaining = m_num_entries;
-	for(unsigned i = 10; i < m_batch_size; i+=10) {
+	for(unsigned i = 10; i < m_batch_size; i+=15) {
 		m_ksizes.resize(i);
 		m_kptrs.resize(i);
 		m_vsizes.resize(i);
 		m_vptrs.resize(i);
-		for(unsigned j = m_key_size_range.first; j < m_key_size_range.second; j+=20) {
+		for(unsigned j = m_key_size_range.first; j < m_key_size_range.second; j+=30) {
 			m_keys.reserve(2*j*i);
 			m_vals.reserve(2*j*i);
 			for(unsigned k = 0; k < i; k++) {
