@@ -309,7 +309,7 @@ class PutPackedBenchmark : public PutBenchmark {
 				 m_vsizes[k] = m_vals[k].size();
 				 m_vptrs[k]  = m_vals[k].data();
 			}
-			db.put_multi(m_kptrs, m_ksizes, m_vptrs, m_vsizes);
+			db.put_packed(m_kptrs, m_ksizes, m_vptrs, m_vsizes);
 			fprintf(stderr, "Batch size: %d and per-kv-size: %d\n", i, j*2);
 			m_keys.resize(0);
 			m_vals.resize(0);
