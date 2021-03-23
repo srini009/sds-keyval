@@ -275,6 +275,8 @@ class PutPackedBenchmark : public PutBenchmark {
     std::vector<const void*> m_kptrs;
     std::vector<hg_size_t>   m_vsizes;
     std::vector<const void*> m_vptrs;
+    std::string packed_keys;
+    std::string packed_vals;
 
     public:
 
@@ -299,25 +301,32 @@ class PutPackedBenchmark : public PutBenchmark {
 		for(unsigned j = m_key_size_range.first; j < m_key_size_range.second; j+=30) {
 			m_keys.reserve(2*j*i);
 			m_vals.reserve(2*j*i);
+			packed_keys.reserve(2*j*i);
+			packed_vals.reserve(2*j*i);
 			for(unsigned k = 0; k < i; k++) {
-				m_keys.push_back(gen_random_string(j));
-				m_vals.push_back(gen_random_string(j));
+				//m_keys.push_back(gen_random_string(j));
+				//m_vals.push_back(gen_random_string(j));
+				packed_keys.append(gen_random_string(j));
+				packed_vals.append(gen_random_string(j));
 			}
 			for(unsigned k = 0; k < i; k++) {
-				 m_ksizes[k] = m_keys[k].size();
-				 m_kptrs[k] = m_keys[k].data();
-				 m_vsizes[k] = m_vals[k].size();
-				 m_vptrs[k]  = m_vals[k].data();
+				 //m_ksizes[k] = m_keys[k].size();
+				 m_ksizes[k] = j;
+				 //m_kptrs[k] = m_keys[k].data();
+				 //m_vsizes[k] = m_vals[k].size();
+				 m_vsizes[k] = j;
+				 //m_vptrs[k]  = m_vals[k].data();
 			}
-			db.put_packed(m_kptrs, m_ksizes, m_vptrs, m_vsizes);
+			//db.put_packed(m_kptrs, m_ksizes, m_vptrs, m_vsizes);
+			db.put_packed(packed_keys, m_ksizes, packed_vals, m_vsizes);
 			fprintf(stderr, "Batch size: %d and per-kv-size: %d\n", i, j*2);
-			m_keys.resize(0);
-			m_vals.resize(0);
+			//m_keys.resize(0);
+			//m_vals.resize(0);
 		}
 		m_ksizes.resize(0); m_ksizes.shrink_to_fit();
-		m_kptrs.resize(0);  m_kptrs.shrink_to_fit();
+		//m_kptrs.resize(0);  m_kptrs.shrink_to_fit();
 		m_vsizes.resize(0); m_vsizes.shrink_to_fit();
-		m_vptrs.resize(0);  m_vptrs.shrink_to_fit();
+		//m_vptrs.resize(0);  m_vptrs.shrink_to_fit();
 
         }
     }
