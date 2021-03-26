@@ -9,7 +9,9 @@
 #include <unistd.h>
 #include <margo.h>
 #include <sdskv-server.h>
+#ifdef USE_SYMBIOMON
 #include <symbiomon/symbiomon-server.h>
+#endif
 
 typedef enum {
     MODE_DATABASES = 0,
@@ -182,6 +184,7 @@ int main(int argc, char **argv)
                 return(-1);
             }
 
+#ifdef USE_SYMBIOMON
             /* initialize SYMBIOMON */
             struct symbiomon_provider_args args = SYMBIOMON_PROVIDER_ARGS_INIT;
             args.push_finalize_callback = 0;
@@ -194,6 +197,7 @@ int main(int argc, char **argv)
             ret = sdskv_provider_set_symbiomon(provider, metric_provider);
             if(ret != 0)
                 fprintf(stderr, "Error: sdskv_provider_set_symbiomon() failed. Contuinuing on.\n");
+#endif
             
             char* path = opts.db_names[i];
             char* x = strrchr(path, '/');
@@ -237,6 +241,8 @@ int main(int argc, char **argv)
             margo_finalize(mid);                                    
             return(-1);
         }
+
+#ifdef USE_SYMBIOMON
         /* initialize SYMBIOMON */
         struct symbiomon_provider_args args = SYMBIOMON_PROVIDER_ARGS_INIT;
         args.push_finalize_callback = 0;
@@ -250,6 +256,7 @@ int main(int argc, char **argv)
         ret = sdskv_provider_set_symbiomon(provider, metric_provider);
         if(ret != 0)
             fprintf(stderr, "Error: sdskv_provider_set_symbiomon() failed. Contuinuing on.\n");
+#endif
 
         for(i=0; i < opts.num_db; i++) {
             sdskv_database_id_t db_id;
