@@ -6,6 +6,7 @@ CLIENT_LiBS=@CLIENT_LIBS@
 AM_CPPFLAGS = -I${srcdir}/src -I${srcdir}/include
 
 bin_PROGRAMS = bin/sdskv-server-daemon 	    \
+	       bin/sdskv-aggr-service	    \
 	       bin/sdskv-shutdown
 
 if BUILD_BENCHMARK
@@ -33,6 +34,10 @@ bin_sdskv_server_daemon_DEPENDENCIES = lib/libsdskv-server.la
 bin_sdskv_server_daemon_LDFLAGS = -Llib -lsdskv-server
 bin_sdskv_server_daemon_LDADD = ${LIBS} -lsdskv-server ${SERVER_LIBS}
 
+bin_sdskv_aggr_service_SOURCES = src/sdskv-aggr-service.cc
+bin_sdskv_aggr_service_DEPENDENCIES = lib/libsdskv-server.la
+bin_sdskv_aggr_service_LDFLAGS = -Llib -lsdskv-server
+bin_sdskv_aggr_service_LDADD = ${LIBS} -lsdskv-server ${SERVER_LIBS}
 
 bin_sdskv_shutdown_SOURCES = src/sdskv-shutdown.c
 bin_sdskv_shutdown_DEPENDENCIES = lib/libsdskv-client.la
