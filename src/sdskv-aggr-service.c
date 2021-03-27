@@ -162,7 +162,7 @@ int main(int argc, char **argv)
 
         // Exchange addresses
         char * addresses_buf = (char*)malloc(128*size);
-        int ret = MPI_Gather(self_addr_str, self_addr_str_sz, MPI_CHAR, addresses_buf, 128, MPI_CHAR, 0, MPI_COMM_WORLD);
+        int ret = MPI_Gather(self_addr_str, self_addr_str_sz, MPI_CHAR, addresses_buf, 128*size, MPI_CHAR, 0, MPI_COMM_WORLD);
 
         if(!rank) {
             fp = fopen(opts.host_file, "w");
