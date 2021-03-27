@@ -5,10 +5,12 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <assert.h>
 #include <unistd.h>
 #include <margo.h>
 #include <sdskv-server.h>
+#include <mpi.h>
 
 typedef enum {
     MODE_DATABASES = 0,
