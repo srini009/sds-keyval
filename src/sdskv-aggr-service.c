@@ -174,6 +174,7 @@ int main(int argc, char **argv)
             }
  
             fprintf(fp, "%s\n", addresses_buf);
+	    fflush(fp);
 
             fclose(fp);
         }
