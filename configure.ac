@@ -232,6 +232,8 @@ if test "$enable_benchmark" = "yes"; then
         CFLAGS="$JSONCPP_CFLAGS $CFLAGS"
 fi
 
+AM_CONDITIONAL(BUILD_AGGR_SERVICE, test x$enable_aggr_service = xyes)
+
 SERVER_LIBS="$SERVER_LIBS_PKG $SERVER_LIBS_EXT -lstdc++"
 
 AC_SUBST(SERVER_LIBS)

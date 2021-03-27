@@ -34,10 +34,12 @@ bin_sdskv_server_daemon_DEPENDENCIES = lib/libsdskv-server.la
 bin_sdskv_server_daemon_LDFLAGS = -Llib -lsdskv-server
 bin_sdskv_server_daemon_LDADD = ${LIBS} -lsdskv-server ${SERVER_LIBS}
 
+if BUILD_AGGR_SERVICE
 bin_sdskv_aggr_service_SOURCES = src/sdskv-aggr-service.cc
 bin_sdskv_aggr_service_DEPENDENCIES = lib/libsdskv-server.la
 bin_sdskv_aggr_service_LDFLAGS = -Llib -lsdskv-server
 bin_sdskv_aggr_service_LDADD = ${LIBS} -lsdskv-server ${SERVER_LIBS}
+endif
 
 bin_sdskv_shutdown_SOURCES = src/sdskv-shutdown.c
 bin_sdskv_shutdown_DEPENDENCIES = lib/libsdskv-client.la
