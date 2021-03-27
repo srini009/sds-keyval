@@ -245,7 +245,7 @@ int main(int argc, char **argv)
             sdskv_database_id_t db_id;
             char* path_ = opts.db_names[i];
             char* x = strrchr(path_, '/');
-            char* db_name_ = path_;
+            char* db_name = path_;
             if(x != NULL) {
                 db_name = x+1;
                 *x = '\0';
@@ -253,7 +253,7 @@ int main(int argc, char **argv)
 
 	    char rank_str[20];
 	    itoa(rank, rank_str);
-            char path = (char*)malloc((strlen(path_)+20)*char);
+            char * path = (char*)malloc((strlen(path_)+20)*char);
 	    strcpy(path, path_);	
 	    strcat(path, rank_str);
 
