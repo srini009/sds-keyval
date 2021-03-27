@@ -253,7 +253,7 @@ int main(int argc, char **argv)
             }
 
 	    char rank_str[20];
-	    itoa(rank, rank_str);
+	    sprintf(rank_str, "%d", rank);
             char * path = (char*)malloc((strlen(path_)+20)*sizeof(char));
 	    strcpy(path, path_);	
 	    strcat(path, rank_str);
