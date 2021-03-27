@@ -6,8 +6,11 @@ CLIENT_LiBS=@CLIENT_LIBS@
 AM_CPPFLAGS = -I${srcdir}/src -I${srcdir}/include
 
 bin_PROGRAMS = bin/sdskv-server-daemon 	    \
-	       bin/sdskv-aggr-service	    \
 	       bin/sdskv-shutdown
+
+if BUILD_AGGR_SERVICE
+bin_PROGRAMS += bin/sdskv-aggr-service
+endif
 
 if BUILD_BENCHMARK
 bin_PROGRAMS += bin/sdskv-benchmark
