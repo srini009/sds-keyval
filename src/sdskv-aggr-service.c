@@ -11,6 +11,7 @@
 #include <margo.h>
 #include <sdskv-server.h>
 #include <mpi.h>
+#include <string.h>
 
 typedef enum {
     MODE_DATABASES = 0,
