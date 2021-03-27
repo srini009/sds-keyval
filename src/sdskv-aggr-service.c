@@ -164,23 +164,22 @@ int main(int argc, char **argv)
         char * addresses_buf = (char*)malloc(128*size);
         int ret = MPI_Gather(self_addr_str, self_addr_str_sz-1, MPI_BYTE, addresses_buf, 128, MPI_BYTE, 0, MPI_COMM_WORLD);
 
-        fp = fopen(opts.host_file, "w");
-        if(!fp)
-        {
-            perror("fopen");
-            margo_finalize(mid);
-            return(-1);
-        }
- 
         if(!rank) {
-             fprintf(fp, "%s\n", &addresses_buf[18]);
-        }
+            fp = fopen(opts.host_file, "w");
+            if(!fp)
+            {
+                perror("fopen");
+                margo_finalize(mid);
+                return(-1);
+            }
+ 
+            fprintf(fp, "%s\n", &addresses_buf[18]);
 
-        fclose(fp);
+            fclose(fp);
+        }
 
         margo_addr_free(mid, self_addr);
 
-        fclose(fp);
     }
 
     /* initialize the SDSKV server */
