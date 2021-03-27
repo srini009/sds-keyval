@@ -240,6 +240,7 @@ AC_ARG_ENABLE(aggr_service,
                 *) AC_MSG_ERROR(bad value ${enableval} for --enable-aggr-service) ;;
                esac],
               [enable_aggr_service="no"]
+)
 AM_CONDITIONAL(BUILD_AGGR_SERVICE, test x$enable_aggr_service = xyes)
 
 SERVER_LIBS="$SERVER_LIBS_PKG $SERVER_LIBS_EXT -lstdc++"
