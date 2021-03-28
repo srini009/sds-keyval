@@ -160,24 +160,21 @@ int main(int argc, char **argv)
             return(-1);
         }
 
-        // Exchange addresses
-        //char * addresses_buf = (char*)malloc(128*size);
-        //int ret = MPI_Gather(self_addr_str, self_addr_str_sz, MPI_CHAR, addresses_buf, 128*size, MPI_CHAR, 0, MPI_COMM_WORLD);
-
-        /*if(!rank) {
+        // Write addresses to a file
+        if(!rank) {
             fp = fopen(opts.host_file, "w");
-            if(!fp)
+	    if(!fp)
             {
-                perror("fopen");
-                margo_finalize(mid);
-                return(-1);
-            }
- 
-            fprintf(fp, "%s\n", addresses_buf);
-	    fflush(fp);
+	    	perror("fopen");
+	        margo_finalize(mid);
+	        return(-1);
+	    }
+	    fprintf(fp, "%d\n", size);
+	    fclose(fp);
+	}
 
-            fclose(fp);
-        }*/
+	MPI_Barrier(MPI_COMM_WORLD);
+	    
 	int i = 0;
 	for(i = 0; i < size; i++) {
         	if(rank == i) {
@@ -189,7 +186,7 @@ int main(int argc, char **argv)
 	                return(-1);
 	            }
  
-	            fprintf(fp, "%s\n", self_addr_str);
+	            fprintf(fp, "%s %d\n", self_addr_str, 1);
 		    fflush(fp);
 
 	            fclose(fp);
