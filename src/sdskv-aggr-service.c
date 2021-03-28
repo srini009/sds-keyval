@@ -161,12 +161,10 @@ int main(int argc, char **argv)
         }
 
         // Exchange addresses
-        char * addresses_buf = (char*)malloc(128*size);
-        fprintf(stderr, "Rank %d gets here\n", rank);
-        int ret = MPI_Gather(self_addr_str, self_addr_str_sz, MPI_CHAR, addresses_buf, 128*size, MPI_CHAR, 0, MPI_COMM_WORLD);
-        fprintf(stderr, "Rank %d gets here too\n", rank);
+        //char * addresses_buf = (char*)malloc(128*size);
+        //int ret = MPI_Gather(self_addr_str, self_addr_str_sz, MPI_CHAR, addresses_buf, 128*size, MPI_CHAR, 0, MPI_COMM_WORLD);
 
-        if(!rank) {
+        /*if(!rank) {
             fp = fopen(opts.host_file, "w");
             if(!fp)
             {
@@ -179,7 +177,26 @@ int main(int argc, char **argv)
 	    fflush(fp);
 
             fclose(fp);
-        }
+        }*/
+	int i = 0;
+	for(i = 0; i < size; i++) {
+        	if(rank == i) {
+	            fp = fopen(opts.host_file, "a");
+	            if(!fp)
+        	    {
+	                perror("fopen");
+	                margo_finalize(mid);
+	                return(-1);
+	            }
+ 
+	            fprintf(fp, "%s\n", self_addr_str);
+		    fflush(fp);
+
+	            fclose(fp);
+ 	       }
+	       MPI_Barrier(MPI_COMM_WORLD);
+	}
+         
 
         margo_addr_free(mid, self_addr);
 
