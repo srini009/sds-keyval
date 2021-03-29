@@ -273,6 +273,7 @@ int main(int argc, char **argv)
             char * path = (char*)malloc((strlen(path_)+20)*sizeof(char));
 	    strcpy(path, path_);	
 	    strcat(path, rank_str);
+            fprintf(stderr, "DB name and path: %s %s\n", db_name, path);
 
             sdskv_config_t db_config = {
                 .db_name = db_name,
