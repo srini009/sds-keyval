@@ -234,7 +234,7 @@ int main(int argc, char **argv)
 	                return(-1);
 	            }
  
-	            fprintf(fp, "%s %d %d\n", self_addr_str, 1, db_id);
+	            fprintf(fp, "%s %d %lu\n", self_addr_str, 1, db_id);
 		    fflush(fp);
 
 	            fclose(fp);
