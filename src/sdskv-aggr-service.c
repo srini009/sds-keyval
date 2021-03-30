@@ -166,7 +166,7 @@ int main(int argc, char **argv)
         sdskv_config_t db_config = {
             .db_name = db_name,
             .db_path = (x == NULL ? "" : path),
-            .db_type = opts.db_types[i],
+            .db_type = opts.db_types[0],
             .db_comp_fn_name = SDSKV_COMPARE_DEFAULT,
             .db_no_overwrite = 0
         };
@@ -180,7 +180,7 @@ int main(int argc, char **argv)
             return(-1);
         }
 
-        printf("Provider 0 managing database \"%s\" at multiplex id %d\n", opts.db_names[i] , 1);
+        printf("Provider 0 managing database \"%s\" at multiplex id %d\n", opts.db_names[0] , 1);
     }
 
     if(opts.host_file)
