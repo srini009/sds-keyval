@@ -134,6 +134,55 @@ int main(int argc, char **argv)
 
     margo_enable_remote_shutdown(mid);
 
+    /* initialize the SDSKV server */
+    	int i;
+	sdskv_provider_t provider;
+	ret = sdskv_provider_register(mid, 1,
+                SDSKV_ABT_POOL_DEFAULT,
+                &provider);
+
+        if(ret != 0)
+        {
+            fprintf(stderr, "Error: sdskv_provider_register()\n");
+            margo_finalize(mid);                                    
+            return(-1);
+        }
+
+        sdskv_database_id_t db_id;
+        char* path_ = opts.db_names[0];
+        char* x = strrchr(path_, '/');
+        char* db_name = path_;
+        if(x != NULL) {
+            db_name = x+1;
+            *x = '\0';
+        }
+
+	char rank_str[20];
+	sprintf(rank_str, "%d", rank);
+        char * path = (char*)malloc((strlen(path_)+20)*sizeof(char));
+	strcpy(path, path_);	
+	strcat(path, rank_str);
+
+        sdskv_config_t db_config = {
+            .db_name = db_name,
+            .db_path = (x == NULL ? "" : path),
+            .db_type = opts.db_types[i],
+            .db_comp_fn_name = SDSKV_COMPARE_DEFAULT,
+            .db_no_overwrite = 0
+        };
+        
+        ret = sdskv_provider_attach_database(provider, &db_config, &db_id);
+
+        if(ret != 0)
+        {
+            fprintf(stderr, "Error: sdskv_provider_attach_database()\n");
+            margo_finalize(mid);                                    
+            return(-1);
+        }
+
+        printf("Provider 0 managing database \"%s\" at multiplex id %d\n", opts.db_names[i] , 1);
+    }
+
     if(opts.host_file)
     {
         /* write the server address to file if requested */
@@ -186,7 +235,7 @@ int main(int argc, char **argv)
 	                return(-1);
 	            }
  
-	            fprintf(fp, "%s %d\n", self_addr_str, 1);
+	            fprintf(fp, "%s %d %d\n", self_addr_str, 1, db_id);
 		    fflush(fp);
 
 	            fclose(fp);
@@ -198,102 +247,6 @@ int main(int argc, char **argv)
         margo_addr_free(mid, self_addr);
 
     }
-
-    /* initialize the SDSKV server */
-    if(opts.mplex_mode == MODE_PROVIDERS) {
-        int i;
-        for(i=0; i< opts.num_db; i++) {
-            sdskv_provider_t provider;
-            ret = sdskv_provider_register(mid, i+1,
-                    SDSKV_ABT_POOL_DEFAULT,
-                    &provider);
-
-            if(ret != 0)
-            {
-                fprintf(stderr, "Error: sdskv_provider_register()\n");
-                margo_finalize(mid);
-                return(-1);
-            }
-
-            char* path = opts.db_names[i];
-            char* x = strrchr(path, '/');
-            char* db_name = path;
-            if(x != NULL) {
-                db_name = x+1;
-                *x = '\0';
-            }
-
-            sdskv_database_id_t db_id;
-            sdskv_config_t db_config = { 
-                .db_name = db_name,
-                .db_path = (x == NULL ? "" : path),
-                .db_type = opts.db_types[i],
-                .db_comp_fn_name = SDSKV_COMPARE_DEFAULT,
-                .db_no_overwrite = 0
-            };
-            ret = sdskv_provider_attach_database(provider, &db_config, &db_id);
-
-            if(ret != 0)
-            {
-                fprintf(stderr, "Error: bake_provider_attach_database()\n");
-                margo_finalize(mid);
-                return(-1);
-            }
-
-            printf("Provider %d managing database \"%s\" at multiplex id %d\n", i, opts.db_names[i], i+1);
-        }
-
-    } else {
-
-        int i;
-        sdskv_provider_t provider;
-        ret = sdskv_provider_register(mid, 1,
-                SDSKV_ABT_POOL_DEFAULT,
-                &provider);
-
-        if(ret != 0)
-        {
-            fprintf(stderr, "Error: sdskv_provider_register()\n");
-            margo_finalize(mid);                                    
-            return(-1);
-        }
-
-        for(i=0; i < opts.num_db; i++) {
-            sdskv_database_id_t db_id;
-            char* path_ = opts.db_names[i];
-            char* x = strrchr(path_, '/');
-            char* db_name = path_;
-            if(x != NULL) {
-                db_name = x+1;
-                *x = '\0';
-            }
-
-	    char rank_str[20];
-	    sprintf(rank_str, "%d", rank);
-            char * path = (char*)malloc((strlen(path_)+20)*sizeof(char));
-	    strcpy(path, path_);	
-	    strcat(path, rank_str);
-
-            sdskv_config_t db_config = {
-                .db_name = db_name,
-                .db_path = (x == NULL ? "" : path),
-                .db_type = opts.db_types[i],
-                .db_comp_fn_name = SDSKV_COMPARE_DEFAULT,
-                .db_no_overwrite = 0
-            };
-            ret = sdskv_provider_attach_database(provider, &db_config, &db_id);
-
-            if(ret != 0)
-            {
-                fprintf(stderr, "Error: sdskv_provider_attach_database()\n");
-                margo_finalize(mid);                                    
-                return(-1);
-            }
-
-            printf("Provider 0 managing database \"%s\" at multiplex id %d\n", opts.db_names[i] , 1);
-        }
-    }
-
     /* suspend until the BAKE server gets a shutdown signal from the client */
     margo_wait_for_finalize(mid);
 
