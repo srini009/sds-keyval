@@ -180,7 +180,7 @@ int main(int argc, char **argv)
             return(-1);
         }
 
-        printf("Provider 0 managing database \"%s\" at multiplex id %d\n", opts.db_names[0] , 1);
+        printf("Provider 0 managing database \"%s\" at multiplex id %d\n", db_name , 1);
 
     if(opts.host_file)
     {
