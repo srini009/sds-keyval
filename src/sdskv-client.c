@@ -1562,6 +1562,7 @@ int sdskv_list_keys_with_prefix(sdskv_provider_handle_t provider,
     int i;
 
     if(*max_keys == 0) {
+        fprintf(stderr, "No I should not be getting here\n");
         return SDSKV_SUCCESS;
     }
 
