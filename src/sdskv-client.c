@@ -1792,6 +1792,7 @@ int sdskv_list_keyvals_with_prefix(sdskv_provider_handle_t provider,
 
     /* set return values */
     *max_keys = out.nkeys;
+    fprintf(stderr, "Really?\n");
     ret = out.ret;
 
 finish:
