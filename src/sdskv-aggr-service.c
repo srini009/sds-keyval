@@ -182,6 +182,23 @@ int main(int argc, char **argv)
 
         printf("Provider 0 managing database \"%s\" at multiplex id %d\n", db_name , 1);
 
+#ifdef USE_SYMBIOMON
+        /* initialize SYMBIOMON */
+        struct symbiomon_provider_args args = SYMBIOMON_PROVIDER_ARGS_INIT;
+        args.push_finalize_callback = 0;
+
+
+        symbiomon_provider_t metric_provider;
+        ret = symbiomon_provider_register(mid, 42, &args, &metric_provider);
+        if(ret != 0)
+            fprintf(stderr, "Error: symbiomon_provider_register() failed. Continuing on.\n");
+           
+        ret = sdskv_provider_set_symbiomon(provider, metric_provider);
+        if(ret != 0)
+            fprintf(stderr, "Error: sdskv_provider_set_symbiomon() failed. Contuinuing on.\n");
+        fprintf(stderr, "SYMBIOMON provider set successfully inside aggregator service.\n");
+#endif
+
     if(opts.host_file)
     {
         /* write the server address to file if requested */
