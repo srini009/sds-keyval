@@ -2555,9 +2555,6 @@ static void sdskv_list_keyvals_ult(hg_handle_t handle)
     symbiomon_metric_update(svr_ctx->listkeyvals_latency, (end-start));
     symbiomon_metric_update(svr_ctx->listkeyvals_data_size, (double)true_data_size);
     symbiomon_metric_update(svr_ctx->listkeyvals_batch_size, (double)true_num_keys);
-    fprintf(stderr, "List keyvals latency: %lf\n", end-start);
-    fprintf(stderr, "List keyvals data size: %lu\n", true_data_size);
-    fprintf(stderr, "List keyvals num keys: %lu\n", true_num_keys);
 #endif 
 
     return;
