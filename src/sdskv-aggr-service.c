@@ -125,7 +125,7 @@ int main(int argc, char **argv)
 
     /* start margo */
     /* use the main xstream for driving progress and executing rpc handlers */
-    mid = margo_init(opts.listen_addr_str, MARGO_SERVER_MODE, 1, 6);
+    mid = margo_init(opts.listen_addr_str, MARGO_SERVER_MODE, 1, 2);
     if(mid == MARGO_INSTANCE_NULL)
     {
         fprintf(stderr, "Error: margo_init()\n");
@@ -180,7 +180,7 @@ int main(int argc, char **argv)
             return(-1);
         }
 
-        printf("Provider 0 managing database \"%s\" at multiplex id %d\n", db_name , 1);
+        //printf("Provider 0 managing database \"%s\" at multiplex id %d\n", db_name , 1);
 
 #ifdef USE_SYMBIOMON
         /* initialize SYMBIOMON */
@@ -196,7 +196,6 @@ int main(int argc, char **argv)
         ret = sdskv_provider_set_symbiomon(provider, metric_provider);
         if(ret != 0)
             fprintf(stderr, "Error: sdskv_provider_set_symbiomon() failed. Contuinuing on.\n");
-        fprintf(stderr, "SYMBIOMON provider set successfully inside aggregator service.\n");
 #endif
 
     if(opts.host_file)
